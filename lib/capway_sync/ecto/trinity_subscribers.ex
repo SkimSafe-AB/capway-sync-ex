@@ -1,22 +1,22 @@
 defmodule CapwaySync.Ecto.TrinitySubscribers do
   import Ecto.Query
 
-  alias CapwaySync.Repo
+  alias CapwaySync.TrinityRepo
   alias CapwaySync.Models.Trinity.Subscriber
+  alias CapwaySync.Vault.Trinity.Hashed.HMAC
 
   def get_subscriber_by_pnr(pnr) do
-    hashed_pnr = CapwaySync.Vault.Hashed.HMAC.hash(pnr)
-    Repo.one(from(s in Subscriber, where: s.personal_number_hash == ^hashed_pnr))
+    hashed_pnr = HMAC.hash(pnr)
+    TrinityRepo.one(from(s in Subscriber, where: s.personal_number_hash == ^hashed_pnr))
   end
 
   # preload subscription
   def list_subscribers(include_relations \\ true) do
-    query = from(s in Subscriber)
-
-    if include_relations do
-      query = Ecto.Query.preload(query, :wp_subscriptions)
-    end
-
-    Repo.all(query)
+    Subscriber
+    |> preload_subscription?(include_relations)
+    |> TrinityRepo.all()
   end
+
+  defp preload_subscription?(query, true), do: Ecto.Query.preload(query, :subscription)
+  defp preload_subscription?(query, false), do: query
 end

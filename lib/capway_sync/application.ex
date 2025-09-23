@@ -10,6 +10,8 @@ defmodule CapwaySync.Application do
     children = [
       # Starts a worker by calling: CapwaySync.Worker.start_link(arg)
       # {CapwaySync.Worker, arg}
+      CapwaySync.TrinityRepo,
+      CapwaySync.Vault.Trinity.AES.GCM
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

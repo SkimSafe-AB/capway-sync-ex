@@ -22,21 +22,33 @@ defmodule CapwaySync.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:reactor, "~> 0.16.0"},
+      {:reactor, "~> 0.16"},
       {:soap, "~> 1.0"},
-      {:sweet_xml, "~> 0.7.0"},
       {:saxy, "~> 1.6"},
       #
       # Ecto
       #
       {:ecto, "~> 3.0"},
+      {:ecto_sql, "~> 3.0"},
+      #
+      #
+      #
+      {:jason, "~> 1.0"},
+      {:postgrex, "~> 0.21"},
       #
       # Cloak
       #
       {:cloak, "~> 1.1"},
-      {:cloak_ecto, "~> 1.2"}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:cloak_ecto, "~> 1.2"},
+      #
+      # AWS
+      #
+      {:ex_aws, "~> 2.1"},
+      {:ex_aws_dynamo, "~> 4.0"},
+      {:ex_aws_sts, "~> 2.0"},
+      {:configparser_ex, "~> 4.0"},
+      # Needed for ex_aws.STS
+      {:sweet_xml, "~> 0.6"}
     ]
   end
 end

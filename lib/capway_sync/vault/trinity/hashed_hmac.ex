@@ -1,4 +1,4 @@
-defmodule CapwaySync.Vault.Hashed.HMAC do
+defmodule CapwaySync.Vault.Trinity.Hashed.HMAC do
   @moduledoc """
   HMAC configuration for hashing sensitive data in CapwaySync.
   Uses SHA-512 algorithm with secret key from environment variable.
