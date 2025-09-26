@@ -10,10 +10,13 @@ defmodule CapwaySync.Ecto.TrinitySubscribers do
     TrinityRepo.one(from(s in Subscriber, where: s.personal_number_hash == ^hashed_pnr))
   end
 
-  # preload subscription
-  def list_subscribers(include_relations \\ true) do
+  # get all subscribers with subscription and its payment_method == capway
+  # the payment_method is stored in the subscription table
+  def list_subscribers(preload_subscription \\ false) do
     Subscriber
-    |> preload_subscription?(include_relations)
+    |> join(:inner, [s], sub in assoc(s, :subscription))
+    |> where([s, sub], sub.payment_method == "capway")
+    |> preload_subscription?(preload_subscription)
     |> TrinityRepo.all()
   end
 

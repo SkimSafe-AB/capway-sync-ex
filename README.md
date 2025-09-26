@@ -1,6 +1,10 @@
 # CapwaySync
 
-**TODO: Add description**
+## Connect to iex on docker
+`iex --cookie mycookie --name debug@127.0.0.1 --remsh capway_sync@127.0.0.1`
+`{:ok, reason } = Reactor.run(SubscriberSyncWorkflow, %{})`
+
+
 
 ## Installation
 

@@ -60,9 +60,15 @@ defmodule CapwaySync.Soap.GenerateReport do
     case HTTPoison.post(endpoint, soap_body, headers, http_options) do
       {:ok, response} ->
         case response.status_code do
-          200 -> {:ok, response.body}
-          401 -> {:error, :unauthorized}
-          _ -> {:error, {:http_error, response.status_code, response.body}}
+          200 ->
+            File.write("priv/soap_response.xml", response.body)
+            {:ok, response.body}
+
+          401 ->
+            {:error, :unauthorized}
+
+          _ ->
+            {:error, {:http_error, response.status_code, response.body}}
         end
 
       {:error, error} ->
@@ -137,7 +143,11 @@ defmodule CapwaySync.Soap.GenerateReport do
   end
 
   defp get_httpoison_opts(auth \\ false) do
-    hackney_base_opts = [:insecure]
+    hackney_base_opts = [
+      :insecure,
+      recv_timeout: 30_000,
+      timeout: 30_000
+    ]
 
     hackney_opts =
       hackney_base_opts ++

@@ -116,32 +116,40 @@ defmodule CapwaySync.Soap.ResponseHandler do
   def handle_event(:characters, chars, state) do
     if state.in_value and state.in_rows and not state.current_value_is_nil do
       # Ensure proper UTF-8 encoding
-      value = case chars do
-        chars when is_binary(chars) ->
-          # Ensure the binary is valid UTF-8 and trim
-          case String.valid?(chars) do
-            true ->
-              trimmed = String.trim(chars)
-              # Check for HTML entities and fix them
-              fix_html_entities(trimmed)
-            false ->
-              # Try to convert from latin1 or other encoding to UTF-8
-              case :unicode.characters_to_binary(chars, :latin1, :utf8) do
-                utf8_binary when is_binary(utf8_binary) ->
-                  fix_html_entities(String.trim(utf8_binary))
-                _ -> String.trim(to_string(chars))
-              end
-          end
-        chars when is_list(chars) ->
-          # Convert from list to UTF-8 binary and trim
-          case :unicode.characters_to_binary(chars, :utf8, :utf8) do
-            utf8_binary when is_binary(utf8_binary) ->
-              fix_html_entities(String.trim(utf8_binary))
-            _ -> String.trim(to_string(chars))
-          end
-        _ ->
-          fix_html_entities(String.trim(to_string(chars)))
-      end
+      value =
+        case chars do
+          chars when is_binary(chars) ->
+            # Ensure the binary is valid UTF-8 and trim
+            case String.valid?(chars) do
+              true ->
+                trimmed = String.trim(chars)
+                # Check for HTML entities and fix them
+                fix_html_entities(trimmed)
+
+              false ->
+                # Try to convert from latin1 or other encoding to UTF-8
+                case :unicode.characters_to_binary(chars, :latin1, :utf8) do
+                  utf8_binary when is_binary(utf8_binary) ->
+                    fix_html_entities(String.trim(utf8_binary))
+
+                  _ ->
+                    String.trim(to_string(chars))
+                end
+            end
+
+          chars when is_list(chars) ->
+            # Convert from list to UTF-8 binary and trim
+            case :unicode.characters_to_binary(chars, :utf8, :utf8) do
+              utf8_binary when is_binary(utf8_binary) ->
+                fix_html_entities(String.trim(utf8_binary))
+
+              _ ->
+                String.trim(to_string(chars))
+            end
+
+          _ ->
+            fix_html_entities(String.trim(to_string(chars)))
+        end
 
       # Ensure value is a string before storing
       string_value = ensure_string(value)
@@ -164,16 +172,25 @@ defmodule CapwaySync.Soap.ResponseHandler do
   end
 
   # Map field index to CapwaySubscriber field
+  # Header structure: rownum(0), datasetid(1), customerref(2), idnumber(3), name(4), contractrefno(5), regdate(6), startdate(7), enddate(8), active(9), paidInvoices(10), unpaidInvoices(11), collection(12), lastInvoicestatus(13)
   defp update_subscriber_field(subscriber, index, value) do
     case index do
-      0 -> %{subscriber | customer_ref: value}
-      1 -> %{subscriber | id_number: value}
-      2 -> %{subscriber | name: value}
-      3 -> %{subscriber | contract_ref_no: value}
-      4 -> %{subscriber | reg_date: value}
-      5 -> %{subscriber | start_date: value}
-      6 -> %{subscriber | end_date: value}
-      7 -> %{subscriber | active: value}
+      # rownum - ignore
+      0 -> subscriber
+      # datasetid - ignore
+      1 -> subscriber
+      2 -> %{subscriber | customer_ref: value}
+      3 -> %{subscriber | id_number: value}
+      4 -> %{subscriber | name: value}
+      5 -> %{subscriber | contract_ref_no: value}
+      6 -> %{subscriber | reg_date: value}
+      7 -> %{subscriber | start_date: value}
+      8 -> %{subscriber | end_date: value}
+      9 -> %{subscriber | active: value}
+      10 -> %{subscriber | paid_invoices: value}
+      11 -> %{subscriber | unpaid_invoices: value}
+      12 -> %{subscriber | collection: value}
+      13 -> %{subscriber | last_invoice_status: value}
       # Ignore extra fields
       _ -> subscriber
     end
@@ -181,25 +198,38 @@ defmodule CapwaySync.Soap.ResponseHandler do
 
   # Finalize subscriber with raw data
   defp finalize_subscriber(subscriber, raw_data) do
-    %{subscriber | raw_data: raw_data}
+    %{subscriber | origin: :capway, raw_data: raw_data}
   end
 
   # Fix common HTML entity encoding issues for Swedish characters
   defp fix_html_entities(value) when is_binary(value) do
     value
-    |> String.replace("Ã¤", "ä")    # ä
-    |> String.replace("Ã¥", "å")    # å
-    |> String.replace("Ã¶", "ö")    # ö
-    |> String.replace("Ã„", "Ä")    # Ä
-    |> String.replace("Ã…", "Å")    # Å
-    |> String.replace("Ã–", "Ö")    # Ö
-    |> String.replace("Ã©", "é")    # é
-    |> String.replace("Ã©", "é")    # é
-    |> String.replace("Ã¡", "á")    # á
-    |> String.replace("Ã­", "í")    # í
-    |> String.replace("Ã³", "ó")    # ó
-    |> String.replace("Ãº", "ú")    # ú
-    |> String.replace("Ã±", "ñ")    # ñ
+    # ä
+    |> String.replace("Ã¤", "ä")
+    # å
+    |> String.replace("Ã¥", "å")
+    # ö
+    |> String.replace("Ã¶", "ö")
+    # Ä
+    |> String.replace("Ã„", "Ä")
+    # Å
+    |> String.replace("Ã…", "Å")
+    # Ö
+    |> String.replace("Ã–", "Ö")
+    # é
+    |> String.replace("Ã©", "é")
+    # é
+    |> String.replace("Ã©", "é")
+    # á
+    |> String.replace("Ã¡", "á")
+    # í
+    |> String.replace("Ã­", "í")
+    # ó
+    |> String.replace("Ã³", "ó")
+    # ú
+    |> String.replace("Ãº", "ú")
+    # ñ
+    |> String.replace("Ã±", "ñ")
   end
 
   defp fix_html_entities(value), do: value
@@ -207,11 +237,15 @@ defmodule CapwaySync.Soap.ResponseHandler do
   # Ensure value is always a string, even if it comes as binary
   defp ensure_string(value) when is_binary(value) do
     case String.valid?(value) do
-      true -> value
+      true ->
+        value
+
       false ->
         # Try to force conversion to UTF-8 string
         case :unicode.characters_to_binary(value, :latin1, :utf8) do
-          result when is_binary(result) -> result
+          result when is_binary(result) ->
+            result
+
           _ ->
             # Last resort: inspect the binary to make it a readable string
             inspect(value)

@@ -52,5 +52,11 @@ defmodule CapwaySync.Models.CapwaySubscriber do
             start_date: nil,
             end_date: nil,
             active: nil,
+            paid_invoices: nil,
+            unpaid_invoices: nil,
+            collection: nil,
+            last_invoice_status: nil,
+            # external data and debug
+            origin: nil,
             raw_data: nil
 end

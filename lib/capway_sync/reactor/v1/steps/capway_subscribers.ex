@@ -16,12 +16,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   end
 
   @impl true
-  def compensate(error, _arguments, _context, _options) do
+  def compensate(_error, _arguments, _context, _options) do
     :retry
   end
 
   @impl true
-  def undo(_map, _context, _options) do
+  def undo(_map, _context, _options, _step_options) do
     :ok
   end
 end

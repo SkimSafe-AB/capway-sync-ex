@@ -10,7 +10,7 @@ defmodule CapwaySync.Vault.Trinity.Hashed.HMAC do
     config =
       Keyword.merge(config,
         algorithm: :sha512,
-        secret: System.get_env("CLOAK_HASHED_HMAC")
+        secret: System.get_env("TRINITY_HASHED_HMAC")
       )
 
     {:ok, config}
@@ -36,7 +36,7 @@ defmodule CapwaySync.Vault.Trinity.Hashed.HMAC do
       :crypto.mac(:hmac, algorithm, secret, value)
       |> Base.encode64()
     else
-      raise "CLOAK_HASHED_HMAC environment variable not set"
+      raise "TRINITY_HASHED_HMAC environment variable not set"
     end
   end
 end

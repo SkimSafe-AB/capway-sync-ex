@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions targetNamespace="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b"
+  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+  xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/"
+  xmlns:tns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b"
+  xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+  xmlns:wsx="http://schemas.xmlsoap.org/ws/2004/09/mex"
+  xmlns:wsap="http://schemas.xmlsoap.org/ws/2004/08/addressing/policy"
+  xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+  xmlns:msc="http://schemas.microsoft.com/ws/2005/12/wsdl/contract"
+  xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+  xmlns:wsa10="http://www.w3.org/2005/08/addressing"
+  xmlns:wsam="http://www.w3.org/2007/05/addressing/metadata">
+  <wsdl:types>
+    <xsd:schema targetNamespace="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Imports">
+      <xsd:import schemaLocation="https://cpw-wip01.prod.aptichosting.net:8318/Reporting/?xsd=xsd0" namespace="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b"/>
+      <xsd:import schemaLocation="https://cpw-wip01.prod.aptichosting.net:8318/Reporting/?xsd=xsd1" namespace="http://schemas.microsoft.com/2003/10/Serialization/"/>
+      <xsd:import schemaLocation="https://cpw-wip01.prod.aptichosting.net:8318/Reporting/?xsd=xsd2" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="Ping">
+    <wsdl:part name="parameters" element="tns:Ping"/>
+  </wsdl:message>
+  <wsdl:message name="Ping_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GeneralResultResponse">
+    <wsdl:part name="parameters" element="tns:GeneralResultResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GeneralResultResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ListProducedReports">
+    <wsdl:part name="parameters" element="tns:ListProducedReports"/>
+  </wsdl:message>
+  <wsdl:message name="ListProducedReports_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="ListProducedReportsResponse">
+    <wsdl:part name="parameters" element="tns:ListProducedReportsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="ListProducedReportsResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="FetchProducedReport">
+    <wsdl:part name="parameters" element="tns:FetchProducedReport"/>
+  </wsdl:message>
+  <wsdl:message name="FetchProducedReport_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="FetchProducedReportResponse">
+    <wsdl:part name="parameters" element="tns:FetchProducedReportResponse"/>
+  </wsdl:message>
+  <wsdl:message name="FetchProducedReportResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportList">
+    <wsdl:part name="parameters" element="tns:GetReportList"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportList_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportListResponse">
+    <wsdl:part name="parameters" element="tns:GetReportListResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportListResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportArguments">
+    <wsdl:part name="parameters" element="tns:GetReportArguments"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportArguments_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportArgumentsResponse">
+    <wsdl:part name="parameters" element="tns:GetReportArgumentsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetReportArgumentsResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GenerateReport">
+    <wsdl:part name="parameters" element="tns:GenerateReport"/>
+  </wsdl:message>
+  <wsdl:message name="GenerateReport_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GenerateReportResponse">
+    <wsdl:part name="parameters" element="tns:GenerateReportResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GenerateReportResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartList">
+    <wsdl:part name="parameters" element="tns:GetChartList"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartList_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartListResponse">
+    <wsdl:part name="parameters" element="tns:GetChartListResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartListResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartData">
+    <wsdl:part name="parameters" element="tns:GetChartData"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartData_Headers">
+    <wsdl:part name="SessionHeader" element="tns:SessionHeader"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartDataResponse">
+    <wsdl:part name="parameters" element="tns:GetChartDataResponse"/>
+  </wsdl:message>
+  <wsdl:message name="GetChartDataResponse_Headers">
+    <wsdl:part name="SessionHeaderResponse" element="tns:SessionHeaderResponse"/>
+  </wsdl:message>
+  <wsdl:portType name="Reporting">
+    <wsdl:operation name="Ping">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/Ping" name="Ping" message="tns:Ping"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/PingResponse" name="GeneralResultResponse" message="tns:GeneralResultResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="ListProducedReports">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/ListProducedReports" name="ListProducedReports" message="tns:ListProducedReports"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/ListProducedReportsResponse" name="ListProducedReportsResponse" message="tns:ListProducedReportsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="FetchProducedReport">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/FetchProducedReport" name="FetchProducedReport" message="tns:FetchProducedReport"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/FetchProducedReportResponse" name="FetchProducedReportResponse" message="tns:FetchProducedReportResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="GetReportList">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetReportList" name="GetReportList" message="tns:GetReportList"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetReportListResponse" name="GetReportListResponse" message="tns:GetReportListResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="GetReportArguments">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetReportArguments" name="GetReportArguments" message="tns:GetReportArguments"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetReportArgumentsResponse" name="GetReportArgumentsResponse" message="tns:GetReportArgumentsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="GenerateReport">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GenerateReport" name="GenerateReport" message="tns:GenerateReport"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GenerateReportResponse" name="GenerateReportResponse" message="tns:GenerateReportResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="GetChartList">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetChartList" name="GetChartList" message="tns:GetChartList"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetChartListResponse" name="GetChartListResponse" message="tns:GetChartListResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="GetChartData">
+      <wsdl:input wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetChartData" name="GetChartData" message="tns:GetChartData"/>
+      <wsdl:output wsaw:Action="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b/Reporting/GetChartDataResponse" name="GetChartDataResponse" message="tns:GetChartDataResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+</wsdl:definitions>

@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema elementFormDefault="qualified" targetNamespace="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b">
+  <xs:import schemaLocation="https://cpw-wip01.prod.aptichosting.net:8318/Reporting/?xsd=xsd2" namespace="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+  <xs:element name="Ping">
+    <xs:complexType>
+      <xs:sequence/>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="SessionHeader">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="LanguageCode" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="SystemCode" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="TransactionID" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="SessionHeader" nillable="true" type="tns:SessionHeader"/>
+  <xs:element name="GeneralResultResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GeneralResult" nillable="true" type="tns:GeneralResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GeneralResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GeneralResult" nillable="true" type="tns:GeneralResult"/>
+  <xs:complexType name="ResultType">
+    <xs:sequence>
+      <xs:element name="ResultCode" type="xs:int"/>
+      <xs:element name="ResultText" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ResultType" nillable="true" type="tns:ResultType"/>
+  <xs:complexType name="ResponseSessionHeader">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="LanguageCode" nillable="true" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <DefaultValue EmitDefaultValue="false"
+              xmlns="http://schemas.microsoft.com/2003/10/Serialization/"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element minOccurs="0" name="SessionErrorCode" nillable="true" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <DefaultValue EmitDefaultValue="false"
+              xmlns="http://schemas.microsoft.com/2003/10/Serialization/"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element minOccurs="0" name="SessionErrorText" nillable="true" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <DefaultValue EmitDefaultValue="false"
+              xmlns="http://schemas.microsoft.com/2003/10/Serialization/"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element minOccurs="0" name="SystemCode" nillable="true" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <DefaultValue EmitDefaultValue="false"
+              xmlns="http://schemas.microsoft.com/2003/10/Serialization/"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+      <xs:element minOccurs="0" name="TransactionID" nillable="true" type="xs:string">
+        <xs:annotation>
+          <xs:appinfo>
+            <DefaultValue EmitDefaultValue="false"
+              xmlns="http://schemas.microsoft.com/2003/10/Serialization/"/>
+          </xs:appinfo>
+        </xs:annotation>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ResponseSessionHeader" nillable="true" type="tns:ResponseSessionHeader"/>
+  <xs:element name="SessionHeaderResponse" nillable="true" type="tns:ResponseSessionHeader"/>
+  <xs:element name="ListProducedReports">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" name="Filter" type="tns:ListProducedReportsFilter"/>
+        <xs:element minOccurs="0" name="Offset" nillable="true" type="xs:int"/>
+        <xs:element minOccurs="0" name="Order" nillable="true" type="tns:ProducedReportSortOrder"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="ListProducedReportsFilter">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="AccountingDateFrom" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="AccountingDateTo" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="ClientReferenceNumber" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Description" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Hidden" nillable="true" type="tns:YesNoAll"/>
+      <xs:element minOccurs="0" name="JournalNoFrom" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="JournalNoTo" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="OpenedErlier" nillable="true" type="tns:YesNoAll"/>
+      <xs:element minOccurs="0" name="ProducedReportType" nillable="true" type="tns:ProducedReportType"/>
+      <xs:element minOccurs="0" name="ProductionDateFrom" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="ProductionDateTo" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="Purged" nillable="true" type="tns:YesNoAll"/>
+      <xs:element minOccurs="0" name="WithoutReferences" nillable="true" type="tns:YesNoAll"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ListProducedReportsFilter" nillable="true" type="tns:ListProducedReportsFilter"/>
+  <xs:simpleType name="YesNoAll">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="No"/>
+      <xs:enumeration value="Yes"/>
+      <xs:enumeration value="All"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="YesNoAll" nillable="true" type="tns:YesNoAll"/>
+  <xs:simpleType name="ProducedReportType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Unknown"/>
+      <xs:enumeration value="LedgerJournal"/>
+      <xs:enumeration value="AccountingJournal"/>
+      <xs:enumeration value="InvoiceJournal"/>
+      <xs:enumeration value="PaymentJournal"/>
+      <xs:enumeration value="TrustAccounting"/>
+      <xs:enumeration value="CreditorAccountDeduction"/>
+      <xs:enumeration value="PurchaseJournal"/>
+      <xs:enumeration value="RegressJournal"/>
+      <xs:enumeration value="InvoicePledge"/>
+      <xs:enumeration value="CreditorReport"/>
+      <xs:enumeration value="RexExport"/>
+      <xs:enumeration value="FactoringAccount"/>
+      <xs:enumeration value="Other"/>
+      <xs:enumeration value="TaskPackageQueueReceipt"/>
+      <xs:enumeration value="CreditorAccountDeductionSummary"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ProducedReportType" nillable="true" type="tns:ProducedReportType"/>
+  <xs:simpleType name="ProducedReportSortOrder">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Default"/>
+      <xs:enumeration value="AccountingDate"/>
+      <xs:enumeration value="LastOpenedAt"/>
+      <xs:enumeration value="ClientJournalNo"/>
+      <xs:enumeration value="Client"/>
+      <xs:enumeration value="Name"/>
+      <xs:enumeration value="ProducedAt"/>
+      <xs:enumeration value="ProducedReportType"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ProducedReportSortOrder" nillable="true" type="tns:ProducedReportSortOrder"/>
+  <xs:element name="ListProducedReportsResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="ListProducedReportsResult" nillable="true" type="tns:ListProducedReportsResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="ListProducedReportsResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Offset" type="xs:int"/>
+      <xs:element minOccurs="0" name="Reports" nillable="true" type="tns:ArrayOfProducedReport"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+      <xs:element minOccurs="0" name="Total" type="xs:int"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ListProducedReportsResult" nillable="true" type="tns:ListProducedReportsResult"/>
+  <xs:complexType name="ArrayOfProducedReport">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ProducedReport" nillable="true" type="tns:ProducedReport"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfProducedReport" nillable="true" type="tns:ArrayOfProducedReport"/>
+  <xs:complexType name="ProducedReport">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="AccountingDate" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="ClientReferenceName" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Description" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Extension" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="LastOpenedAt" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="ProducedAt" nillable="true" type="xs:dateTime"/>
+      <xs:element minOccurs="0" name="ProducedReportGuid" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="ProducedReportType" type="tns:ProducedReportType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ProducedReport" nillable="true" type="tns:ProducedReport"/>
+  <xs:element name="FetchProducedReport">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" name="ProducedReportGuid" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="FetchProducedReportResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="FetchProducedReportResult" nillable="true" type="tns:FetchProducedReportResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="FetchProducedReportResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Extension" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="FileContent" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="FileDescription" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="FetchProducedReportResult" nillable="true" type="tns:FetchProducedReportResult"/>
+  <xs:element name="GetReportList">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" name="ReportType" type="tns:ReportType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:simpleType name="ReportType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="All"/>
+      <xs:enumeration value="Data"/>
+      <xs:enumeration value="PDF"/>
+      <xs:enumeration value="XLS"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ReportType" nillable="true" type="tns:ReportType"/>
+  <xs:element name="GetReportListResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GetReportListResult" nillable="true" type="tns:GetReportListResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GetReportListResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Reports" nillable="true" type="tns:ArrayOfReportInformation"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GetReportListResult" nillable="true" type="tns:GetReportListResult"/>
+  <xs:complexType name="ArrayOfReportInformation">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportInformation" nillable="true" type="tns:ReportInformation"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportInformation" nillable="true" type="tns:ArrayOfReportInformation"/>
+  <xs:complexType name="ReportInformation">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Description" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Group" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="ReportType" type="tns:ReportType"/>
+      <xs:element minOccurs="0" name="System" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportInformation" nillable="true" type="tns:ReportInformation"/>
+  <xs:element name="GetReportArguments">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" name="Name" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetReportArgumentsResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GetReportArgumentsResult" nillable="true" type="tns:GetReportArgumentsResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GetReportArgumentsResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Arguments" nillable="true" type="tns:ArrayOfReportArgument"/>
+      <xs:element minOccurs="0" name="LocalizedName" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GetReportArgumentsResult" nillable="true" type="tns:GetReportArgumentsResult"/>
+  <xs:complexType name="ArrayOfReportArgument">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportArgument" nillable="true" type="tns:ReportArgument"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportArgument" nillable="true" type="tns:ArrayOfReportArgument"/>
+  <xs:complexType name="ReportArgument">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="DefaultValue" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Enabled" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="FieldType" type="tns:ArgumentFieldType"/>
+      <xs:element minOccurs="0" name="LocalizedLabel" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Lookup" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="MaxLength" type="xs:int"/>
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Required" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="Selectable" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportArgument" nillable="true" type="tns:ReportArgument"/>
+  <xs:simpleType name="ArgumentFieldType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="String"/>
+      <xs:enumeration value="Int"/>
+      <xs:enumeration value="Date"/>
+      <xs:enumeration value="Money"/>
+      <xs:enumeration value="Bool"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ArgumentFieldType" nillable="true" type="tns:ArgumentFieldType"/>
+  <xs:element name="GenerateReport">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="1" name="ReportRequest" type="tns:GenerateReportRequest"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GenerateReportRequest">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Arguments" nillable="true" type="tns:ArrayOfReportArgumentValue"/>
+      <xs:element minOccurs="0" name="Offset" type="xs:int"/>
+      <xs:element minOccurs="0" name="ReportName" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="ReportType" type="tns:ReportType"/>
+      <xs:element minOccurs="0" name="StoreReport" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GenerateReportRequest" nillable="true" type="tns:GenerateReportRequest"/>
+  <xs:complexType name="ArrayOfReportArgumentValue">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportArgumentValue" nillable="true" type="tns:ReportArgumentValue"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportArgumentValue" nillable="true" type="tns:ArrayOfReportArgumentValue"/>
+  <xs:complexType name="ReportArgumentValue">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Value" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportArgumentValue" nillable="true" type="tns:ReportArgumentValue"/>
+  <xs:element name="GenerateReportResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GenerateReportResult" nillable="true" type="tns:GenerateReportResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GenerateReportResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="DataRows" nillable="true" type="tns:ArrayOfReportResults"/>
+      <xs:element minOccurs="0" name="FooterRows" nillable="true" type="tns:ArrayOfReportResults"/>
+      <xs:element minOccurs="0" name="Headers" nillable="true" type="tns:ArrayOfReportResultHeader"/>
+      <xs:element minOccurs="0" name="ProducedReportGuid" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="ReportFileContents" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="ReportType" type="tns:ReportType"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GenerateReportResult" nillable="true" type="tns:GenerateReportResult"/>
+  <xs:complexType name="ArrayOfReportResults">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportResults" nillable="true" type="tns:ReportResults"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportResults" nillable="true" type="tns:ArrayOfReportResults"/>
+  <xs:complexType name="ReportResults">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Rows" nillable="true" type="tns:ArrayOfReportResultData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportResults" nillable="true" type="tns:ReportResults"/>
+  <xs:complexType name="ArrayOfReportResultData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportResultData" nillable="true" type="tns:ReportResultData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportResultData" nillable="true" type="tns:ArrayOfReportResultData"/>
+  <xs:complexType name="ReportResultData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Value" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportResultData" nillable="true" type="tns:ReportResultData"/>
+  <xs:complexType name="ArrayOfReportResultHeader">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ReportResultHeader" nillable="true" type="tns:ReportResultHeader"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfReportResultHeader" nillable="true" type="tns:ArrayOfReportResultHeader"/>
+  <xs:complexType name="ReportResultHeader">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Format" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Title" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ReportResultHeader" nillable="true" type="tns:ReportResultHeader"/>
+  <xs:element name="GetChartList">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="filter" nillable="true" type="q1:ArrayOfstring"
+          xmlns:q1="http://schemas.microsoft.com/2003/10/Serialization/Arrays"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetChartListResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GetChartListResult" nillable="true" type="tns:GetChartListResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GetChartListResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Charts" nillable="true" type="tns:ArrayOfChartInformation"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GetChartListResult" nillable="true" type="tns:GetChartListResult"/>
+  <xs:complexType name="ArrayOfChartInformation">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="ChartInformation" nillable="true" type="tns:ChartInformation"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfChartInformation" nillable="true" type="tns:ArrayOfChartInformation"/>
+  <xs:complexType name="ChartInformation">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="BlockWidth" type="xs:int"/>
+      <xs:element minOccurs="0" name="ChartType" type="tns:ChartType"/>
+      <xs:element minOccurs="0" name="ForegroundColor" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="LocalizedDescription" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Name" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ChartInformation" nillable="true" type="tns:ChartInformation"/>
+  <xs:simpleType name="ChartType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="DonutChart"/>
+      <xs:enumeration value="BarChart"/>
+      <xs:enumeration value="PieChart"/>
+      <xs:enumeration value="LineChart"/>
+      <xs:enumeration value="StackedBarChart"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ChartType" nillable="true" type="tns:ChartType"/>
+  <xs:element name="GetChartData">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="ChartName" nillable="true" type="xs:string"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="GetChartDataResponse">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element minOccurs="0" name="GetChartDataResult" nillable="true" type="tns:GetChartDataResult"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="GetChartDataResult">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="BarChartSeries" nillable="true" type="tns:ArrayOfBarChartData"/>
+      <xs:element minOccurs="0" name="ChartType" type="tns:ChartType"/>
+      <xs:element minOccurs="0" name="DonutChartSeries" nillable="true" type="tns:ArrayOfDonutChartData"/>
+      <xs:element minOccurs="0" name="HorizontalAlignment" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="LegendPosition" type="tns:ChartLegendPosition"/>
+      <xs:element minOccurs="0" name="LineChartSeries" nillable="true" type="tns:ArrayOfLineChartData"/>
+      <xs:element minOccurs="0" name="PieChartSeries" nillable="true" type="tns:ArrayOfPieChartData"/>
+      <xs:element minOccurs="0" name="Result" nillable="true" type="tns:ResultType"/>
+      <xs:element minOccurs="0" name="ShowLegend" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="ShowTitle" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="ShowTooltip" type="xs:boolean"/>
+      <xs:element minOccurs="0" name="TitlePosition" type="tns:ChartTitlePosition"/>
+      <xs:element minOccurs="0" name="TooltipTemplate" nillable="true" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="GetChartDataResult" nillable="true" type="tns:GetChartDataResult"/>
+  <xs:complexType name="ArrayOfBarChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="BarChartData" nillable="true" type="tns:BarChartData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfBarChartData" nillable="true" type="tns:ArrayOfBarChartData"/>
+  <xs:complexType name="BarChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Category" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Data" nillable="true" type="tns:ArrayOfBarData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="BarChartData" nillable="true" type="tns:BarChartData"/>
+  <xs:complexType name="ArrayOfBarData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="BarData" nillable="true" type="tns:BarData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfBarData" nillable="true" type="tns:ArrayOfBarData"/>
+  <xs:complexType name="BarData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Value" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="BarData" nillable="true" type="tns:BarData"/>
+  <xs:complexType name="ArrayOfDonutChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="DonutChartData" nillable="true" type="tns:DonutChartData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfDonutChartData" nillable="true" type="tns:ArrayOfDonutChartData"/>
+  <xs:complexType name="DonutChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Category" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Value" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="DonutChartData" nillable="true" type="tns:DonutChartData"/>
+  <xs:simpleType name="ChartLegendPosition">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Top"/>
+      <xs:enumeration value="Bottom"/>
+      <xs:enumeration value="Left"/>
+      <xs:enumeration value="Right"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ChartLegendPosition" nillable="true" type="tns:ChartLegendPosition"/>
+  <xs:complexType name="ArrayOfLineChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="LineChartData" nillable="true" type="tns:LineChartData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLineChartData" nillable="true" type="tns:ArrayOfLineChartData"/>
+  <xs:complexType name="LineChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Category" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Data" nillable="true" type="tns:ArrayOfLineData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="LineChartData" nillable="true" type="tns:LineChartData"/>
+  <xs:complexType name="ArrayOfLineData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="LineData" nillable="true" type="tns:LineData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfLineData" nillable="true" type="tns:ArrayOfLineData"/>
+  <xs:complexType name="LineData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Category" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Value" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="LineData" nillable="true" type="tns:LineData"/>
+  <xs:complexType name="ArrayOfPieChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" maxOccurs="unbounded" name="PieChartData" nillable="true" type="tns:PieChartData"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="ArrayOfPieChartData" nillable="true" type="tns:ArrayOfPieChartData"/>
+  <xs:complexType name="PieChartData">
+    <xs:sequence>
+      <xs:element minOccurs="0" name="Category" nillable="true" type="xs:string"/>
+      <xs:element minOccurs="0" name="Value" type="xs:decimal"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="PieChartData" nillable="true" type="tns:PieChartData"/>
+  <xs:simpleType name="ChartTitlePosition">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Top"/>
+      <xs:enumeration value="Bottom"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="ChartTitlePosition" nillable="true" type="tns:ChartTitlePosition"/>
+</xs:schema>
