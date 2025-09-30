@@ -1,7 +1,9 @@
 defmodule CapwaySync.Soap.GenerateReport do
   def init_wsdl do
     wsdl_path = Path.join([:code.priv_dir(:capway_sync), "merged_wsdl.xml"])
-    {:ok, wsdl} = Soap.init_model(wsdl_path, :file, get_httpoison_opts())
+    # Note: SOAP library isn't used for actual requests, but keep for compatibility
+    soap_opts = [hackney: [:insecure, recv_timeout: 30_000, timeout: 30_000]]
+    {:ok, wsdl} = Soap.init_model(wsdl_path, :file, soap_opts)
     wsdl
   end
 
@@ -16,17 +18,55 @@ defmodule CapwaySync.Soap.GenerateReport do
     init_wsdl() |> Soap.operations()
   end
 
+  @doc """
+  Generate a report with pagination support.
+
+  ## Parameters
+    - report_name: Name of the report to generate (default: "CAP_q_contracts_skimsafe")
+    - report_type: Type of report (default: "Data")
+    - arguments: Arguments list (default: [%{name: "creditor", value: "202623"}])
+    - opts: Optional keyword list with pagination parameters
+      - offset: Starting position for pagination (default: 0)
+      - maxrows: Maximum number of rows to return (default: 100)
+
+  ## Examples
+      # Default pagination (offset: 0, maxrows: 100)
+      iex> CapwaySync.Soap.GenerateReport.generate_report()
+      {:ok, soap_response}
+
+      # Custom offset with default maxrows
+      iex> CapwaySync.Soap.GenerateReport.generate_report("MyReport", "Data", [], offset: 50)
+      {:ok, soap_response}
+
+      # Custom pagination
+      iex> CapwaySync.Soap.GenerateReport.generate_report("MyReport", "Data", [], offset: 0, maxrows: 25)
+      {:ok, soap_response}
+  """
   def generate_report(
         report_name \\ "CAP_q_contracts_skimsafe",
         report_type \\ "Data",
-        arguments \\ [%{name: "creditor", value: "202623"}]
+        arguments \\ [%{name: "creditor", value: "202623"}],
+        opts \\ []
       ) do
     # Use custom SOAP call since the library can't parse operations from this WSDL
+
+    # Extract pagination parameters with defaults
+    offset = Keyword.get(opts, :offset, 0)
+    maxrows = Keyword.get(opts, :maxrows, 100)
+
+    # Build pagination arguments
+    pagination_args = [
+      %{name: "offset", value: to_string(offset)},
+      %{name: "maxrows", value: to_string(maxrows)}
+    ]
+
+    # Combine with user arguments
+    final_arguments = arguments ++ pagination_args
 
     params = %{
       report_name: report_name,
       report_type: report_type,
-      arguments: arguments
+      arguments: final_arguments
     }
 
     call_soap_operation("GenerateReport", params, true)
@@ -49,17 +89,12 @@ defmodule CapwaySync.Soap.GenerateReport do
     # Build SOAP envelope
     soap_body = build_soap_envelope(operation, params, namespace)
 
-    headers = [
-      {"Content-Type", "text/xml; charset=utf-8"},
-      {"SOAPAction", soap_action}
-    ]
+    # Build Req options
+    req_options = get_req_options(auth, soap_action)
 
-    # Add authentication if needed
-    http_options = get_httpoison_opts(auth)
-
-    case HTTPoison.post(endpoint, soap_body, headers, http_options) do
+    case Req.post(endpoint, [body: soap_body] ++ req_options) do
       {:ok, response} ->
-        case response.status_code do
+        case response.status do
           200 ->
             File.write("priv/soap_response.xml", response.body)
             {:ok, response.body}
@@ -68,7 +103,7 @@ defmodule CapwaySync.Soap.GenerateReport do
             {:error, :unauthorized}
 
           _ ->
-            {:error, {:http_error, response.status_code, response.body}}
+            {:error, {:http_error, response.status, response.body}}
         end
 
       {:error, error} ->
@@ -142,28 +177,29 @@ defmodule CapwaySync.Soap.GenerateReport do
       "\n      </urn:ReportRequest>"
   end
 
-  defp get_httpoison_opts(auth \\ false) do
-    hackney_base_opts = [
-      :insecure,
-      recv_timeout: 30_000,
-      timeout: 30_000
+  defp get_req_options(auth, soap_action) do
+    base_options = [
+      headers: [
+        {"Content-Type", "text/xml; charset=utf-8"},
+        {"SOAPAction", soap_action}
+      ],
+      receive_timeout: 60_000,
+      connect_options: [
+        timeout: 60_000
+      ]
     ]
 
-    hackney_opts =
-      hackney_base_opts ++
-        if auth,
-          do: [basic_auth: add_auth(), insecure_basic_auth: true],
-          else: [basic_auth: nil]
+    if auth do
+      username = System.get_env("SOAP_USERNAME")
+      password = System.get_env("SOAP_PASSWORD")
 
-    [
-      hackney: hackney_opts
-    ]
-  end
-
-  defp add_auth do
-    {
-      System.get_env("SOAP_USERNAME"),
-      System.get_env("SOAP_PASSWORD")
-    }
+      if username && password do
+        base_options ++ [auth: {:basic, "#{username}:#{password}"}]
+      else
+        base_options
+      end
+    else
+      base_options
+    end
   end
 end

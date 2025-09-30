@@ -5,14 +5,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
   describe "run/3 - main Reactor step interface" do
     test "successfully compares subscribers and returns missing items" do
       trinity_subscribers = [
-        %{id: "123", name: "Alice", status: "active"},
-        %{id: "456", name: "Bob", status: "active"},
-        %{id: "789", name: "Charlie", status: "active"}
+        %{id_number: "123", name: "Alice", status: "active"},
+        %{id_number: "456", name: "Bob", status: "active"},
+        %{id_number: "789", name: "Charlie", status: "active"}
       ]
 
       capway_subscribers = [
-        %{customer_ref: "123", name: "Alice", active: true},
-        %{customer_ref: "999", name: "David", active: true}
+        %{id_number: "123", name: "Alice", active: true},
+        %{id_number: "999", name: "David", active: true}
       ]
 
       arguments = %{
@@ -32,10 +32,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       assert result.missing_trinity_count == 1
       assert result.existing_in_both_count == 1
 
-      assert Enum.any?(result.missing_in_capway, &(&1.id == "456"))
-      assert Enum.any?(result.missing_in_capway, &(&1.id == "789"))
-      assert Enum.any?(result.missing_in_trinity, &(&1.customer_ref == "999"))
-      assert Enum.any?(result.existing_in_both, &(&1.customer_ref == "123"))
+      assert Enum.any?(result.missing_in_capway, &(&1.id_number == "456"))
+      assert Enum.any?(result.missing_in_capway, &(&1.id_number == "789"))
+      assert Enum.any?(result.missing_in_trinity, &(&1.id_number == "999"))
+      assert Enum.any?(result.existing_in_both, &(&1.id_number == "123"))
     end
 
     test "handles empty lists" do
@@ -93,15 +93,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
 
     test "correctly identifies existing_in_both accounts" do
       trinity_subscribers = [
-        %{id: "100", name: "Alice"},
-        %{id: "200", name: "Bob"},
-        %{id: "300", name: "Charlie"}
+        %{id_number: "100", name: "Alice"},
+        %{id_number: "200", name: "Bob"},
+        %{id_number: "300", name: "Charlie"}
       ]
 
       capway_subscribers = [
-        %{customer_ref: "100", name: "Alice", collection: "1"},
-        %{customer_ref: "200", name: "Bob", collection: "3"},
-        %{customer_ref: "400", name: "David", collection: "0"}
+        %{id_number: "100", name: "Alice", collection: "1"},
+        %{id_number: "200", name: "Bob", collection: "3"},
+        %{id_number: "400", name: "David", collection: "0"}
       ]
 
       arguments = %{
@@ -118,7 +118,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       assert result.missing_capway_count == 1
       assert result.missing_trinity_count == 1
 
-      existing_refs = Enum.map(result.existing_in_both, & &1.customer_ref)
+      existing_refs = Enum.map(result.existing_in_both, & &1.id_number)
       assert "100" in existing_refs
       assert "200" in existing_refs
       refute "400" in existing_refs

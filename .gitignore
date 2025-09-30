@@ -23,3 +23,5 @@ capway_sync-*.tar
 /tmp/
 
 priv/*.xml
+
+**/*.secret.exs

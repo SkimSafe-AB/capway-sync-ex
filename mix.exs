@@ -48,7 +48,15 @@ defmodule CapwaySync.MixProject do
       {:ex_aws_sts, "~> 2.0"},
       {:configparser_ex, "~> 4.0"},
       # Needed for ex_aws.STS
-      {:sweet_xml, "~> 0.6"}
+      {:sweet_xml, "~> 0.6"},
+      #
+      # HTTP Client
+      #
+      {:req, "~> 0.5.0"},
+      #
+      # UUID
+      #
+      {:uuid, "~> 1.1"}
     ]
   end
 end
