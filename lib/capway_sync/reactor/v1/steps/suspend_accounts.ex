@@ -131,4 +131,5 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
       value >= 3 -> "3+"
     end
   end
+
 end

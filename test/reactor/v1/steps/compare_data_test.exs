@@ -1,18 +1,19 @@
 defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
   use ExUnit.Case
   alias CapwaySync.Reactor.V1.Steps.CompareData
+  alias CapwaySync.Models.Subscribers.Canonical
 
   describe "run/3 - main Reactor step interface" do
     test "successfully compares subscribers and returns missing items" do
       trinity_subscribers = [
-        %{id_number: "123", name: "Alice", status: "active"},
-        %{id_number: "456", name: "Bob", status: "active"},
-        %{id_number: "789", name: "Charlie", status: "active"}
+        %Canonical{id_number: "123", payment_method: "capway", origin: :trinity},
+        %Canonical{id_number: "456", payment_method: "capway", origin: :trinity},
+        %Canonical{id_number: "789", payment_method: "capway", origin: :trinity}
       ]
 
       capway_subscribers = [
-        %{id_number: "123", name: "Alice", active: true},
-        %{id_number: "999", name: "David", active: true}
+        %Canonical{id_number: "123", origin: :capway},
+        %Canonical{id_number: "999", origin: :capway}
       ]
 
       arguments = %{
@@ -57,7 +58,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
     end
 
     test "supports custom key configuration" do
-      trinity_subscribers = [%{subscriber_id: "123", name: "Alice"}]
+      trinity_subscribers = [%{subscriber_id: "123", name: "Alice", payment_method: "capway"}]
       capway_subscribers = [%{ref: "456", name: "Bob"}]
 
       arguments = %{
@@ -93,15 +94,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
 
     test "correctly identifies existing_in_both accounts" do
       trinity_subscribers = [
-        %{id_number: "100", name: "Alice"},
-        %{id_number: "200", name: "Bob"},
-        %{id_number: "300", name: "Charlie"}
+        %Canonical{id_number: "100", payment_method: "capway", origin: :trinity},
+        %Canonical{id_number: "200", payment_method: "capway", origin: :trinity},
+        %Canonical{id_number: "300", payment_method: "capway", origin: :trinity}
       ]
 
       capway_subscribers = [
-        %{id_number: "100", name: "Alice", collection: "1"},
-        %{id_number: "200", name: "Bob", collection: "3"},
-        %{id_number: "400", name: "David", collection: "0"}
+        %Canonical{id_number: "100", origin: :capway},
+        %Canonical{id_number: "200", origin: :capway},
+        %Canonical{id_number: "400", origin: :capway}
       ]
 
       arguments = %{
@@ -123,17 +124,17 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       assert "200" in existing_refs
       refute "400" in existing_refs
 
-      # Verify these are Capway records (have collection field)
-      assert Enum.all?(result.existing_in_both, &Map.has_key?(&1, :collection))
+      # Verify these are Capway records (origin is :capway)
+      assert Enum.all?(result.existing_in_both, &(&1.origin == :capway))
     end
   end
 
   describe "find_missing_items/4" do
     test "identifies missing items correctly with different keys" do
       trinity_list = [
-        %{id: "100", name: "John"},
-        %{id: "200", name: "Jane"},
-        %{id: "300", name: "Jack"}
+        %{id: "100", name: "John", payment_method: "capway"},
+        %{id: "200", name: "Jane", payment_method: "capway"},
+        %{id: "300", name: "Jack", payment_method: "capway"}
       ]
 
       capway_list = [
@@ -171,9 +172,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
 
     test "handles lists with nil key values" do
       trinity_list = [
-        %{id: "100", name: "Valid"},
-        %{id: nil, name: "Invalid1"},
-        %{name: "Invalid2"}  # missing key
+        %{id: "100", name: "Valid", payment_method: "capway"},
+        %{id: nil, name: "Invalid1", payment_method: "capway"},
+        %{name: "Invalid2", payment_method: "capway"}  # missing key
       ]
 
       capway_list = [

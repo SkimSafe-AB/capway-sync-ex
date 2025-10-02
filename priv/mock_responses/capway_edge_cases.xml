@@ -1,0 +1,148 @@
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Body>
+    <GenerateReportResponse xmlns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b">
+      <GenerateReportResult xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <DataRows>
+          <ReportResults>
+            <Rows>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>99999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>000000000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>False</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+            </Rows>
+          </ReportResults>
+          <ReportResults>
+            <Rows>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>88888</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>190101011234</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>Åsa Öberg Ärligt från Göteborg</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2025-01-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2025-12-31T23:59:59.9999999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-01-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>True</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>Overdue</Value>
+              </ReportResultData>
+            </Rows>
+          </ReportResults>
+          <ReportResults>
+            <Rows>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>77777</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>201231234567</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>Test &amp; Special &lt;Characters&gt;</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid-guid-format</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid-date</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>another-invalid-date</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>Maybe</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>-5</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>abc</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>Unknown Status</Value>
+              </ReportResultData>
+            </Rows>
+          </ReportResults>
+        </DataRows>
+      </GenerateReportResult>
+    </GenerateReportResponse>
+  </s:Body>
+</s:Envelope>

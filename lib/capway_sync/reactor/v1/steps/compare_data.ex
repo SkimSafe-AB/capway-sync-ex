@@ -64,6 +64,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
   Finds items missing in each dataset and items existing in both datasets by comparing key values.
 
   Uses MapSet for O(1) lookups for optimal performance with large datasets.
+
+  Now also identifies subscribers that need Capway contract cancellation:
+  - Trinity subscribers with payment_method != "capway" that exist in Capway
   """
   def find_missing_items(trinity_list, capway_list, trinity_key, capway_key)
       when is_list(trinity_list) and is_list(capway_list) do
@@ -87,7 +90,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     Logger.debug("   Capway keys size: #{MapSet.size(capway_keys)}")
 
     # Find missing key values
-    missing_capway_keys = MapSet.difference(trinity_keys, capway_keys)
+    _missing_capway_keys = MapSet.difference(trinity_keys, capway_keys)
     missing_trinity_keys = MapSet.difference(capway_keys, trinity_keys)
 
     # Find existing key values (intersection of both sets)
@@ -96,20 +99,63 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     Logger.debug("   Intersection size: #{MapSet.size(existing_keys)}")
     Logger.debug("   Sample intersection keys: #{existing_keys |> Enum.take(5) |> inspect()}")
 
-    # Find the actual items corresponding to keys
-    missing_in_capway = find_items_by_keys(trinity_list, missing_capway_keys, trinity_key)
+    # Find Trinity subscribers with payment_method != "capway" that exist in Capway
+    # These need contract cancellation in Capway
+    cancel_capway_keys =
+      trinity_list
+      |> Enum.filter(fn subscriber ->
+        key_value = Map.get(subscriber, trinity_key)
+        payment_method = Map.get(subscriber, :payment_method)
+        key_value && payment_method != "capway" && MapSet.member?(capway_keys, key_value)
+      end)
+      |> extract_key_values(trinity_key)
+      |> MapSet.new()
+
+    Logger.debug("   Cancel Capway contracts size: #{MapSet.size(cancel_capway_keys)}")
+
+    # Filter Trinity subscribers to only include those with payment_method == "capway"
+    # for the missing_in_capway comparison (these should be added to Capway)
+    capway_payment_trinity_keys =
+      trinity_list
+      |> Enum.filter(fn subscriber ->
+        Map.get(subscriber, :payment_method) == "capway"
+      end)
+      |> extract_key_values(trinity_key)
+      |> MapSet.new()
+
+    # Recalculate missing_capway_keys to only include Trinity subscribers with payment_method == "capway"
+    filtered_missing_capway_keys = MapSet.difference(capway_payment_trinity_keys, capway_keys)
+
+    # Find the actual items for analysis
+    missing_in_capway = find_items_by_keys(trinity_list, filtered_missing_capway_keys, trinity_key)
     missing_in_trinity = find_items_by_keys(capway_list, missing_trinity_keys, capway_key)
     existing_in_both = find_items_by_keys(capway_list, existing_keys, capway_key)
+    cancel_capway_contracts = find_items_by_keys(trinity_list, cancel_capway_keys, trinity_key)
+
+    # Extract ID lists for minimal report storage
+    missing_in_capway_ids = extract_trinity_ids(trinity_list, filtered_missing_capway_keys, trinity_key)
+    missing_in_trinity_ids = extract_trinity_ids(capway_list, missing_trinity_keys, capway_key)
+    existing_in_both_ids = extract_trinity_ids(capway_list, existing_keys, capway_key)
+    cancel_capway_contracts_ids = extract_trinity_ids(trinity_list, cancel_capway_keys, trinity_key)
 
     %{
+      # Full objects for suspend/unsuspend/cancel analysis
       missing_in_capway: missing_in_capway,
       missing_in_trinity: missing_in_trinity,
       existing_in_both: existing_in_both,
+      cancel_capway_contracts: cancel_capway_contracts,
+      # ID lists for report storage
+      missing_in_capway_ids: missing_in_capway_ids,
+      missing_in_trinity_ids: missing_in_trinity_ids,
+      existing_in_both_ids: existing_in_both_ids,
+      cancel_capway_contracts_ids: cancel_capway_contracts_ids,
+      # Counts and totals
       total_trinity: length(trinity_list),
       total_capway: length(capway_list),
       missing_capway_count: length(missing_in_capway),
       missing_trinity_count: length(missing_in_trinity),
-      existing_in_both_count: length(existing_in_both)
+      existing_in_both_count: length(existing_in_both),
+      cancel_capway_contracts_count: length(cancel_capway_contracts)
     }
   end
 
@@ -135,6 +181,24 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
       item_key = Map.get(item, key)
       item_key && MapSet.member?(keys_set, item_key)
     end)
+  end
+
+  @doc """
+  Extracts subscriber IDs from items that match the keys set.
+  Returns a list of IDs for minimal storage in reports.
+  Prefers trinity_id, falls back to capway_id, then to comparison key value.
+  """
+  def extract_trinity_ids(items, keys_set, key) when is_list(items) do
+    items
+    |> Enum.filter(fn item ->
+      item_key = Map.get(item, key)
+      item_key && MapSet.member?(keys_set, item_key)
+    end)
+    |> Enum.map(fn item ->
+      # Prefer trinity_id, fall back to capway_id, then to key value for identification
+      Map.get(item, :trinity_id) || Map.get(item, :capway_id) || Map.get(item, key)
+    end)
+    |> Enum.reject(&is_nil/1)
   end
 
   @doc """

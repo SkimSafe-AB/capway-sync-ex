@@ -21,4 +21,10 @@ if System.get_env("USE_LOCALSTACK") == "true" do
     region: "us-east-1"
 end
 
+# Mock Capway SOAP for faster development
+# Set USE_MOCK_CAPWAY=true to enable mock responses
+# Additional mock environment variables:
+# - MOCK_CAPWAY_RESPONSE: Override specific response file (e.g., "capway_edge_cases.xml")
+# - MOCK_CAPWAY_DELAY: Add artificial delay in milliseconds for testing timeouts
+
 import_config "#{config_env()}.secret.exs"

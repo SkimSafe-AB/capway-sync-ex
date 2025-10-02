@@ -3,6 +3,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   alias CapwaySync.Soap.GenerateReport
   alias CapwaySync.Soap.ResponseHandler
   alias CapwaySync.Rest.{AccessToken, CustomerCount}
+  alias CapwaySync.Models.Subscribers.Canonical
   require Logger
 
   @worker_count 2
@@ -18,7 +19,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         "Successfully fetched #{length(all_subscribers)} total subscribers using parallel workers"
       )
 
-      {:ok, all_subscribers}
+      canonical_subscribers = Canonical.from_capway_list(all_subscribers)
+
+      # Return both formats for different use cases
+      {:ok, %{
+        canonical: canonical_subscribers,
+        raw: all_subscribers
+      }}
     else
       {:error, reason} ->
         Logger.error("Failed to fetch Capway subscribers: #{inspect(reason)}")
@@ -31,6 +38,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   defp fetch_with_parallel_workers(total_count) do
     ranges = calculate_worker_ranges(total_count, @worker_count)
     Logger.info("Worker ranges: #{inspect(ranges)}")
+    timeout = 15 * total_count * 100
+    Logger.info("Setting timeout to #{timeout}ms for fetching #{total_count} records")
 
     # Create tasks for each worker
     tasks =
@@ -41,7 +50,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
           fetch_worker_data(worker_id, offset, maxrows)
         end,
         max_concurrency: @worker_count,
-        timeout: 60_000,
+        timeout: timeout,
         on_timeout: :kill_task
       )
       |> Enum.to_list()
@@ -104,6 +113,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       "Worker #{worker_id}: Fetching chunk of #{chunk_size} records at offset #{current_offset}"
     )
 
+    fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, 3)
+  end
+
+  defp fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left) do
     case GenerateReport.generate_report(
            "CAP_q_contracts_skimsafe",
            "Data",
@@ -128,17 +141,33 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
               subscribers | acc
             ])
 
+          {:error, reason} when retries_left > 0 ->
+            Logger.warning(
+              "Worker #{worker_id}: Failed to parse XML at offset #{current_offset}, retrying... (#{retries_left} retries left) - #{inspect(reason)}"
+            )
+
+            Process.sleep(1000 * (4 - retries_left))
+            fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left - 1)
+
           {:error, reason} ->
             Logger.error(
-              "Worker #{worker_id}: Failed to parse XML at offset #{current_offset} - #{inspect(reason)}"
+              "Worker #{worker_id}: Failed to parse XML at offset #{current_offset} after all retries - #{inspect(reason)}"
             )
 
             {:error, {worker_id, {:parse_error, reason}}}
         end
 
+      {:error, reason} when retries_left > 0 ->
+        Logger.warning(
+          "Worker #{worker_id}: Failed to fetch chunk at offset #{current_offset}, retrying... (#{retries_left} retries left) - #{inspect(reason)}"
+        )
+
+        Process.sleep(1500 * (4 - retries_left))
+        fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left - 1)
+
       {:error, reason} ->
         Logger.error(
-          "Worker #{worker_id}: Failed to fetch chunk at offset #{current_offset} - #{inspect(reason)}"
+          "Worker #{worker_id}: Failed to fetch chunk at offset #{current_offset} after all retries - #{inspect(reason)}"
         )
 
         {:error, {worker_id, {:fetch_error, reason}}}

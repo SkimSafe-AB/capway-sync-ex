@@ -1,4 +1,5 @@
 defmodule CapwaySync.Models.CapwaySubscriber do
+  @derive Jason.Encoder
   @doc """
   This struct is based on the XML headers provided below:
   <Headers>
@@ -58,5 +59,7 @@ defmodule CapwaySync.Models.CapwaySubscriber do
             last_invoice_status: nil,
             # external data and debug
             origin: nil,
+            trinity_id: nil,
+            capway_id: nil,
             raw_data: nil
 end

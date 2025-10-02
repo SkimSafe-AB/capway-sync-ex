@@ -1,0 +1,10 @@
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Body>
+    <GenerateReportResponse xmlns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b">
+      <GenerateReportResult xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+        <DataRows>
+        </DataRows>
+      </GenerateReportResult>
+    </GenerateReportResponse>
+  </s:Body>
+</s:Envelope>

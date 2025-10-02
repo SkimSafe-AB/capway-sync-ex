@@ -14,6 +14,32 @@ CapwaySync is an Elixir application that integrates with SOAP web services for r
 - `mix test` - Run all tests (always run after making changes)
 - `iex -S mix` - Start interactive shell with application loaded
 
+### Mock Capway SOAP for Development
+For faster local development, use mock SOAP responses instead of slow external calls:
+
+```bash
+# Enable mock mode
+export USE_MOCK_CAPWAY=true
+
+# Optional: Override specific response file
+export MOCK_CAPWAY_RESPONSE="capway_edge_cases.xml"
+
+# Optional: Add artificial delay for timeout testing
+export MOCK_CAPWAY_DELAY=100
+```
+
+Mock responses simulate pagination and various scenarios:
+- **Offset 0**: Normal data with Swedish names (capway_page_1.xml)
+- **Offset 100+**: Different data set (capway_page_2.xml)
+- **Offset 200+**: Edge cases with nil values and encoding (capway_edge_cases.xml)
+- **Offset 1000+**: Empty response (capway_empty.xml)
+
+Available mock files in `priv/mock_responses/`:
+- `capway_page_1.xml` - Standard first page with 3 subscribers
+- `capway_page_2.xml` - Second page with different subscribers
+- `capway_edge_cases.xml` - Nil values, Swedish chars, edge cases
+- `capway_empty.xml` - Empty response for testing
+
 ### Application Structure
 - Main application: `CapwaySync.Application` - OTP application with supervisor
 - SOAP module: `CapwaySync.Soap.GenerateReport` - Handles SOAP service interactions
@@ -63,3 +89,5 @@ export SYNC_REPORTS_TABLE="capway-sync-reports-prod"
 - Always run `mix test` after making changes per project requirements
 - Ensure FLOP commands work correctly (crucial for the application)
 - DynamoDB integration tests use LocalStack (configure with DYNAMODB_TEST_HOST/PORT)
+- its essential that the test are covering 100% of the functionality in this app, as its cruxial there are no errors when we run it.
+- Always ensure tests are valid and passed

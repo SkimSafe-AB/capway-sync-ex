@@ -371,9 +371,12 @@ defmodule Mix.Tasks.SeedData do
           try do
             TrinityRepo.transaction(fn ->
               # Create subscription first using changeset
+              # Determine payment method to create realistic test scenarios
+              payment_method = determine_payment_method(capway_sub, acc)
+
               subscription_attrs = %{
                 status: determine_subscription_status(capway_sub, suspend_some),
-                payment_method: "capway",
+                payment_method: payment_method,
                 end_date: parse_date(capway_sub.end_date),
                 requested_cancellation: false
               }
@@ -462,4 +465,27 @@ defmodule Mix.Tasks.SeedData do
     end
   end
   defp parse_date(_), do: nil
+
+  # Determines payment method to create realistic test scenarios.
+  #
+  # Creates a distribution where:
+  # - ~70% remain "capway" (these will exist in both systems)
+  # - ~15% become "bank" (these will be missing from Capway - should be added)
+  # - ~10% become "card" (these will be missing from Capway - should be added)
+  # - ~5% become "other" (these will be missing from Capway - should be added)
+  #
+  # This creates realistic scenarios where some Trinity subscribers are missing from Capway
+  # and need to be added, while the mock XML contains legacy contracts that don't exist
+  # in Trinity and should be cancelled.
+  defp determine_payment_method(capway_sub, _inserted_count) do
+    # Use subscriber data to create deterministic but varied distribution
+    seed = :erlang.phash2(capway_sub.id_number, 100)
+
+    case seed do
+      n when n < 70 -> "capway"  # 70% - will exist in both systems
+      n when n < 85 -> "bank"    # 15% - missing from Capway, should be added
+      n when n < 95 -> "card"    # 10% - missing from Capway, should be added
+      _ -> "other"               # 5% - missing from Capway, should be added
+    end
+  end
 end

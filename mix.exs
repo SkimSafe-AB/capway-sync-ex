@@ -56,7 +56,11 @@ defmodule CapwaySync.MixProject do
       #
       # UUID
       #
-      {:uuid, "~> 1.1"}
+      {:uuid, "~> 1.1"},
+      #
+      # Timex
+      #
+      {:timex, "~> 3.7"}
     ]
   end
 end
