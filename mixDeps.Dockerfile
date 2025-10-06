@@ -14,8 +14,6 @@ RUN mix local.hex --force \
 
 COPY config config
 
-RUN mix archive.install github hexpm/hex branch latest --force
-
 RUN MIX_ENV=prod mix deps.compile
 RUN MIX_ENV=test mix deps.compile
 RUN mv /app/_build /app/elixir_cache/_build
