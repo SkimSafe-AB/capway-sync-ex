@@ -13,6 +13,7 @@ services:
       MIX_ENV: test
     volumes:
       - .:/app
+      - elixir_cache:/app/_build
       # - deps:/app/deps
       # - _build:/app/_build
     command:
