@@ -27,7 +27,6 @@ RUN mix local.hex --force \
 
 COPY config config
 COPY lib lib
-COPY rel rel
 
 WORKDIR /app
 
