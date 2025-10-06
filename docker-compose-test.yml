@@ -21,7 +21,7 @@ services:
       - |
         mix local.hex --force
         mix local.rebar --force
-        cp elixir_cache/deps_cache /app/deps
-        cp elixir_cache/_build /app/_build
-        # mix deps.get
+        cp -r elixir_cache/deps_cache /app/deps
+        cp -r elixir_cache/_build /app/_build
+        mix deps.get
         mix test
