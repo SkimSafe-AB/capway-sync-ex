@@ -11,6 +11,8 @@ services:
     working_dir: /app
     environment:
       MIX_ENV: test
+      SYNC_REPORTS_TABLE: asd
+      ACTION_ITEMS_TABLE: asd
     volumes:
       - .:/app
       # - deps:/app/deps
