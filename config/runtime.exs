@@ -1,4 +1,5 @@
 import Config
+require Logger
 
 if System.get_env("TRINITY_DB_VAULT_KEY") do
   config :capway_sync, Trinity.Db.Vault,
@@ -25,6 +26,8 @@ if config_env() == :prod do
       """
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
+
+  Logger.info("Database URL: #{database_url}")
 
   config :capway_sync, CapwaySync.TrinityRepo,
     url: database_url,
