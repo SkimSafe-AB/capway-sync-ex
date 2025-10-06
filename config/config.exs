@@ -2,11 +2,8 @@ import Config
 
 config :capway_sync,
   report_wsdl: System.get_env("SOAP_REPORT_WSDL") || "https://api.capway.com/Service.svc?wsdl",
-  sync_reports_table:
-    System.get_env("SYNC_REPORTS_TABLE") ||
-      raise("SYNC_REPORTS_TABLE is not set"),
-  action_items_table:
-    System.get_env("ACTION_ITEMS_TABLE") || raise("ACTION_ITEMS_TABLE is not set")
+  sync_reports_table: System.get_env("SYNC_REPORTS_TABLE"),
+  action_items_table: System.get_env("ACTION_ITEMS_TABLE")
 
 config :soap, :globals, version: "1.2"
 
