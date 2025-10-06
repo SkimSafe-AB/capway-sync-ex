@@ -16,7 +16,6 @@ COPY config config
 
 RUN MIX_ENV=prod mix deps.compile
 RUN MIX_ENV=test mix deps.compile
-RUN mv /app/_build /app/elixir_cache/_build
 RUN mv /app/deps /app/elixir_cache/deps_cache
 
 FROM scratch AS export-stage
