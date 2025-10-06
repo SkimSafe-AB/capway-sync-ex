@@ -1,10 +1,12 @@
-name: RELEASE/SWEDEN/v2.1
-
+name: RELEASE
 on:
   workflow_dispatch:
   push:
     branches:
-      - release/sweden/v2.1
+      - main
+  pull_request:
+    branches:
+      - main
 env:
   AWS_REGION: eu-north-1 # set this to your preferred AWS region, e.g. us-west-1
   ECR_REPOSITORY: country-bundle-capway-sync # set this to your Amazon ECR repository name
