@@ -240,6 +240,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
         }
       },
 
+
       # Analysis metadata (stored as separate fields for DynamoDB expandability)
       "stats" => %{
         # Data comparison results
@@ -254,7 +255,9 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
         "suspend_collection_summary" => report.analysis_metadata.suspend_collection_summary,
         "unsuspend_collection_summary" => report.analysis_metadata.unsuspend_collection_summary,
         "unsuspend_unpaid_invoices_summary" =>
-          report.analysis_metadata.unsuspend_unpaid_invoices_summary
+          report.analysis_metadata.unsuspend_unpaid_invoices_summary,
+        "capway_customers_with_unpaid_invoices" => report.analysis_metadata.capway.customers_with_unpaid_invoices,
+        "capway_customers_with_collections" => report.analysis_metadata.capway.customers_with_collections
       }
     }
   end
@@ -280,7 +283,11 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       unsuspend_total_analyzed: Map.get(item, "unsuspend_total_analyzed", 0),
       suspend_collection_summary: Map.get(item, "suspend_collection_summary", %{}),
       unsuspend_collection_summary: Map.get(item, "unsuspend_collection_summary", %{}),
-      unsuspend_unpaid_invoices_summary: Map.get(item, "unsuspend_unpaid_invoices_summary", %{})
+      unsuspend_unpaid_invoices_summary: Map.get(item, "unsuspend_unpaid_invoices_summary", %{}),
+      capway: %{
+        customers_with_unpaid_invoices: Map.get(item, "capway_customers_with_unpaid_invoices", 0),
+        customers_with_collections: Map.get(item, "capway_customers_with_collections", 0)
+      }
     }
 
     %GeneralSyncReport{
@@ -300,6 +307,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       suspend_count: Map.get(item, "suspend_count", 0),
       suspend_threshold: Map.get(item, "suspend_threshold", 2),
       unsuspend_count: Map.get(item, "unsuspend_count", 0),
+
 
       # Analysis metadata (nested structure)
       analysis_metadata: analysis_metadata,

@@ -77,6 +77,9 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
     Enum.reduce(accounts, {[], initial_summary}, fn account, {suspend_acc, summary_acc} ->
       case parse_collection_safely(account.collection) do
         {:ok, collection_value} when collection_value >= suspend_threshold ->
+          id = Map.get(account, :id_number) || Map.get(account, :customer_ref) || "N/A"
+          name = Map.get(account, :name, "N/A")
+          Logger.debug("🔒 SUSPEND: ID #{id} | Collection: #{collection_value} | Name: #{name}")
           summary_key = collection_summary_key(collection_value)
           updated_summary = Map.update(summary_acc, summary_key, 1, &(&1 + 1))
           {[account | suspend_acc], updated_summary}

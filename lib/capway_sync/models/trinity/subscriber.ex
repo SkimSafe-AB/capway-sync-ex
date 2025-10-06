@@ -3,6 +3,7 @@ defmodule CapwaySync.Models.Trinity.Subscriber do
   import Ecto.Changeset
 
   @type t() :: %__MODULE__{}
+  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   schema "subscribers" do
     field(:personal_number_hash, CapwaySync.Vault.Trinity.Hashed.HMAC)
@@ -21,9 +22,15 @@ defmodule CapwaySync.Models.Trinity.Subscriber do
 
   defp put_personal_number_hash(changeset) do
     case get_change(changeset, :personal_number) do
-      nil -> changeset
+      nil ->
+        changeset
+
       personal_number ->
-        put_change(changeset, :personal_number_hash, CapwaySync.Vault.Trinity.Hashed.HMAC.hash(personal_number))
+        put_change(
+          changeset,
+          :personal_number_hash,
+          CapwaySync.Vault.Trinity.Hashed.HMAC.hash(personal_number)
+        )
     end
   end
 end

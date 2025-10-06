@@ -1,0 +1,146 @@
+name: RELEASE/SWEDEN/v2.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - release/sweden/v2.1
+env:
+  AWS_REGION: eu-north-1 # set this to your preferred AWS region, e.g. us-west-1
+  ECR_REPOSITORY: country-bundle-capway-sync # set this to your Amazon ECR repository name
+  RUNNER_AWS_REGION: us-east-2 # Set this to the region the runner should be run in.
+jobs:
+  start-runner-build:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.RUNNER_AWS_REGION }}
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2.4.1
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          ec2-image-id: ami-0efd6d20b0fa3d97e
+          ec2-instance-type: c7gd.2xlarge
+          subnet-id: subnet-afcc80e3
+          security-group-id: sg-17247164
+          aws-resource-tags: > # optional, requires additional permissions
+            [
+              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+  tests:
+    name: Elixir Tests
+    needs:
+      - start-runner-build
+    runs-on: ${{ needs.start-runner-build.outputs.label }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Elixir Packages Hex Cache
+        id: cache-elixir-deps
+        uses: actions/cache@v3
+        with:
+          path: elixir_cache
+          key: ${{ github.workflow }}-elixir-cache-${{ runner.os }}-${{ runner.arch }}-${{ env.cache-name }}-${{ hashFiles('mix.lock') }}
+      - name: check if cache, otherwise get deps
+        if: steps.cache-elixir-deps.outputs.cache-hit != 'true'
+        run: |
+          DOCKER_BUILDKIT=1 docker build -f mixDeps.Dockerfile --output elixir_cache/ .
+      - name: Elixir Tests
+        env:
+          DOCKSYNC_REPORTS_TABLE: asd
+          ACTION_ITEMS_TABLE: asd
+        run: |
+          mix test
+  build:
+    name: Build, tag, and push image to Amazon ECR
+    needs:
+      - start-runner-build
+    runs-on: ${{ needs.start-runner-build.outputs.label }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Elixir Packages Hex Cache
+        id: cache-elixir-deps
+        uses: actions/cache@v3
+        with:
+          path: elixir_cache
+          key: ${{ github.workflow }}-elixir-cache-${{ runner.os }}-${{ runner.arch }}-${{ env.cache-name }}-${{ hashFiles('mix.lock') }}
+      - name: check if cache, otherwise get deps
+        if: steps.cache-elixir-deps.outputs.cache-hit != 'true'
+        run: |
+          DOCKER_BUILDKIT=1 docker build -f mixDeps.Dockerfile --output elixir_cache/ .
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ARM64-SE-RELEASE-2-1-${{ github.sha }}
+        run: |
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+          # ARM64
+          # Witch Cache
+          DOCKER_BUILDKIT=1 docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f prod.Dockerfile .
+  push-image:
+    name: Push to ECR
+    needs:
+      - start-runner-build
+      - build
+      - tests
+    runs-on: ${{ needs.start-runner-build.outputs.label }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
+      - name: Push to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ARM64-SE-RELEASE-2-1-${{ github.sha }}
+        run: |
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+  stop-runner-build:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-runner-build # required to get output from the start-runner job
+      - push-image
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.RUNNER_AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2.4.1
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          label: ${{ needs.start-runner-build.outputs.label }}
+          ec2-instance-id: ${{ needs.start-runner-build.outputs.ec2-instance-id }}

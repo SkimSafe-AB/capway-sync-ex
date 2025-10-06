@@ -14,6 +14,7 @@ defmodule CapwaySync.Models.Trinity.Subscription do
   ]
 
   @type t() :: %__MODULE__{}
+  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   schema "subscriptions" do
     field(:end_date, :naive_datetime)
@@ -27,7 +28,13 @@ defmodule CapwaySync.Models.Trinity.Subscription do
 
   def changeset(subscription, attrs) do
     subscription
-    |> cast(attrs, [:end_date, :payment_method, :requested_cancellation_date, :requested_cancellation, :status])
+    |> cast(attrs, [
+      :end_date,
+      :payment_method,
+      :requested_cancellation_date,
+      :requested_cancellation,
+      :status
+    ])
     |> validate_required([:payment_method, :status])
   end
 end

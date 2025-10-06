@@ -45,6 +45,8 @@ defmodule CapwaySync.Models.CapwaySubscriber do
     </ReportResultHeader>
   </Headers>
   """
+  @derive ExAws.Dynamo.Encodable
+  @derive Jason.Encoder
   defstruct customer_ref: nil,
             id_number: nil,
             name: nil,
