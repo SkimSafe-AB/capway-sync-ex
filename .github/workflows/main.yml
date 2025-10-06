@@ -32,7 +32,35 @@ jobs:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           ec2-image-id: ami-0efd6d20b0fa3d97e
-          ec2-instance-type: c8g.4xlarge
+          ec2-instance-type: c8g.2xlarge
+          subnet-id: subnet-afcc80e3
+          security-group-id: sg-17247164
+          aws-resource-tags: > # optional, requires additional permissions
+            [
+              {"Key": "Name", "Value": "ec2-github-runner"},
+              {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+  start-test-build:
+    name: Start self-hosted EC2 runner
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.start-ec2-runner.outputs.label }}
+      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.RUNNER_AWS_REGION }}
+      - name: Start EC2 runner
+        id: start-ec2-runner
+        uses: machulav/ec2-github-runner@v2.4.1
+        with:
+          mode: start
+          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          ec2-image-id: ami-0efd6d20b0fa3d97e
+          ec2-instance-type: c8g.2xlarge
           subnet-id: subnet-afcc80e3
           security-group-id: sg-17247164
           aws-resource-tags: > # optional, requires additional permissions
@@ -43,8 +71,8 @@ jobs:
   tests:
     name: Elixir Tests
     needs:
-      - start-runner-build
-    runs-on: ${{ needs.start-runner-build.outputs.label }}
+      - start-test-build
+    runs-on: ${{ needs.start-test-build.outputs.label }}
     steps:
       - uses: actions/checkout@v3
       - name: Elixir Packages Hex Cache
@@ -146,3 +174,24 @@ jobs:
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           label: ${{ needs.start-runner-build.outputs.label }}
           ec2-instance-id: ${{ needs.start-runner-build.outputs.ec2-instance-id }}
+  stop-test-build:
+    name: Stop self-hosted EC2 runner
+    needs:
+      - start-test-build # required to get output from the start-test job
+      - tests
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.RUNNER_AWS_REGION }}
+      - name: Stop EC2 runner
+        uses: machulav/ec2-github-runner@v2.4.1
+        with:
+          mode: stop
+          github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
+          label: ${{ needs.start-test-build.outputs.label }}
+          ec2-instance-id: ${{ needs.start-test-build.outputs.ec2-instance-id }}
