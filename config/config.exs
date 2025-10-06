@@ -1,7 +1,7 @@
 import Config
 
 config :capway_sync,
-  report_wsdl: System.get_env("SOAP_REPORT_WSDL") || "https://api.capway.com/Service.svc?wsdl",
+  report_wsdl: System.get_env("SOAP_REPORT_WSDL"),
   sync_reports_table: System.get_env("SYNC_REPORTS_TABLE"),
   action_items_table: System.get_env("ACTION_ITEMS_TABLE")
 
@@ -21,8 +21,5 @@ config :ex_aws,
 config :ex_aws, :dynamodb,
   scheme: "https://",
   region: {:system, "AWS_REGION"}
-
-# Optional: Override DynamoDB endpoint (useful for localstack/development)
-# host: {:system, "DYNAMODB_HOST"}
 
 import_config "#{config_env()}.exs"

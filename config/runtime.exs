@@ -36,4 +36,15 @@ if config_env() == :prod do
       # For RDS, this is usually sufficient
       verify: :verify_none
     ]
+
+  config :capway_sync, :rest_api,
+    base_url: System.get_env("REST_API_BASE_URL") || raise("REST_API_BASE_URL is not set"),
+    username: System.get_env("REST_API_USERNAME") || raise("REST_API_USERNAME is not set"),
+    password: System.get_env("REST_API_PASSWORD") || raise("REST_API_PASSWORD is not set")
+
+  config :ex_aws,
+    secret_access_key: [{:awscli, "profile_name", 30}],
+    access_key_id: [{:awscli, "profile_name", 30}],
+    awscli_auth_adapter: ExAws.STS.AuthCache.AssumeRoleWebIdentityAdapter,
+    region: System.get_env("AWS_REGION")
 end
