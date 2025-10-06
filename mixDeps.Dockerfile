@@ -13,12 +13,8 @@ RUN mix local.hex --force \
   && mix local.rebar --force
 
 COPY config config
-COPY bundle_portal.key /app/keys/
 
 RUN mix archive.install github hexpm/hex branch latest --force
-
-RUN mix hex.repo add bundle_portal https://hex-repo.s3.eu-central-1.amazonaws.com/public --public-key=/app/keys/bundle_portal.key \
-  && mix deps.get
 
 RUN MIX_ENV=prod mix deps.compile
 RUN MIX_ENV=test mix deps.compile
