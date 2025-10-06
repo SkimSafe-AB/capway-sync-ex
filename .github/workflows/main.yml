@@ -86,9 +86,6 @@ jobs:
         run: |
           DOCKER_BUILDKIT=1 docker build -f mixDeps.Dockerfile --output elixir_cache/ .
       - name: Elixir Tests
-        env:
-          DOCKSYNC_REPORTS_TABLE: asd
-          ACTION_ITEMS_TABLE: asd
         run: |
           docker-compose -f docker-compose-test.yml up --build --abort-on-container-exit
   build:

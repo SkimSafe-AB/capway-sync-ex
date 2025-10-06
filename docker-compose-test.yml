@@ -13,7 +13,6 @@ services:
       MIX_ENV: test
     volumes:
       - .:/app
-      - elixir_cache:/app/_build
       # - deps:/app/deps
       # - _build:/app/_build
     command:
@@ -22,5 +21,7 @@ services:
       - |
         mix local.hex --force
         mix local.rebar --force
+        cp elixir_cache/deps_cache /app/deps
+        cp elixir_cache/_build /app/_build
         # mix deps.get
         mix test
