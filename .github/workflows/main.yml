@@ -74,7 +74,7 @@ jobs:
       - start-test-build
     runs-on: ${{ needs.start-test-build.outputs.label }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Elixir Packages Hex Cache
         id: cache-elixir-deps
         uses: actions/cache@v3
@@ -90,14 +90,14 @@ jobs:
           DOCKSYNC_REPORTS_TABLE: asd
           ACTION_ITEMS_TABLE: asd
         run: |
-          mix test
+          docker-compose -f docker-compose-test.yml up --build --abort-on-container-exit
   build:
     name: Build, tag, and push image to Amazon ECR
     needs:
       - start-runner-build
     runs-on: ${{ needs.start-runner-build.outputs.label }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Elixir Packages Hex Cache
         id: cache-elixir-deps
         uses: actions/cache@v3

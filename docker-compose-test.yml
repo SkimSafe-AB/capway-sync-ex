@@ -1,0 +1,22 @@
+version: "3.9"
+# volumes:
+#   deps:
+#   _build:
+services:
+  elixir_tests:
+    # build:
+    #   context: .
+    #   dockerfile: test.Dockerfile
+    image: elixir:1.18
+    working_dir: /app
+    environment:
+      MIX_ENV: test
+    volumes:
+      - .:/app
+      # - deps:/app/deps
+      # - _build:/app/_build
+    command:
+      - /bin/bash
+      - -c
+      - |
+        mix test
