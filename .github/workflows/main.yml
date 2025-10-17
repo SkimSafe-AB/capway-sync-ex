@@ -65,7 +65,7 @@ jobs:
           aws-region: ${{ env.RUNNER_AWS_REGION }}
       - name: Start EC2 runner
         id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2.4.1
+        uses: machulav/ec2-github-runner@v2.4.3
         with:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
@@ -77,6 +77,15 @@ jobs:
             [
               {"Key": "Name", "Value": "ec2-github-runner"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+          startup-quiet-period-seconds: 5
+          startup-retry-interval-seconds: 2
+          availability-zones-config:
+            > # optional, requires additional permissions
+            [
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-afcc80e3", "securityGroupId": "sg-17247164"},
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-48c62235", "securityGroupId": "sg-17247164"},
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-14c36d7f", "securityGroupId": "sg-17247164"}
             ]
   tests:
     name: Elixir Tests
@@ -196,7 +205,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.RUNNER_AWS_REGION }}
       - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2.4.1
+        uses: machulav/ec2-github-runner@v2.4.3
         with:
           mode: stop
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
