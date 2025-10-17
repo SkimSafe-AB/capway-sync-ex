@@ -11,7 +11,7 @@ env:
   AWS_REGION: eu-north-1 # set this to your preferred AWS region, e.g. us-west-1
   ECR_REPOSITORY: country-bundle-capway-sync # set this to your Amazon ECR repository name
   RUNNER_AWS_REGION: us-east-2 # Set this to the region the runner should be run in.
-  ARM_EC2_IMAGE_ID: ami-0778eace43412c477
+  ARM_EC2_IMAGE_ID: ami-0efd6d20b0fa3d97e
 jobs:
   start-runner-build:
     name: Start self-hosted EC2 runner
