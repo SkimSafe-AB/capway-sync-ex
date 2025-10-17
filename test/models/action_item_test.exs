@@ -7,6 +7,7 @@ defmodule CapwaySync.Models.ActionItemTest do
       action_item = %ActionItem{
         id: "test-uuid-123",
         trinity_id: "123456789012",
+        personal_number: "199001012345",
         created_at: "2024-01-15",
         timestamp: 1705312200,  # 2024-01-15 10:30:00 UTC
         action: "suspend"
@@ -14,6 +15,7 @@ defmodule CapwaySync.Models.ActionItemTest do
 
       assert action_item.id == "test-uuid-123"
       assert action_item.trinity_id == "123456789012"
+      assert action_item.personal_number == "199001012345"
       assert action_item.created_at == "2024-01-15"
       assert action_item.timestamp == 1705312200
       assert action_item.action == "suspend"
@@ -24,6 +26,7 @@ defmodule CapwaySync.Models.ActionItemTest do
 
       assert action_item.id == nil
       assert action_item.trinity_id == nil
+      assert action_item.personal_number == nil
       assert action_item.created_at == nil
       assert action_item.timestamp == 0
       assert action_item.action == nil
@@ -33,9 +36,15 @@ defmodule CapwaySync.Models.ActionItemTest do
   describe "create_action_items_from_report/1" do
     test "creates action items from GeneralSyncReport with all action types" do
       report = %GeneralSyncReport{
-        missing_in_capway: ["123456789012", "234567890123"],
-        suspend_accounts: ["345678901234"],
-        unsuspend_accounts: ["456789012345", "567890123456"],
+        missing_in_capway: [
+          %{id: "123456789012", personal_number: "199001012345"},
+          %{id: "234567890123", personal_number: "199002023456"}
+        ],
+        suspend_accounts: [%{id: "345678901234", personal_number: "199003034567"}],
+        unsuspend_accounts: [
+          %{id: "456789012345", personal_number: "199004045678"},
+          %{id: "567890123456", personal_number: "199005056789"}
+        ],
         created_at: ~U[2024-01-15 10:30:00Z]
       }
 
@@ -47,16 +56,20 @@ defmodule CapwaySync.Models.ActionItemTest do
       sync_items = Enum.filter(action_items, &(&1.action == "sync_to_capway"))
       assert length(sync_items) == 2
       assert Enum.map(sync_items, &(&1.trinity_id)) |> Enum.sort() == ["123456789012", "234567890123"]
+      assert Enum.map(sync_items, &(&1.personal_number)) |> Enum.sort() == ["199001012345", "199002023456"]
 
       # Check suspend items
       suspend_items = Enum.filter(action_items, &(&1.action == "suspend"))
       assert length(suspend_items) == 1
-      assert List.first(suspend_items).trinity_id == "345678901234"
+      suspend_item = List.first(suspend_items)
+      assert suspend_item.trinity_id == "345678901234"
+      assert suspend_item.personal_number == "199003034567"
 
       # Check unsuspend items
       unsuspend_items = Enum.filter(action_items, &(&1.action == "unsuspend"))
       assert length(unsuspend_items) == 2
       assert Enum.map(unsuspend_items, &(&1.trinity_id)) |> Enum.sort() == ["456789012345", "567890123456"]
+      assert Enum.map(unsuspend_items, &(&1.personal_number)) |> Enum.sort() == ["199004045678", "199005056789"]
 
       # Verify all items have same timestamp value
       timestamps = Enum.map(action_items, &(&1.timestamp)) |> Enum.uniq()
@@ -108,9 +121,9 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert String.length(item.created_at) > 0
     end
 
-    test "converts non-string trinity_ids to strings" do
+    test "converts non-string trinity_ids to strings and handles backward compatibility" do
       report = %GeneralSyncReport{
-        missing_in_capway: [123456789012],  # Integer trinity_id
+        missing_in_capway: [123456789012],  # Integer trinity_id - old format
         suspend_accounts: [],
         unsuspend_accounts: [],
         created_at: ~U[2024-01-15 10:30:00Z]
@@ -121,7 +134,32 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert length(action_items) == 1
       item = List.first(action_items)
       assert item.trinity_id == "123456789012"
+      assert item.personal_number == nil  # No personal number in old format
       assert is_binary(item.trinity_id)
+    end
+
+    test "handles new format with missing personal numbers" do
+      report = %GeneralSyncReport{
+        missing_in_capway: [
+          %{id: "123456789012", personal_number: "199001012345"},
+          %{id: "234567890123", personal_number: nil}  # Explicit nil personal number
+        ],
+        suspend_accounts: [],
+        unsuspend_accounts: [],
+        created_at: ~U[2024-01-15 10:30:00Z]
+      }
+
+      action_items = ActionItem.create_action_items_from_report(report)
+
+      assert length(action_items) == 2
+
+      items_by_id = Enum.group_by(action_items, &(&1.trinity_id))
+
+      item1 = List.first(items_by_id["123456789012"])
+      assert item1.personal_number == "199001012345"
+
+      item2 = List.first(items_by_id["234567890123"])
+      assert item2.personal_number == nil
     end
   end
 
@@ -203,6 +241,7 @@ defmodule CapwaySync.Models.ActionItemTest do
       action_item = %ActionItem{
         id: "test-uuid-123",
         trinity_id: "123456789012",
+        personal_number: "199001012345",
         created_at: "2024-01-15",
         timestamp: 1705312200,
         action: "suspend"
@@ -213,6 +252,7 @@ defmodule CapwaySync.Models.ActionItemTest do
 
       assert decoded["id"] == "test-uuid-123"
       assert decoded["trinity_id"] == "123456789012"
+      assert decoded["personal_number"] == "199001012345"
       assert decoded["created_at"] == "2024-01-15"
       assert decoded["timestamp"] == 1705312200
       assert decoded["action"] == "suspend"

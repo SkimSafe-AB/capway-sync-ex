@@ -35,6 +35,7 @@ defmodule CapwaySync.Models.ActionItem do
   @type t :: %__MODULE__{
           id: String.t() | nil,
           trinity_id: String.t(),
+          personal_number: String.t() | nil,
           created_at: String.t(),
           timestamp: non_neg_integer(),
           action: String.t(),
@@ -45,6 +46,7 @@ defmodule CapwaySync.Models.ActionItem do
   @derive ExAws.Dynamo.Encodable
   defstruct id: nil,
             trinity_id: nil,
+            personal_number: nil,
             created_at: nil,
             timestamp: 0,
             action: nil,
@@ -66,16 +68,16 @@ defmodule CapwaySync.Models.ActionItem do
   ## Examples
 
       iex> report = %GeneralSyncReport{
-      ...>   missing_in_capway: ["123456789012"],
-      ...>   suspend_accounts: ["234567890123"],
-      ...>   unsuspend_accounts: ["345678901234"],
+      ...>   missing_in_capway: [%{id: "123456789012", personal_number: "199001012345"}],
+      ...>   suspend_accounts: [%{id: "234567890123", personal_number: "199002023456"}],
+      ...>   unsuspend_accounts: [%{id: "345678901234", personal_number: "199003034567"}],
       ...>   created_at: ~U[2024-01-15 10:30:00Z]
       ...> }
       iex> items = ActionItem.create_action_items_from_report(report)
       iex> length(items)
       3
       iex> Enum.map(items, & &1.action) |> Enum.sort()
-      ["cancel_capway_contract", "suspend", "sync_to_capway", "unsuspend"]
+      ["suspend", "sync_to_capway", "unsuspend"]
   """
   def create_action_items_from_report(%CapwaySync.Models.GeneralSyncReport{} = report) do
     # Use report's created_at or current time
@@ -151,23 +153,32 @@ defmodule CapwaySync.Models.ActionItem do
   # Private helper functions
 
   defp create_action_items(
-         trinity_ids,
+         subscriber_data,
          action,
          created_at_formatted,
          timestamp_unix,
          status \\ :pending
        )
-       when is_list(trinity_ids) do
-    Enum.map(trinity_ids, fn trinity_id ->
+       when is_list(subscriber_data) do
+    Enum.map(subscriber_data, fn subscriber ->
+      # Handle both old format (simple IDs) and new format (maps with id and personal_number)
+      {trinity_id, personal_number} = case subscriber do
+        %{id: id, personal_number: pn} -> {id, pn}
+        id when is_binary(id) or is_integer(id) -> {id, nil}
+        _ -> {nil, nil}
+      end
+
       %__MODULE__{
         id: UUID.uuid4(),
         trinity_id: to_string(trinity_id),
+        personal_number: personal_number,
         created_at: created_at_formatted,
         timestamp: timestamp_unix,
         action: action,
         status: status
       }
     end)
+    |> Enum.reject(fn item -> is_nil(item.trinity_id) or item.trinity_id == "nil" end)
   end
 
   defp format_date_time(%DateTime{} = datetime) do

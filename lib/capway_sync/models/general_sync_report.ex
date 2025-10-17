@@ -55,12 +55,12 @@ defmodule CapwaySync.Models.GeneralSyncReport do
           existing_in_both_count: non_neg_integer(),
 
           # Action results (actionable)
-          suspend_accounts: list(),
+          suspend_accounts: list(%{id: String.t(), personal_number: String.t() | nil}),
           suspend_count: non_neg_integer(),
           suspend_threshold: non_neg_integer(),
-          unsuspend_accounts: list(),
+          unsuspend_accounts: list(%{id: String.t(), personal_number: String.t() | nil}),
           unsuspend_count: non_neg_integer(),
-          cancel_capway_contracts: list(),
+          cancel_capway_contracts: list(%{id: String.t(), personal_number: String.t() | nil}),
           cancel_capway_count: non_neg_integer(),
 
 
@@ -282,17 +282,30 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     end
   end
 
-  # Helper function to extract subscriber IDs from a list of subscriber objects
-  # Prefers trinity_id, falls back to capway_id, then to other identifying fields
+  # Helper function to extract subscriber IDs and personal numbers from a list of subscriber objects
+  # Returns list of maps with id and personal_number fields
   defp extract_subscriber_ids(subscribers) when is_list(subscribers) do
     subscribers
     |> Enum.map(fn subscriber ->
-      case subscriber do
+      # Extract primary ID (prefers trinity_id, falls back to capway_id, etc.)
+      id = case subscriber do
         %{trinity_id: trinity_id} when not is_nil(trinity_id) -> trinity_id
         %{capway_id: capway_id} when not is_nil(capway_id) -> capway_id
         %{customer_ref: customer_ref} when not is_nil(customer_ref) -> customer_ref
         %{id_number: id_number} when not is_nil(id_number) -> id_number
         _ -> nil
+      end
+
+      # Extract personal number from various possible fields
+      personal_number = case subscriber do
+        %{personal_number: pn} when not is_nil(pn) and pn != "" -> pn
+        %{id_number: id_num} when not is_nil(id_num) and id_num != "" -> id_num
+        _ -> nil
+      end
+
+      case id do
+        nil -> nil
+        _ -> %{id: id, personal_number: personal_number}
       end
     end)
     |> Enum.reject(&is_nil/1)
