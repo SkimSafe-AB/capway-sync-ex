@@ -11,6 +11,7 @@ env:
   AWS_REGION: eu-north-1 # set this to your preferred AWS region, e.g. us-west-1
   ECR_REPOSITORY: country-bundle-capway-sync # set this to your Amazon ECR repository name
   RUNNER_AWS_REGION: us-east-2 # Set this to the region the runner should be run in.
+  ARM_EC2_IMAGE_ID: ami-0778eace43412c477
 jobs:
   start-runner-build:
     name: Start self-hosted EC2 runner
@@ -27,7 +28,7 @@ jobs:
           aws-region: ${{ env.RUNNER_AWS_REGION }}
       - name: Start EC2 runner
         id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2.4.1
+        uses: machulav/ec2-github-runner@v2.4.3
         with:
           mode: start
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
@@ -39,6 +40,15 @@ jobs:
             [
               {"Key": "Name", "Value": "ec2-github-runner"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"}
+            ]
+          startup-quiet-period-seconds: 5
+          startup-retry-interval-seconds: 2
+          availability-zones-config:
+            > # optional, requires additional permissions
+            [
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-afcc80e3", "securityGroupId": "sg-17247164"},
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-48c62235", "securityGroupId": "sg-17247164"},
+              {"imageId": "${{ env.ARM_EC2_IMAGE_ID }}", "subnetId": "subnet-14c36d7f", "securityGroupId": "sg-17247164"}
             ]
   start-test-build:
     name: Start self-hosted EC2 runner
