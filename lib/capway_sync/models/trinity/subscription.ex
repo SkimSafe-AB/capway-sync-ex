@@ -10,7 +10,8 @@ defmodule CapwaySync.Models.Trinity.Subscription do
     pending: "pending",
     expired: "expired",
     inactive: "inactive",
-    suspended: "suspended"
+    suspended: "suspended",
+    paused: "paused"
   ]
 
   @type t() :: %__MODULE__{}
