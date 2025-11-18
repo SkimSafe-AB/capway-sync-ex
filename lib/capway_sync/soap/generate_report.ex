@@ -81,10 +81,18 @@ defmodule CapwaySync.Soap.GenerateReport do
     end
   end
 
+  @doc """
+  Pings the SOAP service to check connectivity.
+  """
+  @spec ping() :: {:ok, String.t()} | {:error, any()}
   def ping() do
     call_soap_operation("Ping", %{}, true)
   end
 
+  @doc """
+  Lists produced reports from the SOAP service.
+  """
+  @spec list_produced_reports() :: {:ok, String.t()} | {:error, any()}
   def list_produced_reports() do
     call_soap_operation("ListProducedReports", %{}, true)
   end
