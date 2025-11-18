@@ -71,8 +71,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
   def find_missing_items(trinity_list, capway_list, trinity_key, capway_key)
       when is_list(trinity_list) and is_list(capway_list) do
     # Extract key values for efficient comparison
-    IO.inspect("Trinity list length: #{length(trinity_list)}")
-    IO.inspect("Trinity sample: #{Enum.take(trinity_list, 3) |> inspect()}")
     trinity_keys = extract_key_values(trinity_list, trinity_key) |> MapSet.new()
     capway_keys = extract_key_values(capway_list, capway_key) |> MapSet.new()
 
@@ -163,9 +161,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
   Extracts key values from a list of maps, handling nil values gracefully.
   """
   def extract_key_values(items, key) when is_list(items) do
-    IO.inspect("Extracting key values for key: #{key}")
-    IO.inspect("Total items: #{length(items)}")
-
     items
     |> Enum.map(&Map.get(&1, key))
     # Remove nil values for cleaner comparison
