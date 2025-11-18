@@ -13,6 +13,8 @@ services:
       MIX_ENV: test
       SYNC_REPORTS_TABLE: asd
       ACTION_ITEMS_TABLE: asd
+      TRINITY_DB_VAULT_KEY: PFbK4O5r0GpDMgKQ0tp41PVvBqnxOti+xXw2X3KG4wM=
+      # TRIONITY_DB_VAULT_KEY_RETIRED: ""
     volumes:
       - .:/app
       # - deps:/app/deps
