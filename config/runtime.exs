@@ -1,18 +1,6 @@
 import Config
 require Logger
 
-if System.get_env("TRINITY_DB_VAULT_KEY") do
-  config :capway_sync, Trinity.Db.Vault,
-    ciphers: [
-      default:
-        {Cloak.Ciphers.AES.GCM,
-         tag: "AES.GCM.V1", key: Base.decode64!(System.get_env("TRINITY_DB_VAULT_KEY"))},
-      retired:
-        {Cloak.Ciphers.AES.GCM,
-         tag: "AES.GCM.V1", key: Base.decode64!(System.get_env("TRINITY_DB_VAULT_KEY_RETIRED"))}
-    ]
-end
-
 config :capway_sync, Trinity.Db.Hashed.HMAC,
   algorithm: :sha512,
   secret: System.get_env("TRINITY_HASHED_HMAC")

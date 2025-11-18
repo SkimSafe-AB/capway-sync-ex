@@ -14,7 +14,7 @@ services:
       SYNC_REPORTS_TABLE: asd
       ACTION_ITEMS_TABLE: asd
       TRINITY_DB_VAULT_KEY: PFbK4O5r0GpDMgKQ0tp41PVvBqnxOti+xXw2X3KG4wM=
-      # TRIONITY_DB_VAULT_KEY_RETIRED: ""
+      # TRINITY_DB_VAULT_KEY_RETIRED: PFbK4O5s0GpDMgKQ0tp41PVvBqnxOti+xXw2X3KG4wM=
     volumes:
       - .:/app
       # - deps:/app/deps
@@ -25,7 +25,7 @@ services:
       - |
         mix local.hex --force
         mix local.rebar --force
-        cp -r elixir_cache/deps_cache /app/deps
-        cp -r elixir_cache/_build /app/_build
+        # cp -r elixir_cache/deps_cache /app/deps
+        # cp -r elixir_cache/_build /app/_build
         mix deps.get
         mix test

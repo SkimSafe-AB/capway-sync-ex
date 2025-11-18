@@ -7,11 +7,11 @@ defmodule CapwaySync.Vault.Trinity.AES.GCM do
     default_cipher = [
       default: {
         Cloak.Ciphers.AES.GCM,
-        tag: aes_tag(), key: decode_env!("TRINITY_DB_VAULT_KEY"), iv_length: iv_length()
+        tag: aes_tag(), key: decode_env!("TRINITY_DB_VAULT_KEY", :init), iv_length: iv_length()
       }
     ]
 
-    retired_key = decode_env!("TRINITY_DB_VAULT_KEY_RETIRED")
+    retired_key = decode_env!("TRINITY_DB_VAULT_KEY_RETIRED", :init)
 
     ciphers =
       if not is_nil(retired_key) and retired_key != "" do
@@ -30,9 +30,14 @@ defmodule CapwaySync.Vault.Trinity.AES.GCM do
     {:ok, Keyword.put(config, :ciphers, ciphers)}
   end
 
+  defp decode_env!(var, :init) do
+    System.get_env(var) |> decode_env!()
+  end
+
+  defp decode_env!(nil), do: nil
+
   defp decode_env!(var) do
     var
-    |> System.get_env()
     |> Base.decode64!()
   end
 
