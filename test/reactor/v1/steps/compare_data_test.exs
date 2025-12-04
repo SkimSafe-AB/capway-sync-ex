@@ -79,7 +79,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       arguments = %{trinity_subscribers: []}
 
       assert {:error, "Missing required argument: capway_subscribers"} =
-        CompareData.run(arguments, %{})
+               CompareData.run(arguments, %{})
     end
 
     test "returns error for non-list arguments" do
@@ -89,7 +89,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       }
 
       assert {:error, "Argument trinity_subscribers must be a list"} =
-        CompareData.run(arguments, %{})
+               CompareData.run(arguments, %{})
     end
 
     test "correctly identifies existing_in_both accounts" do
@@ -160,7 +160,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
     end
 
     test "handles identical lists" do
-      list = [%{id: "123", name: "Same"}]
+      list = [%{id: "123", name: "Same", active: true}]
 
       result = CompareData.find_missing_items(list, list, :id, :id)
 
@@ -174,7 +174,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       trinity_list = [
         %{id: "100", name: "Valid", payment_method: "capway"},
         %{id: nil, name: "Invalid1", payment_method: "capway"},
-        %{name: "Invalid2", payment_method: "capway"}  # missing key
+        # missing key
+        %{name: "Invalid2", payment_method: "capway"}
       ]
 
       capway_list = [
@@ -185,8 +186,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       result = CompareData.find_missing_items(trinity_list, capway_list, :id, :customer_ref)
 
       # Only valid entries should be considered
-      assert result.missing_capway_count == 1  # "100" missing in capway
-      assert result.missing_trinity_count == 1  # "200" missing in trinity
+      # "100" missing in capway
+      assert result.missing_capway_count == 1
+      # "200" missing in trinity
+      assert result.missing_trinity_count == 1
     end
   end
 
@@ -205,12 +208,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
     test "handles missing keys gracefully" do
       items = [
         %{id: 1, name: "First"},
-        %{name: "Second"},  # missing :id key
+        # missing :id key
+        %{name: "Second"},
         %{id: 3, other: "Third"}
       ]
 
       result = CompareData.extract_key_values(items, :id)
-      assert result == [1, 3]  # nil values are filtered out
+      # nil values are filtered out
+      assert result == [1, 3]
     end
 
     test "handles nil values" do
@@ -221,7 +226,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       ]
 
       result = CompareData.extract_key_values(items, :id)
-      assert result == [1, 2]  # nil values are filtered out
+      # nil values are filtered out
+      assert result == [1, 2]
     end
 
     test "handles empty list" do
@@ -259,7 +265,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       items = [
         %{id: "a", value: 1},
         %{id: nil, value: 2},
-        %{value: 3}  # missing key
+        # missing key
+        %{value: 3}
       ]
 
       keys_set = MapSet.new(["a", nil])
@@ -416,6 +423,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
         %{user: %{id: 1, name: "Alice"}},
         %{user: %{id: 2, name: "Bob"}}
       ]
+
       trinity_list = [
         %{subscriber: %{id: 1, name: "Alice"}},
         %{subscriber: %{id: 2, name: "Bob"}}
@@ -436,6 +444,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
         %{customer_ref: "49866", name: "Riccardo Robotti", id_number: "194902289471"},
         %{customer_ref: "46881", name: "Anna Helena Hansson", id_number: "193812207169"}
       ]
+
       trinity_list = [
         %{id: "49866", full_name: "Riccardo Robotti", personal_id: "194902289471"},
         %{id: "46881", full_name: "Anna Helena Hansson", personal_id: "193812207169"}
@@ -456,9 +465,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
         %{customer_ref: "49866", name: "Riccardo Robotti"},
         %{customer_ref: "46881", name: "Anna Helena Hansson"}
       ]
+
       trinity_list = [
         %{id: "49866", full_name: "Riccardo Robotti"},
-        %{id: "46999", full_name: "Anna Helena Hansson"}  # Different ID
+        # Different ID
+        %{id: "46999", full_name: "Anna Helena Hansson"}
       ]
 
       params = %{
