@@ -97,14 +97,24 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     Logger.debug("   Intersection size: #{MapSet.size(existing_keys)}")
     Logger.debug("   Sample intersection keys: #{existing_keys |> Enum.take(5) |> inspect()}")
 
+    # Create a map of Capway subscribers for efficient status lookup
+    capway_map = Map.new(capway_list, fn sub -> {Map.get(sub, capway_key), sub} end)
+
     # Find Trinity subscribers with payment_method != "capway" that exist in Capway
-    # These need contract cancellation in Capway
+    # and have an "active" status in Capway.
+    # These need contract cancellation in Capway.
     cancel_capway_keys =
       trinity_list
       |> Enum.filter(fn subscriber ->
         key_value = Map.get(subscriber, trinity_key)
         payment_method = Map.get(subscriber, :payment_method)
-        key_value && payment_method != "capway" && MapSet.member?(capway_keys, key_value)
+
+        if key_value && payment_method != "capway" && MapSet.member?(capway_keys, key_value) do
+          capway_subscriber = Map.get(capway_map, key_value)
+          capway_subscriber && capway_subscriber.active == true
+        else
+          false
+        end
       end)
       |> extract_key_values(trinity_key)
       |> MapSet.new()

@@ -11,24 +11,28 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
           id_number: "199001012345",
           trinity_id: 123,
           payment_method: "capway",
+          active: true,
           origin: :trinity
         },
         %Canonical{
           id_number: "199002023456",
           trinity_id: 124,
           payment_method: "bank", # Changed from capway
+          active: true,
           origin: :trinity
         },
         %Canonical{
           id_number: "199003034567",
           trinity_id: 125,
           payment_method: "card", # Changed from capway
+          active: true,
           origin: :trinity
         },
         %Canonical{
           id_number: "199004045678",
           trinity_id: 126,
           payment_method: "bank", # Was never capway
+          active: true,
           origin: :trinity
         }
       ]
@@ -38,16 +42,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
         %Canonical{
           id_number: "199001012345",
           capway_id: "cap_123",
+          active: true,
           origin: :capway
         },
         %Canonical{
           id_number: "199002023456",
           capway_id: "cap_124",
+          active: true,
           origin: :capway
         },
         %Canonical{
           id_number: "199003034567",
           capway_id: "cap_125",
+          active: true,
           origin: :capway
         }
       ]

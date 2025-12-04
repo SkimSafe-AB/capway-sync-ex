@@ -212,6 +212,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
     %{
       # Primary keys
       "id" => report_id,
+      "date" => format_date_for_dynamodb(report.created_at),
       "created_at" => format_datetime_for_dynamodb(report.created_at),
       "sync" => %{
         "missing_in_capway" => report.missing_in_capway,
@@ -240,7 +241,6 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
         }
       },
 
-
       # Analysis metadata (stored as separate fields for DynamoDB expandability)
       "stats" => %{
         # Data comparison results
@@ -256,8 +256,10 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
         "unsuspend_collection_summary" => report.analysis_metadata.unsuspend_collection_summary,
         "unsuspend_unpaid_invoices_summary" =>
           report.analysis_metadata.unsuspend_unpaid_invoices_summary,
-        "capway_customers_with_unpaid_invoices" => report.analysis_metadata.capway.customers_with_unpaid_invoices,
-        "capway_customers_with_collections" => report.analysis_metadata.capway.customers_with_collections
+        "capway_customers_with_unpaid_invoices" =>
+          report.analysis_metadata.capway.customers_with_unpaid_invoices,
+        "capway_customers_with_collections" =>
+          report.analysis_metadata.capway.customers_with_collections
       }
     }
   end
@@ -308,7 +310,6 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       suspend_threshold: Map.get(item, "suspend_threshold", 2),
       unsuspend_count: Map.get(item, "unsuspend_count", 0),
 
-
       # Analysis metadata (nested structure)
       analysis_metadata: analysis_metadata,
 
@@ -323,6 +324,12 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
 
   defp format_datetime_for_dynamodb(%DateTime{} = datetime) do
     DateTime.to_iso8601(datetime)
+  end
+
+  defp format_date_for_dynamodb(%DateTime{} = datetime) do
+    datetime
+    |> DateTime.to_date()
+    |> Date.to_iso8601()
   end
 
   defp format_datetime_for_dynamodb(datetime) when is_binary(datetime) do
