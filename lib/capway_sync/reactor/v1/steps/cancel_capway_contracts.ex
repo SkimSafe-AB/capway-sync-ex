@@ -35,10 +35,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContracts do
 
       Logger.info("Analyzed #{total_analyzed} subscribers for contract cancellation")
 
+      # Extract active status for debug purposes
+      active_statuses = Enum.map(cancel_contracts, fn subscriber ->
+        %{
+          id_number: Map.get(subscriber, :id_number),
+          active: Map.get(subscriber, :capway_active_status)
+        }
+      end)
+
       result = %{
         cancel_capway_contracts: cancel_contracts,
         cancel_capway_count: total_analyzed,
-        total_analyzed: total_analyzed
+        total_analyzed: total_analyzed,
+        debug_active_statuses: active_statuses
       }
 
       if total_analyzed > 0 do
