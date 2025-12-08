@@ -14,6 +14,15 @@ defmodule CapwaySync.Models.Trinity.Subscription do
     paused: "paused"
   ]
 
+  @subscription_types [
+    regular: "regular",
+    locked: "locked",
+    unlocked: "unlocked",
+    trial: "trial",
+    securio: "securio",
+    sinfrid: "sinfrid"
+  ]
+
   @type t() :: %__MODULE__{}
   @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
@@ -23,7 +32,7 @@ defmodule CapwaySync.Models.Trinity.Subscription do
     field(:requested_cancellation_date, :naive_datetime)
     field(:requested_cancellation, :boolean, default: false)
     field(:status, Ecto.Enum, values: @statuses)
-    field(:subscription_type, :string)
+    field(:subscription_type, Ecto.Enum, values: @subscription_types)
     has_many(:subscribers, CapwaySync.Models.Trinity.Subscriber)
     timestamps()
   end

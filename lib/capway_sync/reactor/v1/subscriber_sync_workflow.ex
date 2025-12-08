@@ -178,12 +178,22 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
       # Create comprehensive report struct from all workflow results
       end_time = System.monotonic_time(:millisecond)
 
+      # Merge cancel_contracts from suspend_result with cancel_capway_contracts
+      merged_cancel_result = %{
+        cancel_capway_contracts:
+          (args.cancel_result.cancel_capway_contracts || []) ++
+          (args.suspend_result.cancel_contracts || []),
+        cancel_capway_count:
+          (args.cancel_result.cancel_capway_count || 0) +
+          (args.suspend_result.cancel_contracts_count || 0)
+      }
+
       report =
         GeneralSyncReport.from_workflow_results(
           args.comparison_result,
           args.suspend_result,
           args.unsuspend_result,
-          args.cancel_result,
+          merged_cancel_result,
           args.capway_data.raw,
           args.start_time,
           end_time

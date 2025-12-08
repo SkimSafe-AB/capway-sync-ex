@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     -   `cancel_contracts`: Accounts without `subscription_type == "locked"` (to be cancelled instead of suspended)
 -   Trinity Subscription model now includes `subscription_type` field to support differentiation between locked and unlocked subscriptions.
 -   `prepare_suspend_unsuspend_data` workflow step now enriches Capway data with Trinity `subscription_type` and `status` fields to enable proper filtering in suspend/unsuspend steps.
+-   `cancel_capway_contracts` list now merges contracts from both sources:
+    -   Contracts needing cancellation due to payment method changes (from `CancelCapwayContracts` step)
+    -   Non-locked subscriptions with high collection that should be cancelled instead of suspended (from `SuspendAccounts` step)
 
 ## [0.1.0] - 2025-10-06
 
