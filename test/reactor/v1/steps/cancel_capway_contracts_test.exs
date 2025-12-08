@@ -6,18 +6,21 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContractsTest do
   describe "run/3" do
     test "identifies contracts that need cancellation" do
       # Subscribers with payment method changed from "capway" to something else
+      # These should include the capway_active_status field from CompareData enrichment
       cancel_contracts = [
         %Canonical{
           id_number: "199001012345",
           trinity_id: 123,
           payment_method: "bank",
-          origin: :trinity
+          origin: :trinity,
+          capway_active_status: true
         },
         %Canonical{
           id_number: "199002023456",
           trinity_id: 124,
           payment_method: "card",
-          origin: :trinity
+          origin: :trinity,
+          capway_active_status: true
         }
       ]
 
@@ -37,6 +40,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContractsTest do
       contract_ids = Enum.map(result.cancel_capway_contracts, & &1.id_number)
       assert "199001012345" in contract_ids
       assert "199002023456" in contract_ids
+
+      # Verify debug_active_statuses is present and correct
+      assert Map.has_key?(result, :debug_active_statuses)
+      assert length(result.debug_active_statuses) == 2
+
+      # Verify debug statuses contain correct information
+      debug_ids = Enum.map(result.debug_active_statuses, & &1.id_number)
+      assert "199001012345" in debug_ids
+      assert "199002023456" in debug_ids
+
+      # Verify all active statuses are true
+      assert Enum.all?(result.debug_active_statuses, fn status -> status.active == true end)
     end
 
     test "handles no contracts needing cancellation" do
