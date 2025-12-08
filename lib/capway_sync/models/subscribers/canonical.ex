@@ -18,6 +18,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   - `end_date`: Subscription/contract end date
   - `origin`: Source system (:trinity or :capway)
   - `status`: Original subscription status from Trinity (nil for Capway data)
+  - `subscription_type`: Subscription type from Trinity (e.g., "locked", nil for Capway data)
   - `capway_active_status`: Capway active status (enriched during comparison, nil if not enriched)
 
   ## Usage
@@ -38,7 +39,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           active: boolean(),
           end_date: NaiveDateTime.t() | nil,
           origin: :trinity | :capway,
-          status: atom() | nil
+          status: atom() | nil,
+          subscription_type: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -51,7 +53,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             end_date: nil,
             origin: nil,
             capway_active_status: nil,
-            status: nil
+            status: nil,
+            subscription_type: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -76,7 +79,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       active: subscription.status == :active,
       end_date: subscription.end_date,
       origin: :trinity,
-      status: subscription.status
+      status: subscription.status,
+      subscription_type: subscription.subscription_type
     }
   end
 

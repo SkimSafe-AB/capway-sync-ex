@@ -23,6 +23,7 @@ defmodule CapwaySync.Models.Trinity.Subscription do
     field(:requested_cancellation_date, :naive_datetime)
     field(:requested_cancellation, :boolean, default: false)
     field(:status, Ecto.Enum, values: @statuses)
+    field(:subscription_type, :string)
     has_many(:subscribers, CapwaySync.Models.Trinity.Subscriber)
     timestamps()
   end
@@ -34,7 +35,8 @@ defmodule CapwaySync.Models.Trinity.Subscription do
       :payment_method,
       :requested_cancellation_date,
       :requested_cancellation,
-      :status
+      :status,
+      :subscription_type
     ])
     |> validate_required([:payment_method, :status])
   end

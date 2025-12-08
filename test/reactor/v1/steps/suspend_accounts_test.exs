@@ -3,13 +3,13 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
   alias CapwaySync.Reactor.V1.Steps.SuspendAccounts
 
   describe "run/3 - main Reactor step interface" do
-    test "identifies accounts for suspending based on collection threshold" do
+    test "identifies accounts for suspending based on collection threshold and subscription_type" do
       comparison_result = %{
         existing_in_both: [
-          %{customer_ref: "100", name: "Alice", collection: "1"},
-          %{customer_ref: "200", name: "Bob", collection: "2"},
-          %{customer_ref: "300", name: "Charlie", collection: "3"},
-          %{customer_ref: "400", name: "David", collection: "0"}
+          %{customer_ref: "100", name: "Alice", collection: "1", subscription_type: nil},
+          %{customer_ref: "200", name: "Bob", collection: "2", subscription_type: "locked"},
+          %{customer_ref: "300", name: "Charlie", collection: "3", subscription_type: nil},
+          %{customer_ref: "400", name: "David", collection: "0", subscription_type: nil}
         ]
       }
 
@@ -17,14 +17,21 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
 
       assert {:ok, result} = SuspendAccounts.run(arguments, %{})
 
-      # Bob (collection: 2) and Charlie (collection: 3) should be suspended
-      assert result.suspend_count == 2
+      # Bob (locked, collection: 2) should be suspended
+      assert result.suspend_count == 1
+      # Charlie (not locked, collection: 3) should be in cancel_contracts
+      assert result.cancel_contracts_count == 1
       assert result.total_analyzed == 4
       assert result.suspend_threshold == 2
 
       suspend_refs = Enum.map(result.suspend_accounts, & &1.customer_ref)
-      assert "200" in suspend_refs
-      assert "300" in suspend_refs
+      assert "200" in suspend_refs  # Bob - locked
+      refute "300" in suspend_refs  # Charlie - not locked
+
+      cancel_refs = Enum.map(result.cancel_contracts, & &1.customer_ref)
+      assert "300" in cancel_refs  # Charlie - not locked
+      refute "200" in cancel_refs  # Bob - locked
+
       refute "100" in suspend_refs
       refute "400" in suspend_refs
 
@@ -38,8 +45,8 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
     test "supports custom suspend threshold" do
       comparison_result = %{
         existing_in_both: [
-          %{customer_ref: "100", collection: "2"},
-          %{customer_ref: "200", collection: "3"}
+          %{customer_ref: "100", collection: "2", subscription_type: nil},
+          %{customer_ref: "200", collection: "3", subscription_type: "locked"}
         ]
       }
 
@@ -48,13 +55,14 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
 
       assert {:ok, result} = SuspendAccounts.run(arguments, %{}, options)
 
-      # Only collection >= 3 should be suspended
+      # Only collection >= 3 and locked should be suspended
       assert result.suspend_count == 1
+      assert result.cancel_contracts_count == 0
       assert result.suspend_threshold == 3
 
       suspend_refs = Enum.map(result.suspend_accounts, & &1.customer_ref)
-      assert "200" in suspend_refs
-      refute "100" in suspend_refs
+      assert "200" in suspend_refs  # locked
+      refute "100" in suspend_refs  # below threshold
     end
 
     test "handles empty existing_in_both list" do
@@ -85,10 +93,10 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
     test "excludes accounts with pending_cancel status from suspension" do
       comparison_result = %{
         existing_in_both: [
-          %{customer_ref: "100", name: "Alice", collection: "3", status: :active},
-          %{customer_ref: "200", name: "Bob", collection: "4", status: :pending_cancel},
-          %{customer_ref: "300", name: "Charlie", collection: "5", status: :cancelled},
-          %{customer_ref: "400", name: "David", collection: "2", status: nil}
+          %{customer_ref: "100", name: "Alice", collection: "3", status: :active, subscription_type: "locked"},
+          %{customer_ref: "200", name: "Bob", collection: "4", status: :pending_cancel, subscription_type: "locked"},
+          %{customer_ref: "300", name: "Charlie", collection: "5", status: :cancelled, subscription_type: nil},
+          %{customer_ref: "400", name: "David", collection: "2", status: nil, subscription_type: "locked"}
         ]
       }
 
@@ -96,57 +104,71 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
 
       assert {:ok, result} = SuspendAccounts.run(arguments, %{})
 
-      # Only Alice (active, collection: 3), Charlie (cancelled, collection: 5),
-      # and David (nil status, collection: 2) should be suspended
-      # Bob (pending_cancel) should be excluded
-      assert result.suspend_count == 3
+      # Alice (locked, active, collection: 3) and David (locked, nil status, collection: 2) should be suspended
+      # Charlie (not locked, cancelled, collection: 5) should be in cancel_contracts
+      # Bob (pending_cancel) should be excluded entirely
+      assert result.suspend_count == 2
+      assert result.cancel_contracts_count == 1
       assert result.total_analyzed == 4
 
       suspend_refs = Enum.map(result.suspend_accounts, & &1.customer_ref)
-      assert "100" in suspend_refs  # Alice - active status
-      assert "300" in suspend_refs  # Charlie - cancelled status
-      assert "400" in suspend_refs  # David - nil status
+      assert "100" in suspend_refs  # Alice - locked, active status
+      assert "400" in suspend_refs  # David - locked, nil status
       refute "200" in suspend_refs  # Bob - pending_cancel should be excluded
+
+      cancel_refs = Enum.map(result.cancel_contracts, & &1.customer_ref)
+      assert "300" in cancel_refs  # Charlie - not locked
+      refute "200" in cancel_refs  # Bob - pending_cancel should be excluded
     end
   end
 
   describe "analyze_for_suspend/2" do
-    test "analyzes accounts and returns structured result" do
+    test "analyzes accounts and returns structured result with subscription_type separation" do
       existing_accounts = [
-        %{customer_ref: "100", collection: "1"},
-        %{customer_ref: "200", collection: "2"},
-        %{customer_ref: "300", collection: "4"}
+        %{customer_ref: "100", collection: "1", subscription_type: nil},
+        %{customer_ref: "200", collection: "2", subscription_type: "locked"},
+        %{customer_ref: "300", collection: "4", subscription_type: nil}
       ]
 
       result = SuspendAccounts.analyze_for_suspend(existing_accounts, 2)
 
-      assert result.suspend_count == 2
+      # Only locked account should be in suspend_accounts
+      assert result.suspend_count == 1
+      # Non-locked account should be in cancel_contracts
+      assert result.cancel_contracts_count == 1
       assert result.total_analyzed == 3
       assert result.suspend_threshold == 2
 
       suspend_refs = Enum.map(result.suspend_accounts, & &1.customer_ref)
-      assert "200" in suspend_refs
-      assert "300" in suspend_refs
+      assert "200" in suspend_refs  # locked
+
+      cancel_refs = Enum.map(result.cancel_contracts, & &1.customer_ref)
+      assert "300" in cancel_refs  # not locked
     end
   end
 
   describe "filter_suspend_candidates/2" do
-    test "filters accounts by collection threshold" do
+    test "filters accounts by collection threshold and separates locked from non-locked" do
       accounts = [
-        %{customer_ref: "100", collection: "0"},
-        %{customer_ref: "200", collection: "1"},
-        %{customer_ref: "300", collection: "2"},
-        %{customer_ref: "400", collection: "3"},
-        %{customer_ref: "500", collection: "5"}
+        %{customer_ref: "100", collection: "0", subscription_type: nil},
+        %{customer_ref: "200", collection: "1", subscription_type: nil},
+        %{customer_ref: "300", collection: "2", subscription_type: "locked"},
+        %{customer_ref: "400", collection: "3", subscription_type: nil},
+        %{customer_ref: "500", collection: "5", subscription_type: "locked"}
       ]
 
-      {suspend_accounts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
+      {suspend_accounts, cancel_contracts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
 
-      assert length(suspend_accounts) == 3
+      # Only locked subscriptions go to suspend_accounts
+      assert length(suspend_accounts) == 2
       suspend_refs = Enum.map(suspend_accounts, & &1.customer_ref)
-      assert "300" in suspend_refs
-      assert "400" in suspend_refs
-      assert "500" in suspend_refs
+      assert "300" in suspend_refs  # locked
+      assert "500" in suspend_refs  # locked
+
+      # Non-locked subscriptions go to cancel_contracts
+      assert length(cancel_contracts) == 1
+      cancel_refs = Enum.map(cancel_contracts, & &1.customer_ref)
+      assert "400" in cancel_refs  # non-locked
 
       assert summary["0"] == 1
       assert summary["1"] == 1
@@ -156,18 +178,19 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
 
     test "handles nil and invalid collection values" do
       accounts = [
-        %{customer_ref: "100", collection: nil},
-        %{customer_ref: "200", collection: ""},
-        %{customer_ref: "300", collection: "invalid"},
-        %{customer_ref: "400", collection: "2.5"},
-        %{customer_ref: "500", collection: "2"}
+        %{customer_ref: "100", collection: nil, subscription_type: nil},
+        %{customer_ref: "200", collection: "", subscription_type: nil},
+        %{customer_ref: "300", collection: "invalid", subscription_type: nil},
+        %{customer_ref: "400", collection: "2.5", subscription_type: nil},
+        %{customer_ref: "500", collection: "2", subscription_type: "locked"}
       ]
 
-      {suspend_accounts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
+      {suspend_accounts, cancel_contracts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
 
-      # Only the account with collection "2" should be suspended
+      # Only the locked account with collection "2" should be in suspend_accounts
       assert length(suspend_accounts) == 1
       assert hd(suspend_accounts).customer_ref == "500"
+      assert length(cancel_contracts) == 0
 
       assert summary["nil"] == 2  # nil and ""
       assert summary["invalid"] == 2  # "invalid" and "2.5"
@@ -176,17 +199,22 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
 
     test "handles integer collection values" do
       accounts = [
-        %{customer_ref: "100", collection: 1},
-        %{customer_ref: "200", collection: 2},
-        %{customer_ref: "300", collection: 3}
+        %{customer_ref: "100", collection: 1, subscription_type: nil},
+        %{customer_ref: "200", collection: 2, subscription_type: "locked"},
+        %{customer_ref: "300", collection: 3, subscription_type: nil}
       ]
 
-      {suspend_accounts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
+      {suspend_accounts, cancel_contracts, summary} = SuspendAccounts.filter_suspend_candidates(accounts, 2)
 
-      assert length(suspend_accounts) == 2
+      # Only locked account goes to suspend_accounts
+      assert length(suspend_accounts) == 1
       suspend_refs = Enum.map(suspend_accounts, & &1.customer_ref)
       assert "200" in suspend_refs
-      assert "300" in suspend_refs
+
+      # Non-locked account goes to cancel_contracts
+      assert length(cancel_contracts) == 1
+      cancel_refs = Enum.map(cancel_contracts, & &1.customer_ref)
+      assert "300" in cancel_refs
 
       assert summary["1"] == 1
       assert summary["2"] == 1

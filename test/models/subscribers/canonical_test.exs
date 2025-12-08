@@ -11,7 +11,8 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
           id: 123,
           payment_method: "capway",
           status: :active,
-          end_date: ~N[2024-12-31 23:59:59]
+          end_date: ~N[2024-12-31 23:59:59],
+          subscription_type: "locked"
         },
         id: 456
       }
@@ -26,7 +27,8 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
                payment_method: "capway",
                active: true,
                end_date: ~N[2024-12-31 23:59:59],
-               origin: :trinity
+               origin: :trinity,
+               subscription_type: "locked"
              } = result
     end
 
@@ -37,7 +39,8 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
           id: 123,
           payment_method: "bank",
           status: :cancelled,
-          end_date: nil
+          end_date: nil,
+          subscription_type: nil
         },
         id: 456
       }
@@ -47,6 +50,7 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
       assert result.payment_method == "bank"
       assert result.active == false
       assert result.end_date == nil
+      assert result.subscription_type == nil
     end
   end
 
@@ -95,12 +99,12 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
       trinity_subscribers = [
         %{
           personal_number: "199001012345",
-          subscription: %{id: 123, payment_method: "capway", status: :active, end_date: nil},
+          subscription: %{id: 123, payment_method: "capway", status: :active, end_date: nil, subscription_type: "locked"},
           id: 456
         },
         %{
           personal_number: "199002023456",
-          subscription: %{id: 124, payment_method: "bank", status: :cancelled, end_date: nil},
+          subscription: %{id: 124, payment_method: "bank", status: :cancelled, end_date: nil, subscription_type: nil},
           id: 457
         }
       ]
@@ -114,10 +118,12 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
       first = Enum.at(result, 0)
       assert first.payment_method == "capway"
       assert first.active == true
+      assert first.subscription_type == "locked"
 
       second = Enum.at(result, 1)
       assert second.payment_method == "bank"
       assert second.active == false
+      assert second.subscription_type == nil
     end
 
     test "handles empty list" do

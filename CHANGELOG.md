@@ -12,8 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 -   Canonical subscriber model now includes `status` field to preserve original Trinity subscription status.
+-   Canonical subscriber model now includes `subscription_type` field to preserve subscription type from Trinity.
 -   `missing_in_capway` list now excludes subscribers with cancelled status from Trinity, preventing cancelled subscriptions from being incorrectly identified as missing in Capway.
 -   `suspend_accounts` list now excludes subscribers with `pending_cancel` status from suspension, avoiding suspension of accounts already in the cancellation process.
+-   `SuspendAccounts` step now separates accounts meeting suspend threshold into two lists:
+    -   `suspend_accounts`: Accounts with `subscription_type == "locked"` (to be suspended)
+    -   `cancel_contracts`: Accounts without `subscription_type == "locked"` (to be cancelled instead of suspended)
+-   Trinity Subscription model now includes `subscription_type` field to support differentiation between locked and unlocked subscriptions.
 
 ## [0.1.0] - 2025-10-06
 
