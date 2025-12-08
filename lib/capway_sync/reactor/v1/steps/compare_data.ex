@@ -13,6 +13,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
   - `missing_in_capway`: Subscribers present in Trinity but missing in Capway (to be added to Capway)
   - `missing_in_trinity`: Subscribers present in Capway but missing in Trinity (to be removed from Capway)
   - `existing_in_both`: Subscribers present in both systems
+  - `cancel_capway_contracts`: Trinity subscribers with payment method changed from "capway", enriched with `:capway_active_status` field
   - `total_trinity`: Total count of Trinity subscribers
   - `total_capway`: Total count of Capway subscribers
   - `missing_capway_count`: Count of items missing in Capway
@@ -138,7 +139,17 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     missing_in_capway = find_items_by_keys(trinity_list, filtered_missing_capway_keys, trinity_key)
     missing_in_trinity = find_items_by_keys(capway_list, missing_trinity_keys, capway_key)
     existing_in_both = find_items_by_keys(capway_list, existing_keys, capway_key)
-    cancel_capway_contracts = find_items_by_keys(trinity_list, cancel_capway_keys, trinity_key)
+
+    # Enrich Trinity subscribers with Capway active status for cancellation tracking
+    cancel_capway_contracts =
+      find_items_by_keys(trinity_list, cancel_capway_keys, trinity_key)
+      |> Enum.map(fn subscriber ->
+        key_value = Map.get(subscriber, trinity_key)
+        capway_subscriber = Map.get(capway_map, key_value)
+        capway_active = if capway_subscriber, do: capway_subscriber.active, else: nil
+
+        Map.put(subscriber, :capway_active_status, capway_active)
+      end)
 
     # Extract ID lists for minimal report storage
     missing_in_capway_ids = extract_trinity_ids(trinity_list, filtered_missing_capway_keys, trinity_key)

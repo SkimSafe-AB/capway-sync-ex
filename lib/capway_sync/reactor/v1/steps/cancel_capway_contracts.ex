@@ -14,6 +14,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContracts do
   - `cancel_capway_contracts`: List of subscriber objects that need contract cancellation
   - `cancel_capway_count`: Count of contracts to cancel
   - `total_analyzed`: Total number of potential cancellation candidates analyzed
+  - `debug_active_statuses`: List of maps with id_number and active status for debugging
 
   ## Logic
   Processes subscribers identified in comparison_result.cancel_capway_contracts:
