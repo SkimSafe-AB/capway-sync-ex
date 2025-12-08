@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 -   Personal number details to the synchronization process.
 
+### Changed
+-   Canonical subscriber model now includes `status` field to preserve original Trinity subscription status.
+-   `missing_in_capway` list now excludes subscribers with cancelled status from Trinity, preventing cancelled subscriptions from being incorrectly identified as missing in Capway.
+
 ## [0.1.0] - 2025-10-06
 
 ### Added
