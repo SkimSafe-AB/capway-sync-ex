@@ -76,28 +76,47 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
 
   # Prepares data for suspend/unsuspend analysis by combining comparison results
   # with raw Capway data that contains collection information.
+  # Enriches Capway data with Trinity subscription_type and status.
   step :prepare_suspend_unsuspend_data do
     argument(:comparison_result, result(:compare_data))
     argument(:capway_data, result(:fetch_capway_data))
+    argument(:trinity_canonical, result(:convert_to_canonical_data))
     max_retries(2)
 
     run(fn args, _context ->
+      # Create a map of Trinity canonical data by id_number for quick lookup
+      trinity_map = Map.new(args.trinity_canonical, fn sub -> {sub.id_number, sub} end)
+
       # Get the IDs of accounts that exist in both systems
       existing_both_ids =
         args.comparison_result.existing_in_both
         |> Enum.map(& &1.id_number)
         |> MapSet.new()
 
-      # Filter raw Capway data to only include accounts that exist in both systems
-      existing_both_raw =
+      # Filter raw Capway data and enrich with Trinity subscription_type and status
+      existing_both_enriched =
         args.capway_data.raw
         |> Enum.filter(fn capway_sub ->
           MapSet.member?(existing_both_ids, capway_sub.id_number)
         end)
+        |> Enum.map(fn capway_sub ->
+          # Get Trinity data for this subscriber
+          trinity_data = Map.get(trinity_map, capway_sub.id_number)
 
-      # Create a modified comparison result with raw Capway data for suspend/unsuspend
+          # Enrich Capway data with Trinity subscription_type and status
+          if trinity_data do
+            Map.merge(capway_sub, %{
+              subscription_type: trinity_data.subscription_type,
+              status: trinity_data.status
+            })
+          else
+            capway_sub
+          end
+        end)
+
+      # Create a modified comparison result with enriched data for suspend/unsuspend
       modified_comparison_result =
-        Map.put(args.comparison_result, :existing_in_both, existing_both_raw)
+        Map.put(args.comparison_result, :existing_in_both, existing_both_enriched)
 
       {:ok, modified_comparison_result}
     end)
