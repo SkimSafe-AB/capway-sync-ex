@@ -81,6 +81,33 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccountsTest do
       assert {:error, "Invalid comparison_result format - missing existing_in_both"} =
         SuspendAccounts.run(arguments, %{})
     end
+
+    test "excludes accounts with pending_cancel status from suspension" do
+      comparison_result = %{
+        existing_in_both: [
+          %{customer_ref: "100", name: "Alice", collection: "3", status: :active},
+          %{customer_ref: "200", name: "Bob", collection: "4", status: :pending_cancel},
+          %{customer_ref: "300", name: "Charlie", collection: "5", status: :cancelled},
+          %{customer_ref: "400", name: "David", collection: "2", status: nil}
+        ]
+      }
+
+      arguments = %{comparison_result: comparison_result}
+
+      assert {:ok, result} = SuspendAccounts.run(arguments, %{})
+
+      # Only Alice (active, collection: 3), Charlie (cancelled, collection: 5),
+      # and David (nil status, collection: 2) should be suspended
+      # Bob (pending_cancel) should be excluded
+      assert result.suspend_count == 3
+      assert result.total_analyzed == 4
+
+      suspend_refs = Enum.map(result.suspend_accounts, & &1.customer_ref)
+      assert "100" in suspend_refs  # Alice - active status
+      assert "300" in suspend_refs  # Charlie - cancelled status
+      assert "400" in suspend_refs  # David - nil status
+      refute "200" in suspend_refs  # Bob - pending_cancel should be excluded
+    end
   end
 
   describe "analyze_for_suspend/2" do

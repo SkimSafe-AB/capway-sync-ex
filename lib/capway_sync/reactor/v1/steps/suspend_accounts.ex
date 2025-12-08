@@ -5,6 +5,9 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
   Takes accounts that exist in both Trinity and Capway systems and filters for those
   with collection >= suspend_threshold (default: 2).
 
+  Excludes accounts with Trinity subscription status of `:pending_cancel` from suspension
+  to avoid suspending accounts that are already in the cancellation process.
+
   ## Return Structure
 
   ```elixir
@@ -70,32 +73,38 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
 
   @doc """
   Filters accounts based on collection threshold and builds summary.
+  Excludes accounts with pending_cancel status.
   """
   def filter_suspend_candidates(accounts, suspend_threshold) when is_list(accounts) do
     initial_summary = %{"0" => 0, "1" => 0, "2" => 0, "3+" => 0, "invalid" => 0, "nil" => 0}
 
     Enum.reduce(accounts, {[], initial_summary}, fn account, {suspend_acc, summary_acc} ->
-      case parse_collection_safely(account.collection) do
-        {:ok, collection_value} when collection_value >= suspend_threshold ->
-          id = Map.get(account, :id_number) || Map.get(account, :customer_ref) || "N/A"
-          name = Map.get(account, :name, "N/A")
-          Logger.debug("🔒 SUSPEND: ID #{id} | Collection: #{collection_value} | Name: #{name}")
-          summary_key = collection_summary_key(collection_value)
-          updated_summary = Map.update(summary_acc, summary_key, 1, &(&1 + 1))
-          {[account | suspend_acc], updated_summary}
+      # Skip accounts with pending_cancel status
+      if Map.get(account, :status) == :pending_cancel do
+        {suspend_acc, summary_acc}
+      else
+        case parse_collection_safely(account.collection) do
+          {:ok, collection_value} when collection_value >= suspend_threshold ->
+            id = Map.get(account, :id_number) || Map.get(account, :customer_ref) || "N/A"
+            name = Map.get(account, :name, "N/A")
+            Logger.debug("🔒 SUSPEND: ID #{id} | Collection: #{collection_value} | Name: #{name}")
+            summary_key = collection_summary_key(collection_value)
+            updated_summary = Map.update(summary_acc, summary_key, 1, &(&1 + 1))
+            {[account | suspend_acc], updated_summary}
 
-        {:ok, collection_value} ->
-          summary_key = collection_summary_key(collection_value)
-          updated_summary = Map.update(summary_acc, summary_key, 1, &(&1 + 1))
-          {suspend_acc, updated_summary}
+          {:ok, collection_value} ->
+            summary_key = collection_summary_key(collection_value)
+            updated_summary = Map.update(summary_acc, summary_key, 1, &(&1 + 1))
+            {suspend_acc, updated_summary}
 
-        {:error, :nil_value} ->
-          updated_summary = Map.update(summary_acc, "nil", 1, &(&1 + 1))
-          {suspend_acc, updated_summary}
+          {:error, :nil_value} ->
+            updated_summary = Map.update(summary_acc, "nil", 1, &(&1 + 1))
+            {suspend_acc, updated_summary}
 
-        {:error, :invalid_value} ->
-          updated_summary = Map.update(summary_acc, "invalid", 1, &(&1 + 1))
-          {suspend_acc, updated_summary}
+          {:error, :invalid_value} ->
+            updated_summary = Map.update(summary_acc, "invalid", 1, &(&1 + 1))
+            {suspend_acc, updated_summary}
+        end
       end
     end)
   end
