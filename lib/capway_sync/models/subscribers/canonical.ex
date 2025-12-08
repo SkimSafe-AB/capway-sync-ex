@@ -17,6 +17,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   - `active`: Whether the subscription/contract is active
   - `end_date`: Subscription/contract end date
   - `origin`: Source system (:trinity or :capway)
+  - `status`: Original subscription status from Trinity (nil for Capway data)
   - `capway_active_status`: Capway active status (enriched during comparison, nil if not enriched)
 
   ## Usage
@@ -36,7 +37,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           payment_method: String.t() | nil,
           active: boolean(),
           end_date: NaiveDateTime.t() | nil,
-          origin: :trinity | :capway
+          origin: :trinity | :capway,
+          status: atom() | nil
         }
 
   @derive Jason.Encoder
@@ -48,7 +50,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             active: false,
             end_date: nil,
             origin: nil,
-            capway_active_status: nil
+            capway_active_status: nil,
+            status: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -72,7 +75,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       payment_method: subscription.payment_method,
       active: subscription.status == :active,
       end_date: subscription.end_date,
-      origin: :trinity
+      origin: :trinity,
+      status: subscription.status
     }
   end
 

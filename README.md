@@ -11,7 +11,7 @@ iex --cookie mycookie --name debug@127.0.0.1 --remsh capway_sync@127.0.0.1
 
 ### Run the sync workflow
 ```elixir
-{:ok, result} = Reactor.run(CapwaySync.Reactor.V1.SubscriberSyncWorkflow, %{})
+i
 ```
 
 ### Development with Mock Data

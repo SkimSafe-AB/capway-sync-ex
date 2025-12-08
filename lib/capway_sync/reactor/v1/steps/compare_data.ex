@@ -123,11 +123,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     Logger.debug("   Cancel Capway contracts size: #{MapSet.size(cancel_capway_keys)}")
 
     # Filter Trinity subscribers to only include those with payment_method == "capway"
+    # AND status != :cancelled (exclude cancelled subscriptions)
     # for the missing_in_capway comparison (these should be added to Capway)
     capway_payment_trinity_keys =
       trinity_list
       |> Enum.filter(fn subscriber ->
-        Map.get(subscriber, :payment_method) == "capway"
+        Map.get(subscriber, :payment_method) == "capway" && Map.get(subscriber, :status) != :cancelled
       end)
       |> extract_key_values(trinity_key)
       |> MapSet.new()
