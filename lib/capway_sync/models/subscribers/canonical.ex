@@ -47,7 +47,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             payment_method: nil,
             active: false,
             end_date: nil,
-            origin: nil
+            origin: nil,
+            capway_active_status: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
