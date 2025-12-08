@@ -17,6 +17,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   - `active`: Whether the subscription/contract is active
   - `end_date`: Subscription/contract end date
   - `origin`: Source system (:trinity or :capway)
+  - `capway_active_status`: Capway active status (enriched during comparison, nil if not enriched)
 
   ## Usage
 

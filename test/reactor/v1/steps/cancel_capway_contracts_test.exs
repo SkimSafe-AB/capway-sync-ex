@@ -66,6 +66,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContractsTest do
       assert result.cancel_capway_count == 0
       assert result.total_analyzed == 0
       assert result.cancel_capway_contracts == []
+      assert result.debug_active_statuses == []
     end
 
     test "handles missing cancel_capway_contracts key" do
@@ -78,6 +79,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContractsTest do
       assert result.cancel_capway_count == 0
       assert result.total_analyzed == 0
       assert result.cancel_capway_contracts == []
+      assert result.debug_active_statuses == []
     end
 
     test "returns error for missing comparison_result" do
