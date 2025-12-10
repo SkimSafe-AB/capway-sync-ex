@@ -7,7 +7,7 @@
 -   **Data Synchronization:** Comparing subscriber data between Trinity and Capway to identify discrepancies.
 -   **Account Status Management:** Determining which accounts should be suspended or unsuspended based on predefined business logic.
 -   **Reporting:** Generating detailed synchronization reports (`GeneralSyncReport`) in DynamoDB.
--   **Action Item Generation:** Creating `ActionItem` records in DynamoDB for necessary actions (e.g., "suspend", "unsuspend", "sync_to_capway").
+-   **Action Item Generation:** Creating `ActionItem` records in DynamoDB for necessary actions (e.g., "suspend", "unsuspend", "sync_to_capway", "update_capway_contract").
 
 ## Operational Guidelines
 
@@ -63,7 +63,7 @@ export MOCK_CAPWAY_DELAY=100
 1.  **fetch_trinity_data:** Fetches subscriber data from Trinity (Postgres).
 2.  **convert_to_canonical_data:** Normalizes Trinity data for comparison.
 3.  **fetch_capway_data:** Fetches subscriber data from Capway (SOAP).
-4.  **compare_data:** Compares canonical datasets to find missing/extra accounts.
+4.  **compare_data:** Compares canonical datasets. Identifies missing/extra accounts and detects contracts needing update (missing ID in Capway but valid match) or creation (missing ID in Trinity).
 5.  **prepare_suspend_unsuspend_data:** Enriches data to prepare for status logic.
 6.  **suspend_accounts:** Identifies accounts to suspend (Collection >= 2).
 7.  **unsuspend_accounts:** Identifies accounts to unsuspend (Collection=0, Unpaid=0).

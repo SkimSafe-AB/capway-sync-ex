@@ -2,6 +2,7 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
   use ExUnit.Case, async: true
   import ExUnit.CaptureLog
 
+  require CapwaySync.Soap.GenerateReport
   alias CapwaySync.Soap.GenerateReport
 
   describe "SOAP retry logic" do

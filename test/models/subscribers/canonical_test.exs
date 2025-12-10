@@ -142,17 +142,35 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
       trinity_subscribers = [
         %{
           personal_number: "199001012345",
-          subscription: %{id: 123, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
+          subscription: %{
+            id: 123,
+            payment_method: "capway",
+            status: :active,
+            end_date: nil,
+            subscription_type: nil
+          },
           id: 1
         },
         %{
           personal_number: nil,
-          subscription: %{id: 124, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
+          subscription: %{
+            id: 124,
+            payment_method: "capway",
+            status: :active,
+            end_date: nil,
+            subscription_type: nil
+          },
           id: 2
         },
         %{
           personal_number: "",
-          subscription: %{id: 125, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
+          subscription: %{
+            id: 125,
+            payment_method: "capway",
+            status: :active,
+            end_date: nil,
+            subscription_type: nil
+          },
           id: 3
         }
       ]

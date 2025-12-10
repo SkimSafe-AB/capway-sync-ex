@@ -48,12 +48,16 @@ defmodule CapwaySync.Models.GeneralSyncReport do
           total_trinity: non_neg_integer(),
           total_capway: non_neg_integer(),
           missing_in_capway: list(),
+          missing_in_capway_ids: list(),
           missing_in_trinity: list(),
+          missing_in_trinity_ids: list(),
           existing_in_both: list(),
+          existing_in_both_ids: list(),
           missing_capway_count: non_neg_integer(),
           missing_trinity_count: non_neg_integer(),
           existing_in_both_count: non_neg_integer(),
           update_capway_contract: list(),
+          update_capway_contract_ids: list(),
           update_capway_contract_count: non_neg_integer(),
 
           # Action results (actionable)
@@ -81,12 +85,20 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     total_trinity: 0,
     total_capway: 0,
     missing_in_capway: [],
+    missing_in_capway_ids: [],
+
     missing_in_trinity: [],
+    missing_in_trinity_ids: [],
+
     existing_in_both: [],
+    existing_in_both_ids: [],
+
     missing_capway_count: 0,
     missing_trinity_count: 0,
     existing_in_both_count: 0,
     update_capway_contract: [],
+    update_capway_contract_ids: [],
+
     update_capway_contract_count: 0,
 
     # Action results (actionable)
@@ -96,6 +108,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     unsuspend_accounts: [],
     unsuspend_count: 0,
     cancel_capway_contracts: [],
+    cancel_capway_contracts_ids: [],
     cancel_capway_count: 0,
 
     # Statistical and analytical insights
@@ -180,13 +193,17 @@ defmodule CapwaySync.Models.GeneralSyncReport do
       # Data comparison results - use ID lists for minimal storage
       total_trinity: comparison_result.total_trinity,
       total_capway: comparison_result.total_capway,
-      missing_in_capway: comparison_result.missing_in_capway_ids,
-      missing_in_trinity: comparison_result.missing_in_trinity_ids,
-      existing_in_both: comparison_result.existing_in_both_ids,
+      missing_in_capway: comparison_result.missing_in_capway,
+      missing_in_capway_ids: comparison_result.missing_in_capway_ids,
+      missing_in_trinity: comparison_result.missing_in_trinity,
+      missing_in_trinity_ids: comparison_result.missing_in_trinity_ids,
+      existing_in_both: comparison_result.existing_in_both,
+      existing_in_both_ids: comparison_result.existing_in_both_ids,
       missing_capway_count: comparison_result.missing_capway_count,
       missing_trinity_count: comparison_result.missing_trinity_count,
       existing_in_both_count: comparison_result.existing_in_both_count,
-      update_capway_contract: Map.get(comparison_result, :update_capway_contract_ids, []),
+      update_capway_contract: Map.get(comparison_result, :update_capway_contract, []),
+      update_capway_contract_ids: Map.get(comparison_result, :update_capway_contract_ids, []),
       update_capway_contract_count: Map.get(comparison_result, :update_capway_contract_count, 0),
 
       # Action results - extract IDs for minimal storage
@@ -195,7 +212,8 @@ defmodule CapwaySync.Models.GeneralSyncReport do
       suspend_threshold: suspend_result.suspend_threshold,
       unsuspend_accounts: extract_subscriber_ids(unsuspend_result.unsuspend_accounts),
       unsuspend_count: unsuspend_result.unsuspend_count,
-      cancel_capway_contracts: extract_subscriber_ids(cancel_result.cancel_capway_contracts),
+      cancel_capway_contracts: cancel_result.cancel_capway_contracts,
+      cancel_capway_contracts_ids: cancel_result.cancel_capway_contracts_ids,
       cancel_capway_count: cancel_result.cancel_capway_count,
 
       # Statistical and analytical insights

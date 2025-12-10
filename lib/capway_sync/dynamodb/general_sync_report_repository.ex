@@ -234,10 +234,14 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
           "unsuspend_count" => report.unsuspend_count
         },
         "capway_cancellations" => %{
-          "cancel_capway_contracts" => Map.get(report, :cancel_capway_contracts, [])
+          "cancel_capway_contracts" => Map.get(report, :cancel_capway_contracts_ids, [])
         },
         "capway_new_contracts" => %{
           "create_capway_contracts" => Map.get(report, :missing_in_capway_ids, [])
+        },
+        "capway_updates" => %{
+          "update_capway_contracts" => Map.get(report, :update_capway_contract_ids, []),
+          "update_capway_contract_count" => Map.get(report, :update_capway_contract_count, 0)
         }
       },
 
@@ -279,6 +283,12 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       end
     end
 
+    # Helper to get list fields (handling both JSON string and raw list)
+    get_list_field = fn key ->
+      val = Map.get(item, key, [])
+      if is_list(val), do: val, else: []
+    end
+
     # Reconstruct analysis metadata from separate DynamoDB fields
     analysis_metadata = %{
       suspend_total_analyzed: Map.get(item, "suspend_total_analyzed", 0),
@@ -304,11 +314,13 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       missing_capway_count: Map.get(item, "missing_capway_count", 0),
       missing_trinity_count: Map.get(item, "missing_trinity_count", 0),
       existing_in_both_count: Map.get(item, "existing_in_both_count", 0),
+      update_capway_contract_count: Map.get(item, "update_capway_contract_count", 0),
 
       # Action results
       suspend_count: Map.get(item, "suspend_count", 0),
       suspend_threshold: Map.get(item, "suspend_threshold", 2),
       unsuspend_count: Map.get(item, "unsuspend_count", 0),
+      cancel_capway_count: Map.get(item, "cancel_capway_count", 0),
 
       # Analysis metadata (nested structure)
       analysis_metadata: analysis_metadata,
@@ -318,7 +330,18 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       missing_in_trinity: decode_json_field.("missing_in_trinity"),
       existing_in_both: decode_json_field.("existing_in_both"),
       suspend_accounts: decode_json_field.("suspend_accounts"),
-      unsuspend_accounts: decode_json_field.("unsuspend_accounts")
+      unsuspend_accounts: decode_json_field.("unsuspend_accounts"),
+      
+      # For IDs which are stored as raw lists (or should be)
+      missing_in_capway_ids: get_list_field.("create_capway_contracts"), # Mapped from create_capway_contracts
+      missing_in_trinity_ids: [], # Not currently stored in actions
+      existing_in_both_ids: [], # Not currently stored in actions
+      
+      cancel_capway_contracts: [], # We only store IDs now
+      cancel_capway_contracts_ids: get_list_field.("cancel_capway_contracts"),
+      
+      update_capway_contract: [], # We only store IDs now
+      update_capway_contract_ids: get_list_field.("update_capway_contracts")
     }
   end
 

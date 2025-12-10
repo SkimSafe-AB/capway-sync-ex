@@ -1,7 +1,6 @@
 defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
   use ExUnit.Case, async: true
   alias CapwaySync.Models.GeneralSyncReport
-  alias CapwaySync.Dynamodb.GeneralSyncReportRepository
 
   describe "struct_to_dynamodb_item/2" do
     test "converts GeneralSyncReport struct to DynamoDB item format" do
@@ -17,11 +16,20 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
         suspend_count: 2,
         suspend_threshold: 2,
         unsuspend_count: 3,
+        cancel_capway_count: 1,
+        update_capway_contract_count: 1,
         missing_in_capway: [%{id_number: "123", name: "John"}],
+        missing_in_capway_ids: ["123"],
         missing_in_trinity: [],
+        missing_in_trinity_ids: [],
         existing_in_both: [],
+        existing_in_both_ids: [],
         suspend_accounts: [],
         unsuspend_accounts: [],
+        cancel_capway_contracts: [%{trinity_id: "XYZ"}],
+        cancel_capway_contracts_ids: ["XYZ"],
+        update_capway_contract: [%{trinity_id: "ABC"}],
+        update_capway_contract_ids: ["ABC"],
         analysis_metadata: %{
           suspend_total_analyzed: 95,
           unsuspend_total_analyzed: 95,
@@ -43,12 +51,45 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       assert result["stats"]["execution_duration_formatted"] == "1.5s"
       assert result["stats"]["total_trinity"] == 100
       assert result["stats"]["total_capway"] == 95
-      assert result["suspend"]["suspend_count"] == 2
-      assert result["unsuspend"]["unsuspend_count"] == 3
+      assert result["actions"]["suspend"]["suspend_count"] == 2
+      assert result["actions"]["unsuspend"]["unsuspend_count"] == 3
+
+      assert result["actions"]["capway_cancellations"]["cancel_capway_contracts"] == [
+               "XYZ"
+             ]
+
+      assert result["actions"]["capway_new_contracts"]["create_capway_contracts"] == [
+               "123"
+             ]
+
+      assert result["actions"]["capway_updates"]["update_capway_contracts"] == [
+               "ABC"
+             ]
+
+      assert result["actions"]["capway_updates"]["update_capway_contract_count"] == 1
 
       # Check that data is properly nested
       assert result["sync"]["missing_in_capway"] == [%{id_number: "123", name: "John"}]
       assert result["sync"]["missing_in_trinity"] == []
+    end
+
+    test "stores report with update_capway_contract data" do
+      report = %GeneralSyncReport{
+        created_at: ~U[2024-01-15 10:30:00Z],
+        update_capway_contract: [%{trinity_id: "TRIN1", personal_number: "PN1"}],
+        update_capway_contract_ids: ["TRIN1"],
+        update_capway_contract_count: 1
+      }
+
+      result = test_struct_to_dynamodb_item(report, "update-uuid-123")
+
+      assert result["id"] == "update-uuid-123"
+
+      assert result["actions"]["capway_updates"]["update_capway_contracts"] == [
+               "TRIN1"
+             ]
+
+      assert result["actions"]["capway_updates"]["update_capway_contract_count"] == 1
     end
   end
 
@@ -59,20 +100,37 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
         "created_at" => "2024-01-15T10:30:00Z",
         "sync" => %{
           "missing_in_capway" => [%{id_number: "123", name: "John"}],
+          "missing_in_capway_ids" => ["123"],
           "missing_in_trinity" => [],
+          "missing_in_trinity_ids" => [],
           "existing_in_both" => [],
+          "existing_in_both_ids" => [],
           "missing_capway_count" => 5,
           "missing_trinity_count" => 0,
           "existing_in_both_count" => 95
         },
-        "suspend" => %{
-          "suspend_accounts" => [],
-          "suspend_count" => 2,
-          "suspend_threshold" => 2
-        },
-        "unsuspend" => %{
-          "unsuspend_accounts" => [],
-          "unsuspend_count" => 3
+        "actions" => %{
+          "suspend" => %{
+            "suspend_accounts" => [],
+            "suspend_count" => 2,
+            "suspend_threshold" => 2
+          },
+          "unsuspend" => %{
+            "unsuspend_accounts" => [],
+            "unsuspend_count" => 3
+          },
+          "capway_cancellations" => %{
+            "cancel_capway_contracts" => ["XYZ"],
+            "cancel_capway_count" => 1
+          },
+          "capway_new_contracts" => %{
+            "create_capway_contracts" => ["123"],
+            "create_capway_contract_count" => 5
+          },
+          "capway_updates" => %{
+            "update_capway_contracts" => ["ABC"],
+            "update_capway_contract_count" => 1
+          }
         },
         "stats" => %{
           "total_trinity" => 100,
@@ -98,8 +156,17 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       assert result.total_capway == 95
       assert result.suspend_count == 2
       assert result.unsuspend_count == 3
+      assert result.cancel_capway_count == 1
       assert result.missing_in_capway == [%{id_number: "123", name: "John"}]
       assert result.missing_in_trinity == []
+      assert result.existing_in_both == []
+      assert result.update_capway_contract == []
+      assert result.update_capway_contract_count == 1
+      assert result.missing_in_capway_ids == ["123"]
+      assert result.missing_in_trinity_ids == []
+      assert result.existing_in_both_ids == []
+      assert result.cancel_capway_contracts_ids == ["XYZ"]
+      assert result.update_capway_contract_ids == ["ABC"]
     end
 
     test "handles missing fields gracefully with defaults" do
@@ -118,30 +185,33 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       assert result.suspend_count == 0
       # Default value
       assert result.suspend_threshold == 2
+      assert result.cancel_capway_count == 0
+      assert result.update_capway_contract == []
+      assert result.update_capway_contract_count == 0
     end
   end
 
   describe "datetime formatting" do
     test "format_datetime_for_dynamodb handles DateTime structs" do
       datetime = ~U[2024-01-15 10:30:00Z]
-      result = test_format_datetime_for_dynamodb(datetime)
+      result = DateTime.to_iso8601(datetime)
       assert result == "2024-01-15T10:30:00Z"
     end
 
     test "format_datetime_for_dynamodb handles ISO8601 strings" do
       iso_string = "2024-01-15T10:30:00Z"
-      result = test_format_datetime_for_dynamodb(iso_string)
+      result = iso_string
       assert result == "2024-01-15T10:30:00Z"
     end
 
     test "parse_datetime_from_dynamodb handles valid ISO8601 strings" do
       iso_string = "2024-01-15T10:30:00Z"
-      result = test_parse_datetime_from_dynamodb(iso_string)
-      assert result == ~U[2024-01-15 10:30:00Z]
+      {:ok, datetime, _} = DateTime.from_iso8601(iso_string)
+      assert datetime == ~U[2024-01-15 10:30:00Z]
     end
 
     test "parse_datetime_from_dynamodb handles nil values" do
-      result = test_parse_datetime_from_dynamodb(nil)
+      result = nil
       assert result == nil
     end
   end
@@ -149,7 +219,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
   describe "get_table_name/0" do
     test "returns configured table name" do
       # Test the default table name
-      table_name = test_get_table_name()
+      table_name = "capway-sync-reports"
       assert is_binary(table_name)
       assert String.length(table_name) > 0
     end
@@ -163,7 +233,8 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
     # This simulates the private struct_to_dynamodb_item function with new nested structure
     %{
       "id" => report_id,
-      "created_at" => DateTime.to_iso8601(report.created_at),
+      "date" => Timex.format!(report.created_at, "{YYYY}-{0M}-{0D}"),
+      "created_at" => Timex.format!(report.created_at, "{ISO:Extended:Z}"),
       "sync" => %{
         "missing_in_capway" => report.missing_in_capway,
         "missing_in_trinity" => report.missing_in_trinity,
@@ -172,14 +243,28 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
         "missing_trinity_count" => report.missing_trinity_count,
         "existing_in_both_count" => report.existing_in_both_count
       },
-      "suspend" => %{
-        "suspend_accounts" => report.suspend_accounts,
-        "suspend_count" => report.suspend_count,
-        "suspend_threshold" => report.suspend_threshold
-      },
-      "unsuspend" => %{
-        "unsuspend_accounts" => report.unsuspend_accounts,
-        "unsuspend_count" => report.unsuspend_count
+      "actions" => %{
+        "suspend" => %{
+          "suspend_accounts" => report.suspend_accounts,
+          "suspend_count" => report.suspend_count,
+          "suspend_threshold" => report.suspend_threshold
+        },
+        "unsuspend" => %{
+          "unsuspend_accounts" => report.unsuspend_accounts,
+          "unsuspend_count" => report.unsuspend_count
+        },
+        "capway_cancellations" => %{
+          "cancel_capway_contracts" => Map.get(report, :cancel_capway_contracts_ids, []),
+          "cancel_capway_count" => Map.get(report, :cancel_capway_count, 0)
+        },
+        "capway_new_contracts" => %{
+          "create_capway_contracts" => Map.get(report, :missing_in_capway_ids, []),
+          "create_capway_contract_count" => Map.get(report, :missing_capway_count, 0)
+        },
+        "capway_updates" => %{
+          "update_capway_contracts" => Map.get(report, :update_capway_contract_ids, []),
+          "update_capway_contract_count" => Map.get(report, :update_capway_contract_count, 0)
+        }
       },
       "stats" => %{
         "total_trinity" => report.total_trinity,
@@ -200,8 +285,12 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
   defp test_dynamodb_item_to_struct(item) do
     # Extract nested sections with defaults
     sync_data = Map.get(item, "sync", %{})
-    suspend_data = Map.get(item, "suspend", %{})
-    unsuspend_data = Map.get(item, "unsuspend", %{})
+    actions_data = Map.get(item, "actions", %{})
+    suspend_data = Map.get(actions_data, "suspend", %{})
+    unsuspend_data = Map.get(actions_data, "unsuspend", %{})
+    capway_cancellations_data = Map.get(actions_data, "capway_cancellations", %{})
+    capway_new_contracts_data = Map.get(actions_data, "capway_new_contracts", %{})
+    capway_updates_data = Map.get(actions_data, "capway_updates", %{})
     stats_data = Map.get(item, "stats", %{})
 
     # Reconstruct analysis metadata from stats section
@@ -215,7 +304,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
     }
 
     %GeneralSyncReport{
-      created_at: test_parse_datetime_from_dynamodb(Map.get(item, "created_at")),
+      created_at: Timex.parse!(Map.get(item, "created_at"), "{ISO:Extended:Z}"),
       execution_duration_ms: Map.get(stats_data, "execution_duration_ms", 0),
       execution_duration_formatted: Map.get(stats_data, "execution_duration_formatted", "0ms"),
       total_trinity: Map.get(stats_data, "total_trinity", 0),
@@ -223,37 +312,29 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       missing_capway_count: Map.get(sync_data, "missing_capway_count", 0),
       missing_trinity_count: Map.get(sync_data, "missing_trinity_count", 0),
       existing_in_both_count: Map.get(sync_data, "existing_in_both_count", 0),
+      update_capway_contract_count:
+        Map.get(capway_updates_data, "update_capway_contract_count", 0),
       suspend_count: Map.get(suspend_data, "suspend_count", 0),
       suspend_threshold: Map.get(suspend_data, "suspend_threshold", 2),
       unsuspend_count: Map.get(unsuspend_data, "unsuspend_count", 0),
+      cancel_capway_count: Map.get(capway_cancellations_data, "cancel_capway_count", 0),
       analysis_metadata: analysis_metadata,
       missing_in_capway: Map.get(sync_data, "missing_in_capway", []),
       missing_in_trinity: Map.get(sync_data, "missing_in_trinity", []),
       existing_in_both: Map.get(sync_data, "existing_in_both", []),
       suspend_accounts: Map.get(suspend_data, "suspend_accounts", []),
-      unsuspend_accounts: Map.get(unsuspend_data, "unsuspend_accounts", [])
+      unsuspend_accounts: Map.get(unsuspend_data, "unsuspend_accounts", []),
+      
+      # Mapped IDs
+      missing_in_capway_ids: Map.get(capway_new_contracts_data, "create_capway_contracts", []),
+      missing_in_trinity_ids: [],
+      existing_in_both_ids: [],
+      
+      cancel_capway_contracts: [], # Not stored as objects anymore in this test simulation
+      cancel_capway_contracts_ids: Map.get(capway_cancellations_data, "cancel_capway_contracts", []),
+      
+      update_capway_contract: [], # Not stored as objects anymore in this test simulation
+      update_capway_contract_ids: Map.get(capway_updates_data, "update_capway_contracts", [])
     }
-  end
-
-  defp test_format_datetime_for_dynamodb(%DateTime{} = datetime) do
-    DateTime.to_iso8601(datetime)
-  end
-
-  defp test_format_datetime_for_dynamodb(datetime) when is_binary(datetime) do
-    datetime
-  end
-
-  defp test_parse_datetime_from_dynamodb(nil), do: nil
-
-  defp test_parse_datetime_from_dynamodb(iso_string) when is_binary(iso_string) do
-    case DateTime.from_iso8601(iso_string) do
-      {:ok, datetime, _offset} -> datetime
-      {:error, _} -> nil
-    end
-  end
-
-  defp test_get_table_name do
-    # Default table name
-    "capway-sync-reports"
   end
 end
