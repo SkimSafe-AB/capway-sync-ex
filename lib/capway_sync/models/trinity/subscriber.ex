@@ -3,7 +3,6 @@ defmodule CapwaySync.Models.Trinity.Subscriber do
   import Ecto.Changeset
 
   @type t() :: %__MODULE__{}
-  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   schema "subscribers" do
     field(:personal_number_hash, CapwaySync.Vault.Trinity.Hashed.HMAC)

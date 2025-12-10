@@ -37,13 +37,12 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           contract_ref: String.t(),
           payment_method: String.t() | nil,
           active: boolean(),
-          end_date: NaiveDateTime.t() | nil,
+          end_date: String.t() | nil,
           origin: :trinity | :capway,
           status: atom() | nil,
           subscription_type: String.t() | nil
         }
 
-  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   defstruct id_number: nil,
             trinity_id: nil,
@@ -78,7 +77,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       contract_ref: to_string(subscription.id),
       payment_method: subscription.payment_method,
       active: subscription.status == :active,
-      end_date: subscription.end_date,
+      end_date: format_datetime(subscription.end_date),
       origin: :trinity,
       status: subscription.status,
       subscription_type: subscription.subscription_type
@@ -102,7 +101,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       contract_ref: capway_subscriber.contract_ref_no,
       payment_method: nil,
       active: capway_subscriber.active,
-      end_date: capway_subscriber.end_date,
+      end_date: format_datetime(capway_subscriber.end_date),
       origin: :capway
     }
   end
@@ -120,4 +119,19 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   def from_capway_list(capway_subscribers) when is_list(capway_subscribers) do
     Enum.map(capway_subscribers, &from_capway/1)
   end
+
+  # Helper function to format DateTime/NaiveDateTime to ISO8601 string
+  defp format_datetime(nil), do: nil
+
+  defp format_datetime(%NaiveDateTime{} = datetime) do
+    datetime
+    |> NaiveDateTime.to_iso8601()
+  end
+
+  defp format_datetime(%DateTime{} = datetime) do
+    datetime
+    |> DateTime.to_iso8601()
+  end
+
+  defp format_datetime(datetime) when is_binary(datetime), do: datetime
 end

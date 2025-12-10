@@ -24,7 +24,6 @@ defmodule CapwaySync.Models.Trinity.Subscription do
   ]
 
   @type t() :: %__MODULE__{}
-  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   schema "subscriptions" do
     field(:end_date, :naive_datetime)
