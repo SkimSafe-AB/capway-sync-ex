@@ -213,7 +213,8 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert "unsuspend" in actions
       assert "sync_to_capway" in actions
       assert "cancel_capway_contract" in actions
-      assert length(actions) == 4
+      assert "update_capway_contract" in actions
+      assert length(actions) == 5
     end
   end
 

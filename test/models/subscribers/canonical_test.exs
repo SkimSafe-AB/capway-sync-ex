@@ -138,47 +138,31 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
       assert second.subscription_type == nil
     end
 
-    test "filters out subscribers with missing or empty personal_number" do
+    test "preserves subscribers with missing or empty personal_number" do
       trinity_subscribers = [
         %{
           personal_number: "199001012345",
-          subscription: %{
-            id: 123,
-            payment_method: "capway",
-            status: :active,
-            end_date: nil,
-            subscription_type: "locked"
-          },
+          subscription: %{id: 123, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
           id: 1
         },
         %{
           personal_number: nil,
-          subscription: %{
-            id: 124,
-            payment_method: "capway",
-            status: :active,
-            end_date: nil,
-            subscription_type: nil
-          },
+          subscription: %{id: 124, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
           id: 2
         },
         %{
           personal_number: "",
-          subscription: %{
-            id: 125,
-            payment_method: "capway",
-            status: :active,
-            end_date: nil,
-            subscription_type: nil
-          },
+          subscription: %{id: 125, payment_method: "capway", status: :active, end_date: nil, subscription_type: nil},
           id: 3
         }
       ]
 
       result = Canonical.from_trinity_list(trinity_subscribers)
 
-      assert length(result) == 1
-      assert hd(result).id_number == "199001012345"
+      assert length(result) == 3
+      assert Enum.at(result, 0).id_number == "199001012345"
+      assert Enum.at(result, 1).id_number == nil
+      assert Enum.at(result, 2).id_number == ""
     end
 
     test "handles empty list" do
