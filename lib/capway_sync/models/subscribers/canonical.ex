@@ -43,6 +43,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           subscription_type: String.t() | nil
         }
 
+  @derive ExAws.Dynamo.Encodable
   @derive Jason.Encoder
   defstruct id_number: nil,
             trinity_id: nil,
