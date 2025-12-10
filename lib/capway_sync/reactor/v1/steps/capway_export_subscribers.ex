@@ -49,8 +49,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
             total_exported: length(subscribers_to_export)
           }
 
-          Logger.info("CSV export completed: #{result.total_exported} subscribers exported to #{file_path}")
-          Logger.info("  - Subscribers with unpaid invoices: #{result.customers_with_unpaid_invoices}")
+          Logger.info(
+            "CSV export completed: #{result.total_exported} subscribers exported to #{file_path}"
+          )
+
+          Logger.info(
+            "  - Subscribers with unpaid invoices: #{result.customers_with_unpaid_invoices}"
+          )
+
           Logger.info("  - Subscribers with collections: #{result.customers_with_collections}")
 
           {:ok, result}
@@ -99,7 +105,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
     id_number = Map.get(subscriber, :id_number, "")
     name = Map.get(subscriber, :name, "") |> escape_csv_field()
     customer_ref = Map.get(subscriber, :customer_ref, "")
-    email = "" # Email not available in current data structure
+    # Email not available in current data structure
+    email = ""
     unpaid_invoices = Map.get(subscriber, :unpaid_invoices, 0) || 0
     collection = Map.get(subscriber, :collection, 0) || 0
 
@@ -111,6 +118,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
   """
   def escape_csv_field(nil), do: ""
   def escape_csv_field(""), do: ""
+
   def escape_csv_field(field) when is_binary(field) do
     if String.contains?(field, [",", "\"", "\n", "\r"]) do
       # Escape quotes by doubling them and wrap in quotes
@@ -120,6 +128,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
       field
     end
   end
+
   def escape_csv_field(field), do: to_string(field)
 
   @doc """
@@ -149,7 +158,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
   defp validate_argument(arguments, key) do
     case Map.get(arguments, key) do
       nil -> {:error, "Missing required argument: #{key}"}
-      [] -> {:ok, []} # Empty list is valid
+      # Empty list is valid
+      [] -> {:ok, []}
       value when is_list(value) -> {:ok, value}
       _ -> {:error, "Argument #{key} must be a list"}
     end
@@ -161,6 +171,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
       case File.mkdir_p(output_dir) do
         :ok ->
           File.write(file_path, content)
+
         {:error, reason} ->
           {:error, "Failed to create output directory: #{inspect(reason)}"}
       end

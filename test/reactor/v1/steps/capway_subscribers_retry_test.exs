@@ -24,7 +24,8 @@ defmodule CapwaySyncTest.Reactor.V1.Steps.CapwaySubscribersRetryTest do
 
       # First worker should get the extra record
       [{_first_offset, first_size} | _rest] = ranges
-      assert first_size == 26  # 101 / 4 = 25 remainder 1, so first worker gets 26
+      # 101 / 4 = 25 remainder 1, so first worker gets 26
+      assert first_size == 26
 
       # Verify total records match
       total_size = ranges |> Enum.map(fn {_offset, size} -> size end) |> Enum.sum()
@@ -85,10 +86,11 @@ defmodule CapwaySyncTest.Reactor.V1.Steps.CapwaySubscribersRetryTest do
     end
 
     test "logging is configured for worker operations" do
-      log = capture_log(fn ->
-        require Logger
-        Logger.info("Worker 1: Test log message")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          Logger.info("Worker 1: Test log message")
+        end)
 
       assert log =~ "Worker 1: Test log message"
     end

@@ -70,21 +70,36 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       subscriber = List.first(subscribers)
 
       assert %CapwaySubscriber{
-        customer_ref: "45848",
-        id_number: "195712260115",
-        name: "Test User",
-        contract_ref_no: "CONTRACT123",
-        reg_date: "2025-06-22T00:00:00.0000000",
-        start_date: "2025-06-29T00:00:00.0000000",
-        end_date: "2025-07-01T00:00:00.0000000",
-        active: "True",
-        paid_invoices: "5",
-        unpaid_invoices: "2",
-        collection: "1",
-        last_invoice_status: "Invoice",
-        origin: :capway,
-        raw_data: ["0", nil, "45848", "195712260115", "Test User", "CONTRACT123", "2025-06-22T00:00:00.0000000", "2025-06-29T00:00:00.0000000", "2025-07-01T00:00:00.0000000", "True", "5", "2", "1", "Invoice"]
-      } = subscriber
+               customer_ref: "45848",
+               id_number: "195712260115",
+               name: "Test User",
+               contract_ref_no: "CONTRACT123",
+               reg_date: "2025-06-22T00:00:00.0000000",
+               start_date: "2025-06-29T00:00:00.0000000",
+               end_date: "2025-07-01T00:00:00.0000000",
+               active: "True",
+               paid_invoices: "5",
+               unpaid_invoices: "2",
+               collection: "1",
+               last_invoice_status: "Invoice",
+               origin: :capway,
+               raw_data: [
+                 "0",
+                 nil,
+                 "45848",
+                 "195712260115",
+                 "Test User",
+                 "CONTRACT123",
+                 "2025-06-22T00:00:00.0000000",
+                 "2025-06-29T00:00:00.0000000",
+                 "2025-07-01T00:00:00.0000000",
+                 "True",
+                 "5",
+                 "2",
+                 "1",
+                 "Invoice"
+               ]
+             } = subscriber
     end
 
     test "handles nil values correctly" do

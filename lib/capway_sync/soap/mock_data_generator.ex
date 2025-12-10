@@ -69,18 +69,34 @@ defmodule CapwaySync.Soap.MockDataGenerator do
     base_id = 40000 + index * 100
 
     # Swedish names
-    names = if swedish_chars do
-      [
-        "Erik Holmqvist", "Anna Åkesson", "Nils Åke Öberg", "Märta Ärligt",
-        "Kenneth Bandgren", "Ulla Falk", "Carl Mannheimer", "Åsa Lindberg",
-        "Lars Öhman", "Birgitta Ström", "Gunnar Björk", "Astrid Löfgren"
-      ]
-    else
-      [
-        "Erik Holmqvist", "Anna Akesson", "Nils Ake Oberg", "Marta Arligt",
-        "Kenneth Bandgren", "Ulla Falk", "Carl Mannheimer", "Asa Lindberg"
-      ]
-    end
+    names =
+      if swedish_chars do
+        [
+          "Erik Holmqvist",
+          "Anna Åkesson",
+          "Nils Åke Öberg",
+          "Märta Ärligt",
+          "Kenneth Bandgren",
+          "Ulla Falk",
+          "Carl Mannheimer",
+          "Åsa Lindberg",
+          "Lars Öhman",
+          "Birgitta Ström",
+          "Gunnar Björk",
+          "Astrid Löfgren"
+        ]
+      else
+        [
+          "Erik Holmqvist",
+          "Anna Akesson",
+          "Nils Ake Oberg",
+          "Marta Arligt",
+          "Kenneth Bandgren",
+          "Ulla Falk",
+          "Carl Mannheimer",
+          "Asa Lindberg"
+        ]
+      end
 
     name = Enum.at(names, rem(index - 1, length(names)))
 
@@ -94,7 +110,9 @@ defmodule CapwaySync.Soap.MockDataGenerator do
     # Generate realistic dates
     reg_date = generate_date_string(2025, 6, 1..30)
     start_date = generate_date_string(2025, 6, 15..30)
-    end_date = if include_nils and rem(index, 3) == 0, do: nil, else: generate_date_string(2025, 7, 1..31)
+
+    end_date =
+      if include_nils and rem(index, 3) == 0, do: nil, else: generate_date_string(2025, 7, 1..31)
 
     active = if rem(index, 4) == 0, do: "False", else: "True"
     paid_invoices = Enum.random(0..10)
@@ -163,8 +181,10 @@ defmodule CapwaySync.Soap.MockDataGenerator do
 
   defp build_report_result(subscriber) do
     fields = [
-      "0",  # Always 0
-      nil,  # Always nil
+      # Always 0
+      "0",
+      # Always nil
+      nil,
       subscriber.customer_ref,
       subscriber.id_number,
       subscriber.name,
@@ -200,6 +220,7 @@ defmodule CapwaySync.Soap.MockDataGenerator do
 
   defp build_value_element(value) do
     escaped_value = escape_xml(to_string(value))
+
     """
     <ReportResultData>
                     <Value>#{escaped_value}</Value>

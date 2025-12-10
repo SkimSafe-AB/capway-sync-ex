@@ -191,7 +191,8 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
         "unsuspend_total_analyzed" => report.analysis_metadata.unsuspend_total_analyzed,
         "suspend_collection_summary" => report.analysis_metadata.suspend_collection_summary,
         "unsuspend_collection_summary" => report.analysis_metadata.unsuspend_collection_summary,
-        "unsuspend_unpaid_invoices_summary" => report.analysis_metadata.unsuspend_unpaid_invoices_summary
+        "unsuspend_unpaid_invoices_summary" =>
+          report.analysis_metadata.unsuspend_unpaid_invoices_summary
       }
     }
   end
@@ -209,7 +210,8 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       unsuspend_total_analyzed: Map.get(stats_data, "unsuspend_total_analyzed", 0),
       suspend_collection_summary: Map.get(stats_data, "suspend_collection_summary", %{}),
       unsuspend_collection_summary: Map.get(stats_data, "unsuspend_collection_summary", %{}),
-      unsuspend_unpaid_invoices_summary: Map.get(stats_data, "unsuspend_unpaid_invoices_summary", %{})
+      unsuspend_unpaid_invoices_summary:
+        Map.get(stats_data, "unsuspend_unpaid_invoices_summary", %{})
     }
 
     %GeneralSyncReport{

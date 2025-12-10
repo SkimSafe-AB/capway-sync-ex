@@ -19,7 +19,14 @@ defmodule CapwaySync.Models.ActionItemCancelTest do
       assert length(items) == 5
 
       actions = Enum.map(items, & &1.action) |> Enum.sort()
-      assert actions == ["cancel_capway_contract", "cancel_capway_contract", "suspend", "sync_to_capway", "unsuspend"]
+
+      assert actions == [
+               "cancel_capway_contract",
+               "cancel_capway_contract",
+               "suspend",
+               "sync_to_capway",
+               "unsuspend"
+             ]
 
       # Check cancel_capway_contract items specifically
       cancel_items = Enum.filter(items, &(&1.action == "cancel_capway_contract"))
@@ -33,7 +40,8 @@ defmodule CapwaySync.Models.ActionItemCancelTest do
         assert item.status == :pending
         assert item.created_at == "2024-01-15"
         assert item.timestamp == DateTime.to_unix(~U[2024-01-15 10:30:00Z])
-        assert String.length(item.id) == 36 # UUID length
+        # UUID length
+        assert String.length(item.id) == 36
       end)
     end
 

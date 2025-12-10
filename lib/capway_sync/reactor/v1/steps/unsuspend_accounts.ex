@@ -43,7 +43,9 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccounts do
 
       result = analyze_for_unsuspend(existing_accounts)
 
-      Logger.info("Unsuspend accounts analysis completed: #{result.unsuspend_count}/#{result.total_analyzed} accounts identified for unsuspending")
+      Logger.info(
+        "Unsuspend accounts analysis completed: #{result.unsuspend_count}/#{result.total_analyzed} accounts identified for unsuspending"
+      )
 
       {:ok, result}
     else
@@ -73,13 +75,18 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccounts do
   def filter_unsuspend_candidates(accounts) when is_list(accounts) do
     initial_summary = %{"0" => 0, "1" => 0, "2" => 0, "3+" => 0, "invalid" => 0, "nil" => 0}
 
-    Enum.reduce(accounts, {[], initial_summary, initial_summary}, fn account, {unsuspend_acc, collection_summary_acc, unpaid_summary_acc} ->
+    Enum.reduce(accounts, {[], initial_summary, initial_summary}, fn account,
+                                                                     {unsuspend_acc,
+                                                                      collection_summary_acc,
+                                                                      unpaid_summary_acc} ->
       collection_result = parse_value_safely(account.collection)
       unpaid_result = parse_value_safely(account.unpaid_invoices)
 
       # Update collection summary
       collection_key = summary_key_for_result(collection_result)
-      updated_collection_summary = Map.update(collection_summary_acc, collection_key, 1, &(&1 + 1))
+
+      updated_collection_summary =
+        Map.update(collection_summary_acc, collection_key, 1, &(&1 + 1))
 
       # Update unpaid invoices summary
       unpaid_key = summary_key_for_result(unpaid_result)
@@ -101,15 +108,23 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccounts do
   """
   def parse_value_safely(value) do
     case value do
-      nil -> {:error, :nil_value}
-      "" -> {:error, :nil_value}
+      nil ->
+        {:error, :nil_value}
+
+      "" ->
+        {:error, :nil_value}
+
       val when is_binary(val) ->
         case Integer.parse(String.trim(val)) do
           {integer_val, ""} when integer_val >= 0 -> {:ok, integer_val}
           _ -> {:error, :invalid_value}
         end
-      val when is_integer(val) and val >= 0 -> {:ok, val}
-      _ -> {:error, :invalid_value}
+
+      val when is_integer(val) and val >= 0 ->
+        {:ok, val}
+
+      _ ->
+        {:error, :invalid_value}
     end
   end
 
@@ -138,5 +153,4 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccounts do
       value >= 3 -> "3+"
     end
   end
-
 end

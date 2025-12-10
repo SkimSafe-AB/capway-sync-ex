@@ -58,10 +58,11 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
 
     test "logging is available for error scenarios" do
       # Test that Logger is available and can be used
-      log = capture_log(fn ->
-        require Logger
-        Logger.warning("Test retry warning")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          Logger.warning("Test retry warning")
+        end)
 
       assert log =~ "Test retry warning"
     end

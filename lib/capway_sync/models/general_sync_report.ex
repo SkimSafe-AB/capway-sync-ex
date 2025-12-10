@@ -53,6 +53,8 @@ defmodule CapwaySync.Models.GeneralSyncReport do
           missing_capway_count: non_neg_integer(),
           missing_trinity_count: non_neg_integer(),
           existing_in_both_count: non_neg_integer(),
+          update_capway_contract: list(),
+          update_capway_contract_count: non_neg_integer(),
 
           # Action results (actionable)
           suspend_accounts: list(%{id: String.t(), personal_number: String.t() | nil}),
@@ -62,7 +64,6 @@ defmodule CapwaySync.Models.GeneralSyncReport do
           unsuspend_count: non_neg_integer(),
           cancel_capway_contracts: list(%{id: String.t(), personal_number: String.t() | nil}),
           cancel_capway_count: non_neg_integer(),
-
 
           # Statistical and analytical insights
           analysis_metadata: analysis_metadata()
@@ -85,6 +86,8 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     missing_capway_count: 0,
     missing_trinity_count: 0,
     existing_in_both_count: 0,
+    update_capway_contract: [],
+    update_capway_contract_count: 0,
 
     # Action results (actionable)
     suspend_accounts: [],
@@ -94,7 +97,6 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     unsuspend_count: 0,
     cancel_capway_contracts: [],
     cancel_capway_count: 0,
-
 
     # Statistical and analytical insights
     analysis_metadata: %{
@@ -165,6 +167,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
         # New API: from_workflow_results(comparison, suspend, unsuspend, cancel, raw_capway_data, start_time, end_time)
         {raw_capway_data_or_start_time, start_time_or_end_time, end_time}
       end
+
     end_time = end_time || System.monotonic_time(:millisecond)
     duration = end_time - start_time
 
@@ -183,6 +186,8 @@ defmodule CapwaySync.Models.GeneralSyncReport do
       missing_capway_count: comparison_result.missing_capway_count,
       missing_trinity_count: comparison_result.missing_trinity_count,
       existing_in_both_count: comparison_result.existing_in_both_count,
+      update_capway_contract: Map.get(comparison_result, :update_capway_contract_ids, []),
+      update_capway_contract_count: Map.get(comparison_result, :update_capway_contract_count, 0),
 
       # Action results - extract IDs for minimal storage
       suspend_accounts: extract_subscriber_ids(suspend_result.suspend_accounts),
@@ -218,6 +223,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
        • Missing in Capway: #{report.missing_capway_count}
        • Missing in Trinity: #{report.missing_trinity_count}
        • Existing in both: #{report.existing_in_both_count}
+       • Update Capway Contract: #{report.update_capway_contract_count}
     🔒 Suspend analysis:
        • Accounts to suspend: #{report.suspend_count}/#{report.analysis_metadata.suspend_total_analyzed} (threshold: #{report.suspend_threshold})
     🔓 Unsuspend analysis:
@@ -255,30 +261,46 @@ defmodule CapwaySync.Models.GeneralSyncReport do
   # Check if subscriber has unpaid invoices (> 0)
   defp has_unpaid_invoices?(subscriber) do
     case Map.get(subscriber, :unpaid_invoices) do
-      nil -> false
-      "" -> false
+      nil ->
+        false
+
+      "" ->
+        false
+
       value when is_binary(value) ->
         case Integer.parse(String.trim(value)) do
           {integer_val, ""} when integer_val > 0 -> true
           _ -> false
         end
-      value when is_integer(value) and value > 0 -> true
-      _ -> false
+
+      value when is_integer(value) and value > 0 ->
+        true
+
+      _ ->
+        false
     end
   end
 
   # Check if subscriber has collections (> 0)
   defp has_collections?(subscriber) do
     case Map.get(subscriber, :collection) do
-      nil -> false
-      "" -> false
+      nil ->
+        false
+
+      "" ->
+        false
+
       value when is_binary(value) ->
         case Integer.parse(String.trim(value)) do
           {integer_val, ""} when integer_val > 0 -> true
           _ -> false
         end
-      value when is_integer(value) and value > 0 -> true
-      _ -> false
+
+      value when is_integer(value) and value > 0 ->
+        true
+
+      _ ->
+        false
     end
   end
 
@@ -288,20 +310,22 @@ defmodule CapwaySync.Models.GeneralSyncReport do
     subscribers
     |> Enum.map(fn subscriber ->
       # Extract primary ID (prefers trinity_id, falls back to capway_id, etc.)
-      id = case subscriber do
-        %{trinity_id: trinity_id} when not is_nil(trinity_id) -> trinity_id
-        %{capway_id: capway_id} when not is_nil(capway_id) -> capway_id
-        %{customer_ref: customer_ref} when not is_nil(customer_ref) -> customer_ref
-        %{id_number: id_number} when not is_nil(id_number) -> id_number
-        _ -> nil
-      end
+      id =
+        case subscriber do
+          %{trinity_id: trinity_id} when not is_nil(trinity_id) -> trinity_id
+          %{capway_id: capway_id} when not is_nil(capway_id) -> capway_id
+          %{customer_ref: customer_ref} when not is_nil(customer_ref) -> customer_ref
+          %{id_number: id_number} when not is_nil(id_number) -> id_number
+          _ -> nil
+        end
 
       # Extract personal number from various possible fields
-      personal_number = case subscriber do
-        %{personal_number: pn} when not is_nil(pn) and pn != "" -> pn
-        %{id_number: id_num} when not is_nil(id_num) and id_num != "" -> id_num
-        _ -> nil
-      end
+      personal_number =
+        case subscriber do
+          %{personal_number: pn} when not is_nil(pn) and pn != "" -> pn
+          %{id_number: id_num} when not is_nil(id_num) and id_num != "" -> id_num
+          _ -> nil
+        end
 
       case id do
         nil -> nil

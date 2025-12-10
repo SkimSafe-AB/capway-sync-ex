@@ -22,10 +22,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       canonical_subscribers = Canonical.from_capway_list(all_subscribers)
 
       # Return both formats for different use cases
-      {:ok, %{
-        canonical: canonical_subscribers,
-        raw: all_subscribers
-      }}
+      {:ok,
+       %{
+         canonical: canonical_subscribers,
+         raw: all_subscribers
+       }}
     else
       {:error, reason} ->
         Logger.error("Failed to fetch Capway subscribers: #{inspect(reason)}")
@@ -113,10 +114,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       "Worker #{worker_id}: Fetching chunk of #{chunk_size} records at offset #{current_offset}"
     )
 
-    fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, 3)
+    fetch_chunk_with_retry(
+      worker_id,
+      current_offset,
+      chunk_size,
+      remaining_records,
+      max_chunk_size,
+      acc,
+      3
+    )
   end
 
-  defp fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left) do
+  defp fetch_chunk_with_retry(
+         worker_id,
+         current_offset,
+         chunk_size,
+         remaining_records,
+         max_chunk_size,
+         acc,
+         retries_left
+       ) do
     case GenerateReport.generate_report(
            "CAP_q_contracts_skimsafe",
            "Data",
@@ -147,7 +164,16 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
             )
 
             Process.sleep(1000 * (4 - retries_left))
-            fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left - 1)
+
+            fetch_chunk_with_retry(
+              worker_id,
+              current_offset,
+              chunk_size,
+              remaining_records,
+              max_chunk_size,
+              acc,
+              retries_left - 1
+            )
 
           {:error, reason} ->
             Logger.error(
@@ -163,7 +189,16 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         )
 
         Process.sleep(1500 * (4 - retries_left))
-        fetch_chunk_with_retry(worker_id, current_offset, chunk_size, remaining_records, max_chunk_size, acc, retries_left - 1)
+
+        fetch_chunk_with_retry(
+          worker_id,
+          current_offset,
+          chunk_size,
+          remaining_records,
+          max_chunk_size,
+          acc,
+          retries_left - 1
+        )
 
       {:error, reason} ->
         Logger.error(

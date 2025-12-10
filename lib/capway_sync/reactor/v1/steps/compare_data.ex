@@ -71,8 +71,22 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
   """
   def find_missing_items(trinity_list, capway_list, trinity_key, capway_key)
       when is_list(trinity_list) and is_list(capway_list) do
-    # Extract key values for efficient comparison
-    trinity_keys = extract_key_values(trinity_list, trinity_key) |> MapSet.new()
+    # Partition Trinity subscribers into those with/without valid keys
+    {valid_trinity_list, invalid_trinity_list} =
+      Enum.split_with(trinity_list, fn item ->
+        case Map.get(item, trinity_key) do
+          nil -> false
+          "" -> false
+          _ -> true
+        end
+      end)
+
+    Logger.info(
+      "Found #{length(invalid_trinity_list)} Trinity subscribers without valid #{trinity_key}"
+    )
+
+    # Extract key values for efficient comparison (using only valid items)
+    trinity_keys = extract_key_values(valid_trinity_list, trinity_key) |> MapSet.new()
     capway_keys = extract_key_values(capway_list, capway_key) |> MapSet.new()
 
     # Debug logging to understand what's being compared
@@ -80,7 +94,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     Logger.debug("   Trinity key: #{trinity_key}, Capway key: #{capway_key}")
 
     Logger.debug(
-      "   Trinity count: #{length(trinity_list)}, Capway count: #{length(capway_list)}"
+      "   Valid Trinity count: #{length(valid_trinity_list)}, Capway count: #{length(capway_list)}"
     )
 
     Logger.debug("   Trinity keys sample: #{trinity_keys |> Enum.take(5) |> inspect()}")
@@ -105,7 +119,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     # and have an "active" status in Capway.
     # These need contract cancellation in Capway.
     cancel_capway_keys =
-      trinity_list
+      valid_trinity_list
       |> Enum.filter(fn subscriber ->
         key_value = Map.get(subscriber, trinity_key)
         payment_method = Map.get(subscriber, :payment_method)
@@ -126,9 +140,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     # AND status != :cancelled (exclude cancelled subscriptions)
     # for the missing_in_capway comparison (these should be added to Capway)
     capway_payment_trinity_keys =
-      trinity_list
+      valid_trinity_list
       |> Enum.filter(fn subscriber ->
-        Map.get(subscriber, :payment_method) == "capway" && Map.get(subscriber, :status) != :cancelled
+        Map.get(subscriber, :payment_method) == "capway" &&
+          Map.get(subscriber, :status) != :cancelled
       end)
       |> extract_key_values(trinity_key)
       |> MapSet.new()
@@ -137,13 +152,50 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
     filtered_missing_capway_keys = MapSet.difference(capway_payment_trinity_keys, capway_keys)
 
     # Find the actual items for analysis
-    missing_in_capway = find_items_by_keys(trinity_list, filtered_missing_capway_keys, trinity_key)
+    # Include invalid_trinity_list in missing_in_capway candidates first
+    initial_missing_in_capway =
+      find_items_by_keys(valid_trinity_list, filtered_missing_capway_keys, trinity_key) ++
+        invalid_trinity_list
+
+    # Separate "update_capway_contract" candidates from "missing_in_capway"
+    # Logic: If Trinity ID exists in Capway (via customer_ref/capway_id) AND Capway has missing/nil id_number
+    # then it's an UPDATE, not a CREATE.
+
+    # Map Capway subscribers by capway_id (customer_ref) for lookup
+    capway_by_ref = Map.new(capway_list, fn sub -> {Map.get(sub, :capway_id), sub} end)
+
+    {update_capway_contract, missing_in_capway} =
+      Enum.split_with(initial_missing_in_capway, fn trinity_sub ->
+        trinity_id = Map.get(trinity_sub, :trinity_id)
+
+        if trinity_id do
+          case Map.get(capway_by_ref, to_string(trinity_id)) do
+            # Not in Capway -> Missing (Create)
+            nil ->
+              false
+
+            capway_sub ->
+              # In Capway. Check if Capway id_number is missing.
+              case Map.get(capway_sub, :id_number) do
+                # Capway missing id_number -> Update
+                nil -> true
+                # Capway empty id_number -> Update
+                "" -> true
+                # Capway has id_number -> Mismatch/Conflict (Keep as Missing/Create logic)
+                _ -> false
+              end
+          end
+        else
+          false
+        end
+      end)
+
     missing_in_trinity = find_items_by_keys(capway_list, missing_trinity_keys, capway_key)
     existing_in_both = find_items_by_keys(capway_list, existing_keys, capway_key)
 
     # Enrich Trinity subscribers with Capway active status for cancellation tracking
     cancel_capway_contracts =
-      find_items_by_keys(trinity_list, cancel_capway_keys, trinity_key)
+      find_items_by_keys(valid_trinity_list, cancel_capway_keys, trinity_key)
       |> Enum.map(fn subscriber ->
         key_value = Map.get(subscriber, trinity_key)
         capway_subscriber = Map.get(capway_map, key_value)
@@ -153,10 +205,22 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
       end)
 
     # Extract ID lists for minimal report storage
-    missing_in_capway_ids = extract_trinity_ids(trinity_list, filtered_missing_capway_keys, trinity_key)
+    # Helper to extract IDs from a list of structs (handling both valid/invalid key items)
+    extract_ids_helper = fn items ->
+      Enum.map(items, fn item ->
+        Map.get(item, :trinity_id) || Map.get(item, :capway_id) || Map.get(item, trinity_key)
+      end)
+      |> Enum.reject(&is_nil/1)
+    end
+
+    missing_in_capway_ids = extract_ids_helper.(missing_in_capway)
+    update_capway_contract_ids = extract_ids_helper.(update_capway_contract)
+
     missing_in_trinity_ids = extract_trinity_ids(capway_list, missing_trinity_keys, capway_key)
     existing_in_both_ids = extract_trinity_ids(capway_list, existing_keys, capway_key)
-    cancel_capway_contracts_ids = extract_trinity_ids(trinity_list, cancel_capway_keys, trinity_key)
+
+    cancel_capway_contracts_ids =
+      extract_trinity_ids(valid_trinity_list, cancel_capway_keys, trinity_key)
 
     %{
       # Full objects for suspend/unsuspend/cancel analysis
@@ -164,18 +228,21 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
       missing_in_trinity: missing_in_trinity,
       existing_in_both: existing_in_both,
       cancel_capway_contracts: cancel_capway_contracts,
+      update_capway_contract: update_capway_contract,
       # ID lists for report storage
       missing_in_capway_ids: missing_in_capway_ids,
       missing_in_trinity_ids: missing_in_trinity_ids,
       existing_in_both_ids: existing_in_both_ids,
       cancel_capway_contracts_ids: cancel_capway_contracts_ids,
+      update_capway_contract_ids: update_capway_contract_ids,
       # Counts and totals
       total_trinity: length(trinity_list),
       total_capway: length(capway_list),
       missing_capway_count: length(missing_in_capway),
       missing_trinity_count: length(missing_in_trinity),
       existing_in_both_count: length(existing_in_both),
-      cancel_capway_contracts_count: length(cancel_capway_contracts)
+      cancel_capway_contracts_count: length(cancel_capway_contracts),
+      update_capway_contract_count: length(update_capway_contract)
     }
   end
 

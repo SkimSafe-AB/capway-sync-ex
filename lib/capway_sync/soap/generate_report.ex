@@ -172,12 +172,18 @@ defmodule CapwaySync.Soap.GenerateReport do
             {:error, :unauthorized}
 
           status when status in [502, 503, 504] and retries_left > 0 ->
-            Logger.warning("SOAP server error (#{status}), retrying... (#{retries_left} retries left)")
+            Logger.warning(
+              "SOAP server error (#{status}), retrying... (#{retries_left} retries left)"
+            )
+
             Process.sleep(1000 * (4 - retries_left))
             call_soap_with_retry(endpoint, soap_body, req_options, retries_left - 1)
 
           status when status in [429] and retries_left > 0 ->
-            Logger.warning("SOAP rate limited (#{status}), retrying... (#{retries_left} retries left)")
+            Logger.warning(
+              "SOAP rate limited (#{status}), retrying... (#{retries_left} retries left)"
+            )
+
             Process.sleep(2000 * (4 - retries_left))
             call_soap_with_retry(endpoint, soap_body, req_options, retries_left - 1)
 
@@ -191,8 +197,12 @@ defmodule CapwaySync.Soap.GenerateReport do
         Process.sleep(2000 * (4 - retries_left))
         call_soap_with_retry(endpoint, soap_body, req_options, retries_left - 1)
 
-      {:error, %{reason: reason}} when reason in [:econnrefused, :nxdomain, :closed] and retries_left > 0 ->
-        Logger.warning("SOAP connection error (#{reason}), retrying... (#{retries_left} retries left)")
+      {:error, %{reason: reason}}
+      when reason in [:econnrefused, :nxdomain, :closed] and retries_left > 0 ->
+        Logger.warning(
+          "SOAP connection error (#{reason}), retrying... (#{retries_left} retries left)"
+        )
+
         Process.sleep(1500 * (4 - retries_left))
         call_soap_with_retry(endpoint, soap_body, req_options, retries_left - 1)
 

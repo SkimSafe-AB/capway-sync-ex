@@ -9,7 +9,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
         id: "test-uuid-123",
         trinity_id: "123456789012",
         created_at: "2024-01-15-10-30-00",
-        timestamp: 1705312200,
+        timestamp: 1_705_312_200,
         action: "suspend"
       }
 
@@ -18,7 +18,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
       assert result["id"] == "test-uuid-123"
       assert result["trinity_id"] == "123456789012"
       assert result["created_at"] == "2024-01-15-10-30-00"
-      assert result["timestamp"] == 1705312200
+      assert result["timestamp"] == 1_705_312_200
       assert result["action"] == "suspend"
     end
   end
@@ -29,7 +29,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
         "id" => "test-uuid-123",
         "trinity_id" => "123456789012",
         "created_at" => "2024-01-15-10-30-00",
-        "timestamp" => 1705312200,
+        "timestamp" => 1_705_312_200,
         "action" => "suspend"
       }
 
@@ -39,7 +39,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
       assert result.id == "test-uuid-123"
       assert result.trinity_id == "123456789012"
       assert result.created_at == "2024-01-15-10-30-00"
-      assert result.timestamp == 1705312200
+      assert result.timestamp == 1_705_312_200
       assert result.action == "suspend"
     end
 
@@ -217,7 +217,10 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
     {:ok, result}
   end
 
-  defp test_store_action_items_from_report_with_failure(%GeneralSyncReport{} = report, failure_count) do
+  defp test_store_action_items_from_report_with_failure(
+         %GeneralSyncReport{} = report,
+         failure_count
+       ) do
     action_items = ActionItem.create_action_items_from_report(report)
     total_items = length(action_items)
     success_count = total_items - failure_count
@@ -241,7 +244,9 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
     # Add action filter
     {filters, expression_values} =
       case Keyword.get(opts, :action) do
-        nil -> {filters, expression_values}
+        nil ->
+          {filters, expression_values}
+
         action ->
           filter = "action = :action"
           values = Map.put(expression_values, ":action", action)
@@ -251,7 +256,9 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
     # Add trinity_id filter
     {filters, expression_values} =
       case Keyword.get(opts, :trinity_id) do
-        nil -> {filters, expression_values}
+        nil ->
+          {filters, expression_values}
+
         trinity_id ->
           filter = "trinity_id = :trinity_id"
           values = Map.put(expression_values, ":trinity_id", trinity_id)
@@ -263,21 +270,27 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryTest do
       case {Keyword.get(opts, :start_date), Keyword.get(opts, :end_date)} do
         {nil, nil} ->
           {filters, expression_values}
+
         {start_date, nil} when is_binary(start_date) ->
           filter = "created_at >= :start_date"
           values = Map.put(expression_values, ":start_date", start_date)
           {[filter | filters], values}
+
         {nil, end_date} when is_binary(end_date) ->
           filter = "created_at <= :end_date"
           values = Map.put(expression_values, ":end_date", end_date)
           {[filter | filters], values}
+
         {start_date, end_date} when is_binary(start_date) and is_binary(end_date) ->
           filter = "created_at BETWEEN :start_date AND :end_date"
+
           values =
             expression_values
             |> Map.put(":start_date", start_date)
             |> Map.put(":end_date", end_date)
+
           {[filter | filters], values}
+
         _ ->
           {filters, expression_values}
       end

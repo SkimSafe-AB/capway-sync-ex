@@ -51,7 +51,9 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
 
       result = analyze_for_suspend(existing_accounts, suspend_threshold)
 
-      Logger.info("Suspend accounts analysis completed: #{result.suspend_count}/#{result.total_analyzed} accounts for suspension, #{result.cancel_contracts_count} for cancellation (threshold: #{suspend_threshold})")
+      Logger.info(
+        "Suspend accounts analysis completed: #{result.suspend_count}/#{result.total_analyzed} accounts for suspension, #{result.cancel_contracts_count} for cancellation (threshold: #{suspend_threshold})"
+      )
 
       {:ok, result}
     else
@@ -67,7 +69,6 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
   """
   def analyze_for_suspend(existing_accounts, suspend_threshold)
       when is_list(existing_accounts) and is_integer(suspend_threshold) do
-
     {suspend_accounts, cancel_contracts, collection_summary} =
       filter_suspend_candidates(existing_accounts, suspend_threshold)
 
@@ -107,10 +108,16 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
 
             # Separate based on subscription_type
             if subscription_type == "locked" do
-              Logger.debug("🔒 SUSPEND: ID #{id} | Collection: #{collection_value} | Name: #{name} | Type: locked")
+              Logger.debug(
+                "🔒 SUSPEND: ID #{id} | Collection: #{collection_value} | Name: #{name} | Type: locked"
+              )
+
               {[account | suspend_acc], cancel_acc, updated_summary}
             else
-              Logger.debug("🚫 CANCEL: ID #{id} | Collection: #{collection_value} | Name: #{name} | Type: #{subscription_type || "nil"}")
+              Logger.debug(
+                "🚫 CANCEL: ID #{id} | Collection: #{collection_value} | Name: #{name} | Type: #{subscription_type || "nil"}"
+              )
+
               {suspend_acc, [account | cancel_acc], updated_summary}
             end
 
@@ -136,15 +143,23 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
   """
   def parse_collection_safely(collection) do
     case collection do
-      nil -> {:error, :nil_value}
-      "" -> {:error, :nil_value}
+      nil ->
+        {:error, :nil_value}
+
+      "" ->
+        {:error, :nil_value}
+
       value when is_binary(value) ->
         case Integer.parse(String.trim(value)) do
           {integer_val, ""} when integer_val >= 0 -> {:ok, integer_val}
           _ -> {:error, :invalid_value}
         end
-      value when is_integer(value) and value >= 0 -> {:ok, value}
-      _ -> {:error, :invalid_value}
+
+      value when is_integer(value) and value >= 0 ->
+        {:ok, value}
+
+      _ ->
+        {:error, :invalid_value}
     end
   end
 
@@ -165,5 +180,4 @@ defmodule CapwaySync.Reactor.V1.Steps.SuspendAccounts do
       value >= 3 -> "3+"
     end
   end
-
 end

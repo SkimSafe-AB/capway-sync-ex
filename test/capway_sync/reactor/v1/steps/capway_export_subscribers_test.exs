@@ -78,13 +78,29 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribersTest do
   describe "generate_csv_content/1" do
     test "generates CSV with header and rows" do
       subscribers = [
-        %{id_number: "123456789", name: "John Doe", customer_ref: "CR001", unpaid_invoices: 2, collection: 1},
-        %{id_number: "987654321", name: "Jane Smith", customer_ref: "CR002", unpaid_invoices: 0, collection: 3}
+        %{
+          id_number: "123456789",
+          name: "John Doe",
+          customer_ref: "CR001",
+          unpaid_invoices: 2,
+          collection: 1
+        },
+        %{
+          id_number: "987654321",
+          name: "Jane Smith",
+          customer_ref: "CR002",
+          unpaid_invoices: 0,
+          collection: 3
+        }
       ]
 
       result = CapwayExportSubscribers.generate_csv_content(subscribers)
 
-      assert String.starts_with?(result, "id_number,name,customer_ref,email,unpaid_invoices,collection\n")
+      assert String.starts_with?(
+               result,
+               "id_number,name,customer_ref,email,unpaid_invoices,collection\n"
+             )
+
       assert String.contains?(result, "123456789,John Doe,CR001,,2,1\n")
       assert String.contains?(result, "987654321,Jane Smith,CR002,,0,3\n")
     end
@@ -168,7 +184,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribersTest do
     end
 
     test "escapes quotes and wraps in quotes" do
-      assert CapwayExportSubscribers.escape_csv_field("John \"Johnny\" Doe") == "\"John \"\"Johnny\"\" Doe\""
+      assert CapwayExportSubscribers.escape_csv_field("John \"Johnny\" Doe") ==
+               "\"John \"\"Johnny\"\" Doe\""
     end
 
     test "wraps field in quotes if contains newline" do
@@ -226,7 +243,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribersTest do
     test "handles empty capway_data list" do
       result = CapwayExportSubscribers.run(%{capway_data: []}, %{}, [])
 
-      assert {:ok, %{total_exported: 0, customers_with_unpaid_invoices: 0, customers_with_collections: 0}} = result
+      assert {:ok,
+              %{
+                total_exported: 0,
+                customers_with_unpaid_invoices: 0,
+                customers_with_collections: 0
+              }} = result
     end
   end
 end

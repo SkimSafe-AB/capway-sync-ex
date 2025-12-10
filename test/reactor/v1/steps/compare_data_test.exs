@@ -170,12 +170,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
       assert result.missing_in_trinity == []
     end
 
-    test "handles lists with nil key values" do
+    test "handles lists with nil key values by treating them as missing in Capway" do
       trinity_list = [
         %{id: "100", name: "Valid", payment_method: "capway"},
-        %{id: nil, name: "Invalid1", payment_method: "capway"},
+        %{id: nil, trinity_id: "998", name: "Invalid1", payment_method: "capway"},
         # missing key
-        %{name: "Invalid2", payment_method: "capway"}
+        %{trinity_id: "999", name: "Invalid2", payment_method: "capway"}
       ]
 
       capway_list = [
@@ -185,11 +185,47 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataTest do
 
       result = CompareData.find_missing_items(trinity_list, capway_list, :id, :customer_ref)
 
-      # Only valid entries should be considered
-      # "100" missing in capway
-      assert result.missing_capway_count == 1
+      # "100" (Valid) missing in capway
+      # "998" (Invalid1) missing in capway (because invalid key)
+      # "999" (Invalid2) missing in capway (because invalid key)
+      assert result.missing_capway_count == 3
+
+      missing_ids = result.missing_in_capway_ids
+      assert "100" in missing_ids
+      assert "998" in missing_ids
+      assert "999" in missing_ids
+
       # "200" missing in trinity
       assert result.missing_trinity_count == 1
+    end
+
+    test "identifies update_capway_contract items" do
+      trinity_list = [
+        # Normal case
+        %{id_number: "111", trinity_id: "1", payment_method: "capway"},
+        # Update case: ID matches (trinity_id=2 <-> customer_ref=2), but Capway has no id_number
+        %{id_number: "222", trinity_id: "2", payment_method: "capway"}
+      ]
+
+      capway_list = [
+        # Normal match
+        %{id_number: "111", customer_ref: "1", capway_id: "1"},
+        # Needs update (missing id_number)
+        %{id_number: nil, customer_ref: "2", capway_id: "2"}
+      ]
+
+      result = CompareData.find_missing_items(trinity_list, capway_list, :id_number, :id_number)
+
+      # "111" matches perfectly -> existing_in_both
+      assert result.existing_in_both_count == 1
+
+      # "222" is not in Capway key set (because Capway id is nil)
+      # Usually "missing_in_capway", BUT we intercept it because trinity_id "2" exists in Capway
+      assert result.missing_capway_count == 0
+      assert result.update_capway_contract_count == 1
+
+      update_ids = result.update_capway_contract_ids
+      assert "2" in update_ids
     end
   end
 

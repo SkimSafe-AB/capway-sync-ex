@@ -16,13 +16,14 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
       try do
         System.put_env("USE_MOCK_CAPWAY", "true")
 
-        result = GenerateReport.generate_report(
-          "CAP_q_contracts_skimsafe",
-          "Data",
-          [%{name: "creditor", value: "202623"}],
-          offset: 0,
-          maxrows: 100
-        )
+        result =
+          GenerateReport.generate_report(
+            "CAP_q_contracts_skimsafe",
+            "Data",
+            [%{name: "creditor", value: "202623"}],
+            offset: 0,
+            maxrows: 100
+          )
 
         assert {:ok, _xml_data} = result
       after
@@ -41,17 +42,19 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
         System.put_env("USE_MOCK_CAPWAY", "true")
         System.put_env("MOCK_CAPWAY_DELAY", "50")
 
-        result = GenerateReport.generate_report(
-          "CAP_q_contracts_skimsafe",
-          "Data",
-          [%{name: "creditor", value: "202623"}],
-          offset: 0,
-          maxrows: 100
-        )
+        result =
+          GenerateReport.generate_report(
+            "CAP_q_contracts_skimsafe",
+            "Data",
+            [%{name: "creditor", value: "202623"}],
+            offset: 0,
+            maxrows: 100
+          )
 
         assert {:ok, _xml_data} = result
       after
         System.delete_env("MOCK_CAPWAY_DELAY")
+
         if original_env do
           System.put_env("USE_MOCK_CAPWAY", original_env)
         else
@@ -67,14 +70,16 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
         System.put_env("USE_MOCK_CAPWAY", "true")
         System.put_env("MOCK_CAPWAY_RESPONSE", "nonexistent_file.xml")
 
-        log = capture_log(fn ->
-          result = GenerateReport.generate_report()
-          assert {:error, {:mock_file_error, _reason}} = result
-        end)
+        log =
+          capture_log(fn ->
+            result = GenerateReport.generate_report()
+            assert {:error, {:mock_file_error, _reason}} = result
+          end)
 
         assert log =~ "Failed to read mock response"
       after
         System.delete_env("MOCK_CAPWAY_RESPONSE")
+
         if original_env do
           System.put_env("USE_MOCK_CAPWAY", original_env)
         else
@@ -89,10 +94,11 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
       try do
         System.put_env("USE_MOCK_CAPWAY", "true")
 
-        log = capture_log(fn ->
-          result = GenerateReport.generate_report()
-          assert {:ok, _xml_data} = result
-        end)
+        log =
+          capture_log(fn ->
+            result = GenerateReport.generate_report()
+            assert {:ok, _xml_data} = result
+          end)
 
         assert log =~ "Using mock Capway response"
       after
@@ -111,16 +117,20 @@ defmodule CapwaySyncTest.Soap.GenerateReportRetryTest do
         System.put_env("USE_MOCK_CAPWAY", "true")
 
         # Test offset 0 - should use capway_page_1.xml
-        {:ok, result1} = GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 0)
+        {:ok, result1} =
+          GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 0)
 
         # Test offset 100 - should use capway_page_2.xml
-        {:ok, result2} = GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 100)
+        {:ok, result2} =
+          GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 100)
 
         # Test offset 200 - should use capway_edge_cases.xml
-        {:ok, result3} = GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 200)
+        {:ok, result3} =
+          GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 200)
 
         # Test offset 1000 - should use capway_empty.xml
-        {:ok, result4} = GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 1000)
+        {:ok, result4} =
+          GenerateReport.generate_report("CAP_q_contracts_skimsafe", "Data", [], offset: 1000)
 
         # Results should be different (different mock files)
         assert result1 != result2

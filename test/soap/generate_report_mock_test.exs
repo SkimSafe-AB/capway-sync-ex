@@ -22,7 +22,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "returns mock response for first page (offset 0)" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       assert is_binary(xml_response)
       assert String.contains?(xml_response, "GenerateReportResponse")
@@ -30,7 +31,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "returns different mock response for second page (offset 100)" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 100, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 100, maxrows: 100)
 
       assert is_binary(xml_response)
       assert String.contains?(xml_response, "GenerateReportResponse")
@@ -38,7 +40,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "returns edge cases for high offset (offset 200)" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
 
       assert is_binary(xml_response)
       assert String.contains?(xml_response, "i:nil=\"true\"")
@@ -46,7 +49,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "returns empty response for very high offset (offset 1000)" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 1000, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 1000, maxrows: 100)
 
       assert is_binary(xml_response)
       assert String.contains?(xml_response, "GenerateReportResponse")
@@ -57,7 +61,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     test "respects custom response file override" do
       System.put_env("MOCK_CAPWAY_RESPONSE", "capway_edge_cases.xml")
 
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       assert String.contains?(xml_response, "Åsa Öberg Ärligt")
 
@@ -68,7 +73,10 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
       System.put_env("MOCK_CAPWAY_DELAY", "50")
 
       start_time = System.monotonic_time(:millisecond)
-      assert {:ok, _xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+
+      assert {:ok, _xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+
       end_time = System.monotonic_time(:millisecond)
 
       # Should take at least 50ms
@@ -80,7 +88,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     test "returns error for missing mock file" do
       System.put_env("MOCK_CAPWAY_RESPONSE", "nonexistent_file.xml")
 
-      assert {:error, {:mock_file_error, _reason}} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      assert {:error, {:mock_file_error, _reason}} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       System.delete_env("MOCK_CAPWAY_RESPONSE")
     end
@@ -110,7 +119,8 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "mock data contains expected Swedish characters" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
 
       # Should contain proper Swedish characters
       assert String.contains?(xml_response, "Åsa")
@@ -119,21 +129,24 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "mock data includes nil values for testing" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 200, maxrows: 100)
 
       # Should contain nil values
       assert String.contains?(xml_response, "i:nil=\"true\"")
     end
 
     test "mock data includes realistic Swedish personal numbers" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       # Should contain 12-digit personal numbers
       assert xml_response =~ ~r/\d{12}/
     end
 
     test "mock data includes various collection and invoice values" do
-      assert {:ok, xml_response} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      assert {:ok, xml_response} =
+               GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       # Should contain numeric values for collections/invoices
       assert String.contains?(xml_response, "<Value>0</Value>")
@@ -160,8 +173,11 @@ defmodule CapwaySync.Soap.GenerateReportMockTest do
     end
 
     test "maxrows parameter doesn't affect mock selection (for simplicity)" do
-      {:ok, response1} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 50)
-      {:ok, response2} = GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
+      {:ok, response1} =
+        GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 50)
+
+      {:ok, response2} =
+        GenerateReport.generate_report("test", "Data", [], offset: 0, maxrows: 100)
 
       # Same offset should return same mock file regardless of maxrows
       assert response1 == response2

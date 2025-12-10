@@ -35,19 +35,21 @@ defmodule CapwaySyncTest.Reactor.V1.Steps.TrinitySubscribersRetryTest do
 
     test "error handling logs appropriately" do
       # Test that Logger is available for error scenarios
-      log = capture_log(fn ->
-        require Logger
-        Logger.error("Failed to fetch Trinity subscribers: test error")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          Logger.error("Failed to fetch Trinity subscribers: test error")
+        end)
 
       assert log =~ "Failed to fetch Trinity subscribers: test error"
     end
 
     test "success scenario logs appropriately" do
-      log = capture_log(fn ->
-        require Logger
-        Logger.info("Successfully fetched 10 Trinity subscribers")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          Logger.info("Successfully fetched 10 Trinity subscribers")
+        end)
 
       assert log =~ "Successfully fetched 10 Trinity subscribers"
     end
@@ -87,9 +89,10 @@ defmodule CapwaySyncTest.Reactor.V1.Steps.TrinitySubscribersRetryTest do
   describe "integration with Reactor framework" do
     test "step is properly structured for Reactor" do
       # Verify the step uses Reactor.Step
-      behaviours = TrinitySubscribers.module_info(:attributes)
-                  |> Enum.filter(fn {key, _} -> key == :behaviour end)
-                  |> Enum.flat_map(fn {_, behaviours} -> behaviours end)
+      behaviours =
+        TrinitySubscribers.module_info(:attributes)
+        |> Enum.filter(fn {key, _} -> key == :behaviour end)
+        |> Enum.flat_map(fn {_, behaviours} -> behaviours end)
 
       assert Reactor.Step in behaviours
     end
@@ -113,22 +116,24 @@ defmodule CapwaySyncTest.Reactor.V1.Steps.TrinitySubscribersRetryTest do
 
   describe "logging behavior" do
     test "logs success with subscriber count" do
-      log = capture_log(fn ->
-        require Logger
-        # Simulate the log message format used in the step
-        subscribers = [%{id: 1}, %{id: 2}, %{id: 3}]
-        Logger.info("Successfully fetched #{length(subscribers)} Trinity subscribers")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          # Simulate the log message format used in the step
+          subscribers = [%{id: 1}, %{id: 2}, %{id: 3}]
+          Logger.info("Successfully fetched #{length(subscribers)} Trinity subscribers")
+        end)
 
       assert log =~ "Successfully fetched 3 Trinity subscribers"
     end
 
     test "logs errors with details" do
-      log = capture_log(fn ->
-        require Logger
-        error = %RuntimeError{message: "Database connection failed"}
-        Logger.error("Failed to fetch Trinity subscribers: #{inspect(error)}")
-      end)
+      log =
+        capture_log(fn ->
+          require Logger
+          error = %RuntimeError{message: "Database connection failed"}
+          Logger.error("Failed to fetch Trinity subscribers: #{inspect(error)}")
+        end)
 
       assert log =~ "Failed to fetch Trinity subscribers"
       assert log =~ "Database connection failed"

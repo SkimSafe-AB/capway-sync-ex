@@ -182,10 +182,10 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
       merged_cancel_result = %{
         cancel_capway_contracts:
           (args.cancel_result.cancel_capway_contracts || []) ++
-          (args.suspend_result.cancel_contracts || []),
+            (args.suspend_result.cancel_contracts || []),
         cancel_capway_count:
           (args.cancel_result.cancel_capway_count || 0) +
-          (args.suspend_result.cancel_contracts_count || 0)
+            (args.suspend_result.cancel_contracts_count || 0)
       }
 
       report =
@@ -242,7 +242,11 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
       Logger.info("📊 CSV Export Results:")
       Logger.info("   - File: #{args.csv_export_result.csv_file_path}")
       Logger.info("   - Total exported: #{args.csv_export_result.total_exported}")
-      Logger.info("   - With unpaid invoices: #{args.csv_export_result.customers_with_unpaid_invoices}")
+
+      Logger.info(
+        "   - With unpaid invoices: #{args.csv_export_result.customers_with_unpaid_invoices}"
+      )
+
       Logger.info("   - With collections: #{args.csv_export_result.customers_with_collections}")
 
       Logger.info(
@@ -255,12 +259,26 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
           Logger.info("📝 GeneralSyncReport stored to DynamoDB with ID: #{report_id}")
           # Return report with metadata about storage
           report_with_id = %{report | created_at: report.created_at}
-          {:ok, %{report: report_with_id, report_id: report_id, stored: true, csv_export: args.csv_export_result}}
+
+          {:ok,
+           %{
+             report: report_with_id,
+             report_id: report_id,
+             stored: true,
+             csv_export: args.csv_export_result
+           }}
 
         {:error, reason} ->
           Logger.error("❌ Failed to store GeneralSyncReport to DynamoDB: #{inspect(reason)}")
           # Still return the report even if storage failed
-          {:ok, %{report: report, report_id: nil, stored: false, storage_error: reason, csv_export: args.csv_export_result}}
+          {:ok,
+           %{
+             report: report,
+             report_id: nil,
+             stored: false,
+             storage_error: reason,
+             csv_export: args.csv_export_result
+           }}
       end
     end)
   end

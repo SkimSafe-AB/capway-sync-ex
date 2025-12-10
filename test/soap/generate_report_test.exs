@@ -84,16 +84,17 @@ defmodule CapwaySync.Soap.GenerateReportTest do
       ]
 
       assert Enum.any?(pagination_args, fn arg ->
-        arg.name == "offset" && arg.value == "25"
-      end)
+               arg.name == "offset" && arg.value == "25"
+             end)
 
       assert Enum.any?(pagination_args, fn arg ->
-        arg.name == "maxrows" && arg.value == "50"
-      end)
+               arg.name == "maxrows" && arg.value == "50"
+             end)
     end
 
     test "pagination arguments are combined with user arguments" do
       user_args = [%{name: "creditor", value: "202623"}]
+
       pagination_args = [
         %{name: "offset", value: "0"},
         %{name: "maxrows", value: "100"}
@@ -143,7 +144,7 @@ defmodule CapwaySync.Soap.GenerateReportTest do
     end
 
     test "handles large numbers" do
-      offset = 999999
+      offset = 999_999
       maxrows = 10000
 
       assert to_string(offset) == "999999"

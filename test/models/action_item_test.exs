@@ -9,7 +9,8 @@ defmodule CapwaySync.Models.ActionItemTest do
         trinity_id: "123456789012",
         personal_number: "199001012345",
         created_at: "2024-01-15",
-        timestamp: 1705312200,  # 2024-01-15 10:30:00 UTC
+        # 2024-01-15 10:30:00 UTC
+        timestamp: 1_705_312_200,
         action: "suspend"
       }
 
@@ -17,7 +18,7 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert action_item.trinity_id == "123456789012"
       assert action_item.personal_number == "199001012345"
       assert action_item.created_at == "2024-01-15"
-      assert action_item.timestamp == 1705312200
+      assert action_item.timestamp == 1_705_312_200
       assert action_item.action == "suspend"
     end
 
@@ -55,8 +56,16 @@ defmodule CapwaySync.Models.ActionItemTest do
       # Check sync_to_capway items
       sync_items = Enum.filter(action_items, &(&1.action == "sync_to_capway"))
       assert length(sync_items) == 2
-      assert Enum.map(sync_items, &(&1.trinity_id)) |> Enum.sort() == ["123456789012", "234567890123"]
-      assert Enum.map(sync_items, &(&1.personal_number)) |> Enum.sort() == ["199001012345", "199002023456"]
+
+      assert Enum.map(sync_items, & &1.trinity_id) |> Enum.sort() == [
+               "123456789012",
+               "234567890123"
+             ]
+
+      assert Enum.map(sync_items, & &1.personal_number) |> Enum.sort() == [
+               "199001012345",
+               "199002023456"
+             ]
 
       # Check suspend items
       suspend_items = Enum.filter(action_items, &(&1.action == "suspend"))
@@ -68,24 +77,33 @@ defmodule CapwaySync.Models.ActionItemTest do
       # Check unsuspend items
       unsuspend_items = Enum.filter(action_items, &(&1.action == "unsuspend"))
       assert length(unsuspend_items) == 2
-      assert Enum.map(unsuspend_items, &(&1.trinity_id)) |> Enum.sort() == ["456789012345", "567890123456"]
-      assert Enum.map(unsuspend_items, &(&1.personal_number)) |> Enum.sort() == ["199004045678", "199005056789"]
+
+      assert Enum.map(unsuspend_items, & &1.trinity_id) |> Enum.sort() == [
+               "456789012345",
+               "567890123456"
+             ]
+
+      assert Enum.map(unsuspend_items, & &1.personal_number) |> Enum.sort() == [
+               "199004045678",
+               "199005056789"
+             ]
 
       # Verify all items have same timestamp value
-      timestamps = Enum.map(action_items, &(&1.timestamp)) |> Enum.uniq()
+      timestamps = Enum.map(action_items, & &1.timestamp) |> Enum.uniq()
       assert length(timestamps) == 1
       expected_timestamp = DateTime.to_unix(~U[2024-01-15 10:30:00Z])
       assert List.first(timestamps) == expected_timestamp
 
       # Verify all items have same created_at date string
-      created_ats = Enum.map(action_items, &(&1.created_at)) |> Enum.uniq()
+      created_ats = Enum.map(action_items, & &1.created_at) |> Enum.uniq()
       assert length(created_ats) == 1
       assert List.first(created_ats) == "2024-01-15"
 
       # Verify all items have UUIDs
-      ids = Enum.map(action_items, &(&1.id))
+      ids = Enum.map(action_items, & &1.id)
       assert Enum.all?(ids, &is_binary/1)
-      assert Enum.all?(ids, &(String.length(&1) == 36))  # UUID length
+      # UUID length
+      assert Enum.all?(ids, &(String.length(&1) == 36))
     end
 
     test "creates empty list when no actionable items in report" do
@@ -123,7 +141,8 @@ defmodule CapwaySync.Models.ActionItemTest do
 
     test "converts non-string trinity_ids to strings and handles backward compatibility" do
       report = %GeneralSyncReport{
-        missing_in_capway: [123456789012],  # Integer trinity_id - old format
+        # Integer trinity_id - old format
+        missing_in_capway: [123_456_789_012],
         suspend_accounts: [],
         unsuspend_accounts: [],
         created_at: ~U[2024-01-15 10:30:00Z]
@@ -134,7 +153,8 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert length(action_items) == 1
       item = List.first(action_items)
       assert item.trinity_id == "123456789012"
-      assert item.personal_number == nil  # No personal number in old format
+      # No personal number in old format
+      assert item.personal_number == nil
       assert is_binary(item.trinity_id)
     end
 
@@ -142,7 +162,8 @@ defmodule CapwaySync.Models.ActionItemTest do
       report = %GeneralSyncReport{
         missing_in_capway: [
           %{id: "123456789012", personal_number: "199001012345"},
-          %{id: "234567890123", personal_number: nil}  # Explicit nil personal number
+          # Explicit nil personal number
+          %{id: "234567890123", personal_number: nil}
         ],
         suspend_accounts: [],
         unsuspend_accounts: [],
@@ -153,7 +174,7 @@ defmodule CapwaySync.Models.ActionItemTest do
 
       assert length(action_items) == 2
 
-      items_by_id = Enum.group_by(action_items, &(&1.trinity_id))
+      items_by_id = Enum.group_by(action_items, & &1.trinity_id)
 
       item1 = List.first(items_by_id["123456789012"])
       assert item1.personal_number == "199001012345"
@@ -202,7 +223,8 @@ defmodule CapwaySync.Models.ActionItemTest do
         missing_in_capway: ["123456789012"],
         suspend_accounts: [],
         unsuspend_accounts: [],
-        created_at: ~U[2024-01-15 10:30:45.123Z]  # With seconds and microseconds
+        # With seconds and microseconds
+        created_at: ~U[2024-01-15 10:30:45.123Z]
       }
 
       action_items = ActionItem.create_action_items_from_report(report)
@@ -243,7 +265,7 @@ defmodule CapwaySync.Models.ActionItemTest do
         trinity_id: "123456789012",
         personal_number: "199001012345",
         created_at: "2024-01-15",
-        timestamp: 1705312200,
+        timestamp: 1_705_312_200,
         action: "suspend"
       }
 
@@ -254,7 +276,7 @@ defmodule CapwaySync.Models.ActionItemTest do
       assert decoded["trinity_id"] == "123456789012"
       assert decoded["personal_number"] == "199001012345"
       assert decoded["created_at"] == "2024-01-15"
-      assert decoded["timestamp"] == 1705312200
+      assert decoded["timestamp"] == 1_705_312_200
       assert decoded["action"] == "suspend"
     end
   end

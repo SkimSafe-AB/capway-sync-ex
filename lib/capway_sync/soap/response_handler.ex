@@ -198,11 +198,7 @@ defmodule CapwaySync.Soap.ResponseHandler do
 
   # Finalize subscriber with raw data and set capway_id
   defp finalize_subscriber(subscriber, raw_data) do
-    %{subscriber |
-      origin: :capway,
-      capway_id: subscriber.customer_ref,
-      raw_data: raw_data
-    }
+    %{subscriber | origin: :capway, capway_id: subscriber.customer_ref, raw_data: raw_data}
   end
 
   # Fix common HTML entity encoding issues for Swedish characters

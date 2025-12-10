@@ -67,7 +67,8 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
         id: 1003,
         subscription: %{
           id: 2003,
-          payment_method: "bank",  # Changed from capway to bank
+          # Changed from capway to bank
+          payment_method: "bank",
           status: :active,
           end_date: nil
         }

@@ -37,12 +37,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContracts do
       Logger.info("Analyzed #{total_analyzed} subscribers for contract cancellation")
 
       # Extract active status for debug purposes
-      active_statuses = Enum.map(cancel_contracts, fn subscriber ->
-        %{
-          id_number: Map.get(subscriber, :id_number),
-          active: Map.get(subscriber, :capway_active_status)
-        }
-      end)
+      active_statuses =
+        Enum.map(cancel_contracts, fn subscriber ->
+          %{
+            id_number: Map.get(subscriber, :id_number),
+            active: Map.get(subscriber, :capway_active_status)
+          }
+        end)
 
       result = %{
         cancel_capway_contracts: cancel_contracts,
@@ -52,7 +53,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CancelCapwayContracts do
       }
 
       if total_analyzed > 0 do
-        Logger.info("🚫 Found #{total_analyzed} Capway contracts that need cancellation due to payment method changes")
+        Logger.info(
+          "🚫 Found #{total_analyzed} Capway contracts that need cancellation due to payment method changes"
+        )
 
         # Log sample of contracts for visibility
         sample_size = min(5, total_analyzed)

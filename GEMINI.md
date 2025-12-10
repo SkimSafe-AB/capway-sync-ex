@@ -5,81 +5,87 @@
 `CapwaySync` is an Elixir-based application designed to synchronize subscriber data between a primary system called "Trinity" and a secondary system, "Capway". The application's core responsibilities include:
 
 -   **Data Synchronization:** Comparing subscriber data between Trinity and Capway to identify discrepancies.
--   **Account Status Management:** Determining which accounts should be suspended or unsuspended based on predefined business logic (e.g., number of collections, unpaid invoices).
--   **Reporting:** Generating detailed synchronization reports (`GeneralSyncReport`) that provide a comprehensive overview of the sync process.
--   **Action Item Generation:** Creating individual `ActionItem` records in DynamoDB for each necessary action (e.g., "suspend", "unsuspend", "sync_to_capway").
+-   **Account Status Management:** Determining which accounts should be suspended or unsuspended based on predefined business logic.
+-   **Reporting:** Generating detailed synchronization reports (`GeneralSyncReport`) in DynamoDB.
+-   **Action Item Generation:** Creating `ActionItem` records in DynamoDB for necessary actions (e.g., "suspend", "unsuspend", "sync_to_capway").
 
-This application is built with a robust set of technologies, including:
+## Operational Guidelines
 
--   **Backend:** Elixir
--   **Workflow Management:** `Reactor` library
--   **System Integration:**
-    -   `SOAP` for communication with the Capway system.
-    -   `Ecto` for database interactions with the Trinity system (likely PostgreSQL).
--   **Cloud Services:**
-    -   `ExAws` for integration with AWS services, specifically DynamoDB for storing sync reports and action items, and AWS STS.
--   **Data Handling:**
-    -   `Jason` for JSON processing.
-    -   `Cloak` for data encryption.
--   **HTTP Communication:** `Req` for making HTTP requests.
--   **Time and Date Management:** `Timex`
+### Development Workflow
+-   **Compilation:** Always run `mix compile` after completing a task or making code changes.
+-   **Testing:** Always run `mix test` after making changes. Tests must cover 100% of the functionality.
+-   **Changelog:** Always add a summary of your changes to `CHANGELOG.md` if available.
+-   **Agent Context:** When initializing (or effectively re-initializing), always read `CLAUDE.md` or other agent files to gather full context.
 
-The architecture is modular, with clear separation of concerns for interacting with different systems and services. It appears to be event-driven, using a workflow engine to orchestrate the synchronization process.
+### Key Commands
+-   `mix deps.get`: Install dependencies.
+-   `mix compile`: Compile the project.
+-   `mix test`: Run all tests.
+-   `iex -S mix`: Start interactive shell with application loaded.
 
-### Application Structure
+## Local Development & Mocking
 
--   **Main Application:** `CapwaySync.Application` - The OTP application with its supervisor.
--   **SOAP Module:** `CapwaySync.Soap.GenerateReport` - Handles interactions with the SOAP web service.
--   **Configuration:** `config/config.exs` - Contains global settings, including the SOAP WSDL URL.
+### Mock Capway SOAP
+For faster local development, the application supports mocking SOAP responses. This avoids slow external calls to the Capway API.
 
-### Architecture Details
-
-#### Dependencies
-
--   `reactor` (~> 0.16.0): Provides a pattern for composable, resumable, and introspectable workflows.
--   `soap` (~> 1.0): The SOAP client library for Elixir.
-
-#### SOAP Integration
-
-The application connects to a SOAP service for reporting. Key aspects include:
-
--   **WSDL URL:** Configured via the `SOAP_REPORT_WSDL` environment variable.
--   **Authentication:** Uses `SOAP_USERNAME` and `SOAP_PASSWORD` environment variables for basic authentication.
--   **HTTP Client:** Utilizes HTTPoison, with options for insecure SSL during development.
--   **Operations:** SOAP operations are available through `CapwaySync.Soap.GenerateReport.operations/0`.
--   **Configuration:** Global SOAP version is set to "1.2" in the configuration.
-
-#### AWS/DynamoDB Integration
-
-The application stores `GeneralSyncReport` data in AWS DynamoDB and manages action items.
-
--   **Sync Reports Table:** Configured via the `SYNC_REPORTS_TABLE` environment variable (default: "capway-sync-reports").
--   **Action Items Table:** Configured via the `ACTION_ITEMS_TABLE` environment variable (default: "capway-sync-action-items").
--   **AWS Credentials:** Requires `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION` environment variables.
--   **Local Development:** Supports LocalStack for local DynamoDB development using `USE_LOCALSTACK=true`.
--   **Further Details:** A comprehensive setup guide is available in `docs/AWS_CONFIGURATION.md`.
-
-**Required Environment Variables for Production:**
-
+**Configuration:**
 ```bash
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_REGION="us-east-1"
-export SYNC_REPORTS_TABLE="capway-sync-reports-prod"
-export SOAP_REPORT_WSDL="https://api.capway.com/Service.svc?wsdl"
-export SOAP_USERNAME="your-soap-username"
-export SOAP_PASSWORD="your-soap-password"
+# Enable mock mode
+export USE_MOCK_CAPWAY=true
+
+# Optional: Override specific response file
+export MOCK_CAPWAY_RESPONSE="capway_edge_cases.xml"
+
+# Optional: Add artificial delay (ms) for timeout testing
+export MOCK_CAPWAY_DELAY=100
 ```
 
-### Key Files
+**Mock Response Behavior (by Offset):**
+-   **Offset 0**: Normal data (Swedish names) - `capway_page_1.xml`
+-   **Offset 100+**: Different data set - `capway_page_2.xml`
+-   **Offset 200+**: Edge cases (nil values, encoding) - `capway_edge_cases.xml`
+-   **Offset 1000+**: Empty response - `capway_empty.xml`
 
--   `lib/capway_sync/soap/generate_report.ex`: Contains the SOAP client implementation.
--   `priv/`: This directory holds various XML/WSDL files (e.g., `1.xml` through `5.xml`) and mock responses.
+**Mock Files Location:** `priv/mock_responses/`
 
-## Testing
+## Architecture & Technology Stack
 
--   **Framework:** The project uses the ExUnit testing framework.
--   **Execution:** Always run `mix test` after making changes to ensure code integrity and functionality.
--   **Coverage:** It is crucial that tests cover 100% of the application's functionality to prevent errors during execution.
--   **DynamoDB Integration Tests:** These tests utilize LocalStack for local DynamoDB emulation. Configuration for LocalStack can be managed via `DYNAMODB_TEST_HOST` and `DYNAMODB_TEST_PORT` environment variables.
--   **Validation:** Ensure all tests are valid and pass before considering changes complete.
+-   **Language:** Elixir (~> 1.18)
+-   **Workflow Engine:** `Reactor` (~> 0.16) - Manages the sync workflow steps.
+-   **SOAP Client:** `soap` (~> 1.0) & `saxy` - For communicating with Capway's SOAP API (version 1.2).
+-   **Database (Trinity):** `Ecto` (PostgreSQL) - For reading subscriber data.
+-   **Cloud Storage (AWS):** `ExAws` (DynamoDB) - For storing reports and action items.
+-   **Encryption:** `Cloak` - For handling sensitive data.
+-   **HTTP Client:** `Req` - For general HTTP requests.
+-   **Utilities:** `Jason` (JSON), `Timex` (Time), `UUID`.
+
+### Sync Workflow Steps (`CapwaySync.Reactor.V1.SubscriberSyncWorkflow`)
+1.  **fetch_trinity_data:** Fetches subscriber data from Trinity (Postgres).
+2.  **convert_to_canonical_data:** Normalizes Trinity data for comparison.
+3.  **fetch_capway_data:** Fetches subscriber data from Capway (SOAP).
+4.  **compare_data:** Compares canonical datasets to find missing/extra accounts.
+5.  **prepare_suspend_unsuspend_data:** Enriches data to prepare for status logic.
+6.  **suspend_accounts:** Identifies accounts to suspend (Collection >= 2).
+7.  **unsuspend_accounts:** Identifies accounts to unsuspend (Collection=0, Unpaid=0).
+8.  **cancel_capway_contracts:** Identifies contracts to cancel (Payment method changed).
+9.  **capway_export_subscribers_csv:** Exports specific Capway data to CSV.
+10. **process_results:** Aggregates all results and stores a `GeneralSyncReport` in DynamoDB.
+11. **store_action_items:** Stores individual `ActionItem` records in DynamoDB for each required action.
+
+### AWS/DynamoDB Integration
+-   **Tables:**
+    -   `SYNC_REPORTS_TABLE` (default: "capway-sync-reports")
+    -   `ACTION_ITEMS_TABLE` (default: "capway-sync-action-items")
+-   **Local Development:** Supports LocalStack (`USE_LOCALSTACK=true`).
+-   **Credentials:** Requires standard AWS env vars (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`).
+
+## Key Directories & Files
+-   `lib/capway_sync/soap/generate_report.ex`: SOAP client implementation.
+-   `lib/capway_sync/reactor/`: Workflow definitions.
+-   `priv/`: WSDL files and mock responses.
+-   `config/`: Configuration files (check `config.exs` and `runtime.exs`).
+
+## Testing Strategy
+-   **Framework:** ExUnit.
+-   **Integration:** DynamoDB tests run against LocalStack.
+-   **Coverage:** Strict requirement for high coverage (aiming for 100%).

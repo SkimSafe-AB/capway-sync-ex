@@ -12,10 +12,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(100, 4)
 
       expected = [
-        {0, 25},    # Worker 1: records 0-24
-        {25, 25},   # Worker 2: records 25-49
-        {50, 25},   # Worker 3: records 50-74
-        {75, 25}    # Worker 4: records 75-99
+        # Worker 1: records 0-24
+        {0, 25},
+        # Worker 2: records 25-49
+        {25, 25},
+        # Worker 3: records 50-74
+        {50, 25},
+        # Worker 4: records 75-99
+        {75, 25}
       ]
 
       assert ranges == expected
@@ -25,10 +29,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(102, 4)
 
       expected = [
-        {0, 26},    # Worker 1: 26 records (gets 1 extra)
-        {26, 26},   # Worker 2: 26 records (gets 1 extra)
-        {52, 25},   # Worker 3: 25 records
-        {77, 25}    # Worker 4: 25 records
+        # Worker 1: 26 records (gets 1 extra)
+        {0, 26},
+        # Worker 2: 26 records (gets 1 extra)
+        {26, 26},
+        # Worker 3: 25 records
+        {52, 25},
+        # Worker 4: 25 records
+        {77, 25}
       ]
 
       assert ranges == expected
@@ -38,9 +46,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(3, 4)
 
       expected = [
-        {0, 1},     # Worker 1: 1 record
-        {1, 1},     # Worker 2: 1 record
-        {2, 1}      # Worker 3: 1 record
+        # Worker 1: 1 record
+        {0, 1},
+        # Worker 2: 1 record
+        {1, 1},
+        # Worker 3: 1 record
+        {2, 1}
         # Worker 4 gets no records (filtered out)
       ]
 
@@ -51,10 +62,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(4, 4)
 
       expected = [
-        {0, 1},     # Worker 1: 1 record
-        {1, 1},     # Worker 2: 1 record
-        {2, 1},     # Worker 3: 1 record
-        {3, 1}      # Worker 4: 1 record
+        # Worker 1: 1 record
+        {0, 1},
+        # Worker 2: 1 record
+        {1, 1},
+        # Worker 3: 1 record
+        {2, 1},
+        # Worker 4: 1 record
+        {3, 1}
       ]
 
       assert ranges == expected
@@ -64,8 +79,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(2, 4)
 
       expected = [
-        {0, 1},     # Worker 1: 1 record
-        {1, 1}      # Worker 2: 1 record
+        # Worker 1: 1 record
+        {0, 1},
+        # Worker 2: 1 record
+        {1, 1}
         # Workers 3 and 4 get filtered out
       ]
 
@@ -76,10 +93,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(1000, 4)
 
       expected = [
-        {0, 250},     # Worker 1: records 0-249
-        {250, 250},   # Worker 2: records 250-499
-        {500, 250},   # Worker 3: records 500-749
-        {750, 250}    # Worker 4: records 750-999
+        # Worker 1: records 0-249
+        {0, 250},
+        # Worker 2: records 250-499
+        {250, 250},
+        # Worker 3: records 500-749
+        {500, 250},
+        # Worker 4: records 750-999
+        {750, 250}
       ]
 
       assert ranges == expected
@@ -121,7 +142,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       # Verify coverage: all records from 0 to 96 are covered
       {_total_offset, total_records} =
         Enum.reduce(ranges, {0, 0}, fn {offset, count}, {expected_offset, total} ->
-          assert offset == expected_offset, "Gap detected at offset #{offset}, expected #{expected_offset}"
+          assert offset == expected_offset,
+                 "Gap detected at offset #{offset}, expected #{expected_offset}"
+
           {offset + count, total + count}
         end)
 
@@ -145,7 +168,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       for total_count <- [1, 50, 99, 100, 101, 200, 1000] do
         ranges = calculate_worker_ranges(total_count, 4)
         sum_of_ranges = Enum.sum(Enum.map(ranges, fn {_offset, count} -> count end))
-        assert sum_of_ranges == total_count, "For total_count #{total_count}, sum was #{sum_of_ranges}"
+
+        assert sum_of_ranges == total_count,
+               "For total_count #{total_count}, sum was #{sum_of_ranges}"
       end
     end
 
@@ -158,7 +183,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
           max_count = Enum.max(counts)
           min_count = Enum.min(counts)
           diff = max_count - min_count
-          assert diff <= 1, "For total_count #{total_count}, load difference was #{diff} (counts: #{inspect(counts)})"
+
+          assert diff <= 1,
+                 "For total_count #{total_count}, load difference was #{diff} (counts: #{inspect(counts)})"
         end
       end
     end
@@ -170,10 +197,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(1000, 4)
 
       expected = [
-        {0, 250},     # Worker 1: records 0-249 (3 chunks of 100, 1 chunk of 50)
-        {250, 250},   # Worker 2: records 250-499 (3 chunks of 100, 1 chunk of 50)
-        {500, 250},   # Worker 3: records 500-749 (3 chunks of 100, 1 chunk of 50)
-        {750, 250}    # Worker 4: records 750-999 (3 chunks of 100, 1 chunk of 50)
+        # Worker 1: records 0-249 (3 chunks of 100, 1 chunk of 50)
+        {0, 250},
+        # Worker 2: records 250-499 (3 chunks of 100, 1 chunk of 50)
+        {250, 250},
+        # Worker 3: records 500-749 (3 chunks of 100, 1 chunk of 50)
+        {500, 250},
+        # Worker 4: records 750-999 (3 chunks of 100, 1 chunk of 50)
+        {750, 250}
       ]
 
       assert ranges == expected
@@ -200,10 +231,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
       ranges = calculate_worker_ranges(400, 4)
 
       expected = [
-        {0, 100},     # Worker 1: exactly 100 records (1 chunk)
-        {100, 100},   # Worker 2: exactly 100 records (1 chunk)
-        {200, 100},   # Worker 3: exactly 100 records (1 chunk)
-        {300, 100}    # Worker 4: exactly 100 records (1 chunk)
+        # Worker 1: exactly 100 records (1 chunk)
+        {0, 100},
+        # Worker 2: exactly 100 records (1 chunk)
+        {100, 100},
+        # Worker 3: exactly 100 records (1 chunk)
+        {200, 100},
+        # Worker 4: exactly 100 records (1 chunk)
+        {300, 100}
       ]
 
       assert ranges == expected

@@ -28,13 +28,18 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       refute "400" in unsuspend_refs
 
       # Verify collection summary
-      assert result.collection_summary["0"] == 2  # Bob and Charlie
-      assert result.collection_summary["1"] == 1  # Alice
-      assert result.collection_summary["2"] == 1  # David
+      # Bob and Charlie
+      assert result.collection_summary["0"] == 2
+      # Alice
+      assert result.collection_summary["1"] == 1
+      # David
+      assert result.collection_summary["2"] == 1
 
       # Verify unpaid_invoices summary
-      assert result.unpaid_invoices_summary["0"] == 3  # Alice, Bob, David
-      assert result.unpaid_invoices_summary["1"] == 1  # Charlie
+      # Alice, Bob, David
+      assert result.unpaid_invoices_summary["0"] == 3
+      # Charlie
+      assert result.unpaid_invoices_summary["1"] == 1
     end
 
     test "handles empty existing_in_both list" do
@@ -52,14 +57,14 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       arguments = %{}
 
       assert {:error, "Missing required argument: comparison_result"} =
-        UnsuspendAccounts.run(arguments, %{})
+               UnsuspendAccounts.run(arguments, %{})
     end
 
     test "returns error for invalid comparison_result format" do
       arguments = %{comparison_result: %{some_other_key: "value"}}
 
       assert {:error, "Invalid comparison_result format - missing existing_in_both"} =
-        UnsuspendAccounts.run(arguments, %{})
+               UnsuspendAccounts.run(arguments, %{})
     end
   end
 
@@ -105,14 +110,20 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       refute "500" in unsuspend_refs
 
       # Collection summary
-      assert collection_summary["0"] == 3  # 100, 200, 400
-      assert collection_summary["1"] == 1  # 300
-      assert collection_summary["2"] == 1  # 500
+      # 100, 200, 400
+      assert collection_summary["0"] == 3
+      # 300
+      assert collection_summary["1"] == 1
+      # 500
+      assert collection_summary["2"] == 1
 
       # Unpaid invoices summary
-      assert unpaid_summary["0"] == 3  # 100, 300, 400
-      assert unpaid_summary["1"] == 1  # 200
-      assert unpaid_summary["3+"] == 1  # 500
+      # 100, 300, 400
+      assert unpaid_summary["0"] == 3
+      # 200
+      assert unpaid_summary["1"] == 1
+      # 500
+      assert unpaid_summary["3+"] == 1
     end
 
     test "handles nil and invalid values" do
@@ -132,14 +143,20 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       assert hd(unsuspend_accounts).customer_ref == "500"
 
       # Collection summary
-      assert collection_summary["nil"] == 2   # nil and ""
-      assert collection_summary["invalid"] == 1  # "invalid"
-      assert collection_summary["0"] == 2  # 200, 500
+      # nil and ""
+      assert collection_summary["nil"] == 2
+      # "invalid"
+      assert collection_summary["invalid"] == 1
+      # 200, 500
+      assert collection_summary["0"] == 2
 
       # Unpaid invoices summary
-      assert unpaid_summary["nil"] == 2  # nil and ""
-      assert unpaid_summary["invalid"] == 1  # "2.5"
-      assert unpaid_summary["0"] == 2  # 100, 500
+      # nil and ""
+      assert unpaid_summary["nil"] == 2
+      # "2.5"
+      assert unpaid_summary["invalid"] == 1
+      # 100, 500
+      assert unpaid_summary["0"] == 2
     end
 
     test "handles integer values" do
@@ -155,18 +172,25 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       assert length(unsuspend_accounts) == 1
       assert hd(unsuspend_accounts).customer_ref == "100"
 
-      assert collection_summary["0"] == 2  # 100, 200
-      assert collection_summary["1"] == 1  # 300
+      # 100, 200
+      assert collection_summary["0"] == 2
+      # 300
+      assert collection_summary["1"] == 1
 
-      assert unpaid_summary["0"] == 2  # 100, 300
-      assert unpaid_summary["1"] == 1  # 200
+      # 100, 300
+      assert unpaid_summary["0"] == 2
+      # 200
+      assert unpaid_summary["1"] == 1
     end
 
     test "requires both collection AND unpaid_invoices to be 0" do
       accounts = [
-        %{customer_ref: "100", collection: "0", unpaid_invoices: "1"},  # Only collection is 0
-        %{customer_ref: "200", collection: "1", unpaid_invoices: "0"},  # Only unpaid_invoices is 0
-        %{customer_ref: "300", collection: "0", unpaid_invoices: "0"}   # Both are 0
+        # Only collection is 0
+        %{customer_ref: "100", collection: "0", unpaid_invoices: "1"},
+        # Only unpaid_invoices is 0
+        %{customer_ref: "200", collection: "1", unpaid_invoices: "0"},
+        # Both are 0
+        %{customer_ref: "300", collection: "0", unpaid_invoices: "0"}
       ]
 
       {unsuspend_accounts, _collection_summary, _unpaid_summary} =
@@ -182,7 +206,8 @@ defmodule CapwaySync.Reactor.V1.Steps.UnsuspendAccountsTest do
       assert {:ok, 0} = UnsuspendAccounts.parse_value_safely("0")
       assert {:ok, 1} = UnsuspendAccounts.parse_value_safely("1")
       assert {:ok, 5} = UnsuspendAccounts.parse_value_safely("5")
-      assert {:ok, 10} = UnsuspendAccounts.parse_value_safely(" 10 ")  # with whitespace
+      # with whitespace
+      assert {:ok, 10} = UnsuspendAccounts.parse_value_safely(" 10 ")
     end
 
     test "handles valid integers" do

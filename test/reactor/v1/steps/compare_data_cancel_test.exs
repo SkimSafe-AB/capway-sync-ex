@@ -17,21 +17,24 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
         %Canonical{
           id_number: "199002023456",
           trinity_id: 124,
-          payment_method: "bank", # Changed from capway
+          # Changed from capway
+          payment_method: "bank",
           active: true,
           origin: :trinity
         },
         %Canonical{
           id_number: "199003034567",
           trinity_id: 125,
-          payment_method: "card", # Changed from capway
+          # Changed from capway
+          payment_method: "card",
           active: true,
           origin: :trinity
         },
         %Canonical{
           id_number: "199004045678",
           trinity_id: 126,
-          payment_method: "bank", # Was never capway
+          # Was never capway
+          payment_method: "bank",
           active: true,
           origin: :trinity
         }
@@ -65,8 +68,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
       assert result.cancel_capway_contracts_count == 2
 
       cancel_ids = Enum.map(result.cancel_capway_contracts, & &1.id_number)
-      assert "199002023456" in cancel_ids # bank payment method
-      assert "199003034567" in cancel_ids # card payment method
+      # bank payment method
+      assert "199002023456" in cancel_ids
+      # card payment method
+      assert "199003034567" in cancel_ids
 
       # Should NOT include the one with capway payment method
       refute "199001012345" in cancel_ids
@@ -75,10 +80,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
       refute "199004045678" in cancel_ids
 
       # Missing in Capway should only include Trinity subscribers with payment_method == "capway"
-      assert result.missing_capway_count == 0 # 199001012345 exists in both systems
+      # 199001012345 exists in both systems
+      assert result.missing_capway_count == 0
 
       # Missing in Trinity should include Capway subscribers not in Trinity
-      assert result.missing_trinity_count == 0 # All Capway subscribers exist in Trinity
+      # All Capway subscribers exist in Trinity
+      assert result.missing_trinity_count == 0
 
       # Existing in both should include all intersections
       assert result.existing_in_both_count == 3
@@ -149,13 +156,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataCancelTest do
         %Canonical{
           id_number: "199001012345",
           trinity_id: 123,
-          payment_method: "capway", # Should be added to Capway
+          # Should be added to Capway
+          payment_method: "capway",
           origin: :trinity
         },
         %Canonical{
           id_number: "199002023456",
           trinity_id: 124,
-          payment_method: "bank", # Should NOT be added to Capway
+          # Should NOT be added to Capway
+          payment_method: "bank",
           origin: :trinity
         }
       ]

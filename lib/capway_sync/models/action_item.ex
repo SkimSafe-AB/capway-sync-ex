@@ -28,9 +28,14 @@ defmodule CapwaySync.Models.ActionItem do
       {:ok, item_id} = ActionItemRepository.store_action_item(action_item)
   """
 
-  @valid_actions ~w(suspend unsuspend sync_to_capway cancel_capway_contract)
+  @valid_actions ~w(suspend unsuspend sync_to_capway cancel_capway_contract update_capway_contract)
 
-  @type action_type :: :suspend | :unsuspend | :sync_to_capway | :cancel_capway_contract
+  @type action_type ::
+          :suspend
+          | :unsuspend
+          | :sync_to_capway
+          | :cancel_capway_contract
+          | :update_capway_contract
 
   @type t :: %__MODULE__{
           id: String.t() | nil,
@@ -94,6 +99,14 @@ defmodule CapwaySync.Models.ActionItem do
         timestamp_unix
       )
 
+    update_items =
+      create_action_items(
+        Map.get(report, :update_capway_contract, []),
+        "update_capway_contract",
+        created_at_formatted,
+        timestamp_unix
+      )
+
     suspend_items =
       create_action_items(
         report.suspend_accounts,
@@ -118,7 +131,7 @@ defmodule CapwaySync.Models.ActionItem do
         timestamp_unix
       )
 
-    sync_items ++ suspend_items ++ unsuspend_items ++ cancel_items
+    sync_items ++ update_items ++ suspend_items ++ unsuspend_items ++ cancel_items
   end
 
   @doc """
@@ -162,11 +175,12 @@ defmodule CapwaySync.Models.ActionItem do
        when is_list(subscriber_data) do
     Enum.map(subscriber_data, fn subscriber ->
       # Handle both old format (simple IDs) and new format (maps with id and personal_number)
-      {trinity_id, personal_number} = case subscriber do
-        %{id: id, personal_number: pn} -> {id, pn}
-        id when is_binary(id) or is_integer(id) -> {id, nil}
-        _ -> {nil, nil}
-      end
+      {trinity_id, personal_number} =
+        case subscriber do
+          %{id: id, personal_number: pn} -> {id, pn}
+          id when is_binary(id) or is_integer(id) -> {id, nil}
+          _ -> {nil, nil}
+        end
 
       %__MODULE__{
         id: UUID.uuid4(),

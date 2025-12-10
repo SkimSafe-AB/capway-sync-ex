@@ -21,11 +21,11 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflowTest do
 
       # Test minutes (< 60m)
       assert_duration_format(90000, "1.5m")
-      assert_duration_format(180000, "3.0m")
+      assert_duration_format(180_000, "3.0m")
 
       # Test hours
-      assert_duration_format(3600000, "1.0h")
-      assert_duration_format(7200000, "2.0h")
+      assert_duration_format(3_600_000, "1.0h")
+      assert_duration_format(7_200_000, "2.0h")
     end
 
     test "workflow module has reactor/0 function" do
@@ -57,12 +57,13 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflowTest do
   # Helper function to test duration formatting logic
   defp assert_duration_format(ms, expected) do
     # Replicate the format_duration logic for testing
-    actual = case ms do
-      ms when ms < 1000 -> "#{ms}ms"
-      ms when ms < 60_000 -> "#{Float.round(ms / 1000, 2)}s"
-      ms when ms < 3_600_000 -> "#{Float.round(ms / 60_000, 2)}m"
-      ms -> "#{Float.round(ms / 3_600_000, 2)}h"
-    end
+    actual =
+      case ms do
+        ms when ms < 1000 -> "#{ms}ms"
+        ms when ms < 60_000 -> "#{Float.round(ms / 1000, 2)}s"
+        ms when ms < 3_600_000 -> "#{Float.round(ms / 60_000, 2)}m"
+        ms -> "#{Float.round(ms / 3_600_000, 2)}h"
+      end
 
     assert actual == expected, "Expected #{expected} for #{ms}ms, got #{actual}"
   end
