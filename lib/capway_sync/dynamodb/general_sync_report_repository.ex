@@ -64,7 +64,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
     table_name = get_table_name()
 
     # Ensure created_at is set
-    report = %{report | created_at: report.created_at || DateTime.utc_now()}
+    report = %{report | created_at: report.created_at || (Timex.now() |> Timex.format!("{ISO:Extended}"))}
 
     # Convert to DynamoDB item format
     dynamodb_item = struct_to_dynamodb_item(report, report_id)
@@ -157,8 +157,8 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
     case ExAws.Dynamo.scan(scan_params) |> ExAws.request() do
       {:ok, %{"Items" => items}} ->
         reports = Enum.map(items, &dynamodb_item_to_struct/1)
-        # Sort by created_at descending
-        reports = Enum.sort_by(reports, & &1.created_at, {:desc, DateTime})
+        # Sort by created_at descending (ISO8601 strings sort correctly)
+        reports = Enum.sort_by(reports, & &1.created_at, :desc)
         {:ok, reports}
 
       {:error, reason} = error ->
@@ -349,24 +349,39 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
     DateTime.to_iso8601(datetime)
   end
 
+  defp format_datetime_for_dynamodb(datetime) when is_binary(datetime) do
+    # Assume it's already in ISO8601 format
+    datetime
+  end
+
+  defp format_datetime_for_dynamodb(nil), do: nil
+
+  defp format_date_for_dynamodb(datetime) when is_binary(datetime) do
+    # Parse the ISO8601 string and extract just the date part
+    case Timex.parse(datetime, "{ISO:Extended}") do
+      {:ok, dt} ->
+        dt
+        |> Timex.to_date()
+        |> Date.to_iso8601()
+      {:error, _} ->
+        # Fallback to extracting first 10 chars (YYYY-MM-DD)
+        String.slice(datetime, 0, 10)
+    end
+  end
+
   defp format_date_for_dynamodb(%DateTime{} = datetime) do
     datetime
     |> DateTime.to_date()
     |> Date.to_iso8601()
   end
 
-  defp format_datetime_for_dynamodb(datetime) when is_binary(datetime) do
-    # Assume it's already in ISO8601 format
-    datetime
-  end
+  defp format_date_for_dynamodb(nil), do: nil
 
   defp parse_datetime_from_dynamodb(nil), do: nil
 
   defp parse_datetime_from_dynamodb(iso_string) when is_binary(iso_string) do
-    case DateTime.from_iso8601(iso_string) do
-      {:ok, datetime, _offset} -> datetime
-      {:error, _} -> nil
-    end
+    # Just return the string as-is since created_at is now a String type
+    iso_string
   end
 
   defp maybe_add_date_filters(scan_params, opts) do

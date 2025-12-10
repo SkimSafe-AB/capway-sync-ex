@@ -40,7 +40,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
 
   @type t :: %__MODULE__{
           # Execution metadata
-          created_at: DateTime.t() | nil,
+          created_at: String.t() | nil,
           execution_duration_ms: non_neg_integer(),
           execution_duration_formatted: String.t(),
 
@@ -186,7 +186,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
 
     %__MODULE__{
       # Execution metadata
-      created_at: DateTime.utc_now(),
+      created_at: Timex.now() |> Timex.format!("{ISO:Extended}"),
       execution_duration_ms: duration,
       execution_duration_formatted: format_duration(duration),
 

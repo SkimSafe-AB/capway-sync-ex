@@ -11,7 +11,7 @@ CapwaySync is an Elixir application that integrates with SOAP web services for r
 ### Development
 - `mix deps.get` - Install dependencies
 - `mix compile` - Compile the project
-- `mix test` - Run all tests (always run after making changes)
+- `docker-compose -f docker-compose-test.yml up` - Run all tests (always run after making changes)
 - `iex -S mix` - Start interactive shell with application loaded
 
 ### Mock Capway SOAP for Development
