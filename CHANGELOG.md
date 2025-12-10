@@ -11,11 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Personal number details to the synchronization process.
 
 ### Fixed
--   Fixed `Protocol.UndefinedError` for `ExAws.Dynamo.Encodable` when storing GeneralSyncReport to DynamoDB.
+-   Fixed `Protocol.UndefinedError` for `ExAws.Dynamo.Encodable` when storing data to DynamoDB.
     - Changed `created_at` field in GeneralSyncReport from `DateTime` to `String` type
+    - Changed `end_date` field in Canonical model from `NaiveDateTime` to `String` type
     - Now using Timex to format timestamps as ISO8601 strings
-    - Removed `@derive ExAws.Dynamo.Encodable` as it's incompatible with DateTime fields
-    - Updated repository functions to handle string-based timestamps properly
+    - Removed `@derive ExAws.Dynamo.Encodable` from models with DateTime/NaiveDateTime fields:
+      - GeneralSyncReport
+      - Canonical (Subscribers)
+      - Trinity Subscription (has end_date and requested_cancellation_date as NaiveDateTime)
+      - Trinity Subscriber (has timestamps from Ecto)
+      - CapwaySubscriber (for consistency)
+    - Updated repository functions and tests to handle string-based timestamps properly
 
 ### Changed
 -   Canonical subscriber model now includes `status` field to preserve original Trinity subscription status.

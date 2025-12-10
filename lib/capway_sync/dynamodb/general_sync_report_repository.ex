@@ -215,9 +215,9 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       "date" => format_date_for_dynamodb(report.created_at),
       "created_at" => format_datetime_for_dynamodb(report.created_at),
       "sync" => %{
-        "missing_in_capway" => report.missing_in_capway,
-        "missing_in_trinity" => report.missing_in_trinity,
-        "existing_in_both" => report.existing_in_both,
+        "missing_in_capway" => report.missing_in_capway_ids,
+        "missing_in_trinity" => report.missing_in_trinity_ids,
+        "existing_in_both" => report.existing_in_both_ids,
         "missing_capway_count" => report.missing_capway_count,
         "missing_trinity_count" => report.missing_trinity_count,
         "existing_in_both_count" => report.existing_in_both_count

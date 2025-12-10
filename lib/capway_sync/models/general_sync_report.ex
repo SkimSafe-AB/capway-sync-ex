@@ -212,7 +212,7 @@ defmodule CapwaySync.Models.GeneralSyncReport do
       suspend_threshold: suspend_result.suspend_threshold,
       unsuspend_accounts: extract_subscriber_ids(unsuspend_result.unsuspend_accounts),
       unsuspend_count: unsuspend_result.unsuspend_count,
-      cancel_capway_contracts: cancel_result.cancel_capway_contracts,
+      cancel_capway_contracts: extract_subscriber_ids(cancel_result.cancel_capway_contracts || []),
       cancel_capway_contracts_ids: cancel_result.cancel_capway_contracts_ids,
       cancel_capway_count: cancel_result.cancel_capway_count,
 
