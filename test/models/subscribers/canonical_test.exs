@@ -26,7 +26,7 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
                contract_ref: "123",
                payment_method: "capway",
                active: true,
-               end_date: ~N[2024-12-31 23:59:59],
+               end_date: "2024-12-31T23:59:59",
                origin: :trinity,
                subscription_type: "locked"
              } = result
@@ -73,7 +73,7 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
                contract_ref: "456",
                payment_method: nil,
                active: true,
-               end_date: ~N[2024-12-31 23:59:59],
+               end_date: "2024-12-31T23:59:59",
                origin: :capway
              } = result
     end
