@@ -5,7 +5,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
   describe "struct_to_dynamodb_item/2" do
     test "converts GeneralSyncReport struct to DynamoDB item format" do
       report = %GeneralSyncReport{
-        created_at: ~U[2024-01-15 10:30:00Z],
+        created_at: "2024-01-15T10:30:00Z",
         execution_duration_ms: 1500,
         execution_duration_formatted: "1.5s",
         total_trinity: 100,
@@ -68,14 +68,14 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
 
       assert result["actions"]["capway_updates"]["update_capway_contract_count"] == 1
 
-      # Check that data is properly nested
-      assert result["sync"]["missing_in_capway"] == [%{id_number: "123", name: "John"}]
+      # Check that data is properly nested - now stores IDs only
+      assert result["sync"]["missing_in_capway"] == ["123"]
       assert result["sync"]["missing_in_trinity"] == []
     end
 
     test "stores report with update_capway_contract data" do
       report = %GeneralSyncReport{
-        created_at: ~U[2024-01-15 10:30:00Z],
+        created_at: "2024-01-15T10:30:00Z",
         update_capway_contract: [%{trinity_id: "TRIN1", personal_number: "PN1"}],
         update_capway_contract_ids: ["TRIN1"],
         update_capway_contract_count: 1
@@ -99,7 +99,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
         "id" => "test-uuid-123",
         "created_at" => "2024-01-15T10:30:00Z",
         "sync" => %{
-          "missing_in_capway" => [%{id_number: "123", name: "John"}],
+          "missing_in_capway" => ["123"],
           "missing_in_capway_ids" => ["123"],
           "missing_in_trinity" => [],
           "missing_in_trinity_ids" => [],
@@ -149,7 +149,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       result = test_dynamodb_item_to_struct(dynamodb_item)
 
       assert %GeneralSyncReport{} = result
-      assert result.created_at == ~U[2024-01-15 10:30:00Z]
+      assert result.created_at == "2024-01-15T10:30:00Z"
       assert result.execution_duration_ms == 1500
       assert result.execution_duration_formatted == "1.5s"
       assert result.total_trinity == 100
@@ -157,7 +157,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       assert result.suspend_count == 2
       assert result.unsuspend_count == 3
       assert result.cancel_capway_count == 1
-      assert result.missing_in_capway == [%{id_number: "123", name: "John"}]
+      assert result.missing_in_capway == []  # Full objects no longer stored, only IDs
       assert result.missing_in_trinity == []
       assert result.existing_in_both == []
       assert result.update_capway_contract == []
@@ -177,7 +177,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       result = test_dynamodb_item_to_struct(minimal_item)
 
       assert %GeneralSyncReport{} = result
-      assert result.created_at == ~U[2024-01-15 10:30:00Z]
+      assert result.created_at == "2024-01-15T10:30:00Z"
       assert result.execution_duration_ms == 0
       assert result.total_trinity == 0
       assert result.total_capway == 0
@@ -231,14 +231,16 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
 
   defp test_struct_to_dynamodb_item(report, report_id) do
     # This simulates the private struct_to_dynamodb_item function with new nested structure
+    # created_at is now a string, so extract date from it
+    date_part = if is_binary(report.created_at), do: String.slice(report.created_at, 0, 10), else: nil
     %{
       "id" => report_id,
-      "date" => Timex.format!(report.created_at, "{YYYY}-{0M}-{0D}"),
-      "created_at" => Timex.format!(report.created_at, "{ISO:Extended:Z}"),
+      "date" => date_part,
+      "created_at" => report.created_at,
       "sync" => %{
-        "missing_in_capway" => report.missing_in_capway,
-        "missing_in_trinity" => report.missing_in_trinity,
-        "existing_in_both" => report.existing_in_both,
+        "missing_in_capway" => report.missing_in_capway_ids,
+        "missing_in_trinity" => report.missing_in_trinity_ids,
+        "existing_in_both" => report.existing_in_both_ids,
         "missing_capway_count" => report.missing_capway_count,
         "missing_trinity_count" => report.missing_trinity_count,
         "existing_in_both_count" => report.existing_in_both_count
@@ -304,7 +306,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
     }
 
     %GeneralSyncReport{
-      created_at: Timex.parse!(Map.get(item, "created_at"), "{ISO:Extended:Z}"),
+      created_at: Map.get(item, "created_at"),
       execution_duration_ms: Map.get(stats_data, "execution_duration_ms", 0),
       execution_duration_formatted: Map.get(stats_data, "execution_duration_formatted", "0ms"),
       total_trinity: Map.get(stats_data, "total_trinity", 0),
@@ -319,16 +321,16 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryTest do
       unsuspend_count: Map.get(unsuspend_data, "unsuspend_count", 0),
       cancel_capway_count: Map.get(capway_cancellations_data, "cancel_capway_count", 0),
       analysis_metadata: analysis_metadata,
-      missing_in_capway: Map.get(sync_data, "missing_in_capway", []),
-      missing_in_trinity: Map.get(sync_data, "missing_in_trinity", []),
-      existing_in_both: Map.get(sync_data, "existing_in_both", []),
+      missing_in_capway: [],  # Full objects are no longer stored in DynamoDB
+      missing_in_trinity: [],  # Full objects are no longer stored in DynamoDB
+      existing_in_both: [],    # Full objects are no longer stored in DynamoDB
       suspend_accounts: Map.get(suspend_data, "suspend_accounts", []),
       unsuspend_accounts: Map.get(unsuspend_data, "unsuspend_accounts", []),
       
-      # Mapped IDs
-      missing_in_capway_ids: Map.get(capway_new_contracts_data, "create_capway_contracts", []),
-      missing_in_trinity_ids: [],
-      existing_in_both_ids: [],
+      # Mapped IDs - these come from sync data now
+      missing_in_capway_ids: Map.get(sync_data, "missing_in_capway", []),
+      missing_in_trinity_ids: Map.get(sync_data, "missing_in_trinity", []),
+      existing_in_both_ids: Map.get(sync_data, "existing_in_both", []),
       
       cancel_capway_contracts: [], # Not stored as objects anymore in this test simulation
       cancel_capway_contracts_ids: Map.get(capway_cancellations_data, "cancel_capway_contracts", []),

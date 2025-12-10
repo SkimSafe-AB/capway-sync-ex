@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - Trinity Subscription (has end_date and requested_cancellation_date as NaiveDateTime)
       - Trinity Subscriber (has timestamps from Ecto)
       - CapwaySubscriber (for consistency)
+    - Updated repository to store only ID lists instead of full structs in DynamoDB:
+      - `missing_in_capway`, `missing_in_trinity`, `existing_in_both` now use ID lists
+      - This avoids nested struct encoding issues
     - Updated repository functions and tests to handle string-based timestamps properly
 
 ### Changed
