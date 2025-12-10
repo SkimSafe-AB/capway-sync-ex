@@ -179,10 +179,24 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
       end_time = System.monotonic_time(:millisecond)
 
       # Merge cancel_contracts from suspend_result with cancel_capway_contracts
+      merged_cancel_contracts =
+        (args.cancel_result.cancel_capway_contracts || []) ++
+          (args.suspend_result.cancel_contracts || [])
+
+      merged_cancel_ids =
+        Enum.map(merged_cancel_contracts, fn
+          %{trinity_id: id} when not is_nil(id) -> id
+          %{customer_ref: id} when not is_nil(id) -> id
+          # Fallback
+          %{capway_id: id} when not is_nil(id) -> id
+          %{id_number: id} when not is_nil(id) -> id
+          _ -> nil
+        end)
+        |> Enum.reject(&is_nil/1)
+
       merged_cancel_result = %{
-        cancel_capway_contracts:
-          (args.cancel_result.cancel_capway_contracts || []) ++
-            (args.suspend_result.cancel_contracts || []),
+        cancel_capway_contracts: merged_cancel_contracts,
+        cancel_capway_contracts_ids: merged_cancel_ids,
         cancel_capway_count:
           (args.cancel_result.cancel_capway_count || 0) +
             (args.suspend_result.cancel_contracts_count || 0)
