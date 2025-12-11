@@ -4,7 +4,14 @@ defmodule CapwaySync.Reactor.V1.Steps.ConvertToCanonicalData do
 
   @impl true
   def run(data, _context, _options) do
-    canonical_data = Canonical.from_trinity_list(data.trinity_subscribers)
+    trinity_canonical_data = Canonical.from_trinity_list(data.trinity_subscribers)
+    capway_canonical_data = Canonical.from_capway_list(data.capway_data)
+
+    canonical_data = %{
+      trinity: trinity_canonical_data,
+      capway: capway_canonical_data
+    }
+
     {:ok, canonical_data}
   end
 

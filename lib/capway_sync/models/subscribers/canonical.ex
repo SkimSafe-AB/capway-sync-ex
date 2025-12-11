@@ -9,10 +9,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
 
   ## Fields
 
-  - `id_number`: Unique identifier (personal number) for comparison
-  - `trinity_id`: Original Trinity subscriber ID (if from Trinity)
-  - `capway_id`: Original Capway customer reference (if from Capway)
-  - `contract_ref`: Contract reference number
+  - `national_id`: Unique identifier (personal number) for comparison
+  - `trinity_subscriber_id`: Original Trinity subscriber ID (if from Trinity)
+  - `capway_contract_ref`: Original Capway customer reference (if from Capway)
   - `payment_method`: Payment method (Trinity-specific, nil for Capway data)
   - `active`: Whether the subscription/contract is active
   - `end_date`: Subscription/contract end date
@@ -31,30 +30,41 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   """
 
   @type t :: %__MODULE__{
-          id_number: String.t(),
-          trinity_id: String.t() | nil,
-          capway_id: String.t() | nil,
-          contract_ref: String.t(),
-          payment_method: String.t() | nil,
-          active: boolean(),
+          # Ids, references
+          national_id: String.t(),
+          trinity_subscriber_id: String.t() | nil,
+          trinity_subscription_id: String.t() | nil,
+          capway_contract_ref: String.t(),
+          # Subscription details
           end_date: String.t() | nil,
           origin: :trinity | :capway,
-          status: atom() | nil,
-          subscription_type: String.t() | nil
+          # Trinity specific data
+          payment_method: String.t() | nil,
+          subscription_type: String.t() | nil,
+          trinity_status: atom() | nil,
+          # Capway specific/enriched data
+          capway_active_status: boolean(),
+          last_invoice_status: String.t() | nil,
+          paid_invoices: integer() | nil,
+          unpaid_invoices: integer() | nil,
+          collection: integer() | nil
         }
 
   @derive Jason.Encoder
-  defstruct id_number: nil,
-            trinity_id: nil,
-            capway_id: nil,
-            contract_ref: nil,
-            payment_method: nil,
-            active: false,
+  defstruct national_id: nil,
+            trinity_subscriber_id: nil,
+            trinity_subscription_id: nil,
+            capway_contract_ref: nil,
             end_date: nil,
             origin: nil,
+            payment_method: nil,
+            subscription_type: nil,
+            trinity_status: nil,
             capway_active_status: nil,
-            status: nil,
-            subscription_type: nil
+            last_invoice_status: nil,
+            paid_invoices: nil,
+            unpaid_invoices: nil,
+            collection: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -68,19 +78,23 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   def from_trinity(%{
         personal_number: personal_number,
         subscription: subscription,
-        id: trinity_id
+        id: trinity_subscriber_id
       }) do
     %__MODULE__{
-      id_number: personal_number,
-      trinity_id: trinity_id,
-      capway_id: nil,
-      contract_ref: to_string(subscription.id),
+      national_id: personal_number,
+      trinity_subscriber_id: trinity_subscriber_id,
+      trinity_subscription_id: to_string(subscription.id),
+      capway_contract_ref: nil,
       payment_method: subscription.payment_method,
-      active: subscription.status == :active,
       end_date: format_datetime(subscription.end_date),
       origin: :trinity,
-      status: subscription.status,
-      subscription_type: subscription.subscription_type
+      trinity_status: subscription.status,
+      subscription_type: Map.get(subscription, :subscription_type),
+      capway_active_status: nil,
+      last_invoice_status: nil,
+      paid_invoices: nil,
+      unpaid_invoices: nil,
+      collection: nil
     }
   end
 
@@ -95,14 +109,21 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   """
   def from_capway(%CapwaySync.Models.CapwaySubscriber{} = capway_subscriber) do
     %__MODULE__{
-      id_number: capway_subscriber.id_number,
-      trinity_id: nil,
-      capway_id: capway_subscriber.customer_ref,
-      contract_ref: capway_subscriber.contract_ref_no,
-      payment_method: nil,
-      active: capway_subscriber.active,
+      national_id: capway_subscriber.id_number,
+      trinity_subscriber_id:
+        capway_subscriber.customer_ref |> format_string_to_integer() |> to_string(),
+      trinity_subscription_id: nil,
+      capway_contract_ref: capway_subscriber.contract_ref_no,
       end_date: format_datetime(capway_subscriber.end_date),
-      origin: :capway
+      capway_active_status: capway_subscriber.active == "true",
+      last_invoice_status: capway_subscriber.last_invoice_status,
+      paid_invoices: capway_subscriber.paid_invoices |> format_string_to_integer(),
+      unpaid_invoices: capway_subscriber.unpaid_invoices |> format_string_to_integer(),
+      collection: capway_subscriber.collection |> format_string_to_integer(),
+      origin: :capway,
+      payment_method: nil,
+      trinity_status: nil,
+      subscription_type: nil
     }
   end
 
@@ -134,4 +155,15 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   end
 
   defp format_datetime(datetime) when is_binary(datetime), do: datetime
+
+  defp format_string_to_integer(nil), do: nil
+
+  defp format_string_to_integer(str) when is_binary(str) do
+    case Integer.parse(str) do
+      {int, _} -> int
+      :error -> nil
+    end
+  end
+
+  defp format_string_to_integer(val), do: val
 end

@@ -6,7 +6,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   alias CapwaySync.Models.Subscribers.Canonical
   require Logger
 
-  @worker_count 2
+  @worker_count 3
 
   @impl true
   def run(_map, _context, _options) do
@@ -19,14 +19,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         "Successfully fetched #{length(all_subscribers)} total subscribers using parallel workers"
       )
 
-      canonical_subscribers = Canonical.from_capway_list(all_subscribers)
-
-      # Return both formats for different use cases
-      {:ok,
-       %{
-         canonical: canonical_subscribers,
-         raw: all_subscribers
-       }}
+      {:ok, all_subscribers}
     else
       {:error, reason} ->
         Logger.error("Failed to fetch Capway subscribers: #{inspect(reason)}")
