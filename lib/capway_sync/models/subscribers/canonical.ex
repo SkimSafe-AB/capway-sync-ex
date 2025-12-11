@@ -32,8 +32,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   @type t :: %__MODULE__{
           # Ids, references
           national_id: String.t(),
-          trinity_subscriber_id: String.t() | nil,
-          trinity_subscription_id: String.t() | nil,
+          trinity_subscriber_id: integer() | nil,
+          trinity_subscription_id: integer() | nil,
           capway_contract_ref: String.t(),
           # Subscription details
           end_date: String.t() | nil,
@@ -82,8 +82,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       }) do
     %__MODULE__{
       national_id: personal_number,
-      trinity_subscriber_id: trinity_subscriber_id,
-      trinity_subscription_id: to_string(subscription.id),
+      trinity_subscriber_id: trinity_subscriber_id |> format_string_to_integer(),
+      trinity_subscription_id: subscription.id,
       capway_contract_ref: nil,
       payment_method: subscription.payment_method,
       end_date: format_datetime(subscription.end_date),
@@ -110,8 +110,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   def from_capway(%CapwaySync.Models.CapwaySubscriber{} = capway_subscriber) do
     %__MODULE__{
       national_id: capway_subscriber.id_number,
-      trinity_subscriber_id:
-        capway_subscriber.customer_ref |> format_string_to_integer() |> to_string(),
+      trinity_subscriber_id: capway_subscriber.customer_ref |> format_string_to_integer(),
       trinity_subscription_id: nil,
       capway_contract_ref: capway_subscriber.contract_ref_no,
       end_date: format_datetime(capway_subscriber.end_date),
