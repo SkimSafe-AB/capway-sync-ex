@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 -   Personal number details to the synchronization process.
 
 ### Fixed
+-   Fixed `Enum.reduce` arity error in `CapwaySync.Models.Subscribers.Cannonical.Helper.group/2` function:
+    - The `locked_subscribers` calculation was incorrectly trying to iterate over `active_subscribers` (a Map) instead of the original `subscribers` list
+    - Now correctly filters from the original list and checks both active status and subscription_type in a single pass
+    - Added comprehensive documentation for both Trinity and Capway grouping functions
+
+### Fixed
 -   Fixed `Protocol.UndefinedError` for `ExAws.Dynamo.Encodable` when storing data to DynamoDB.
     - Changed `created_at` field in GeneralSyncReport from `DateTime` to `String` type
     - Changed `end_date` field in Canonical model from `NaiveDateTime` to `String` type

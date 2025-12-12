@@ -9,56 +9,92 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
   alias CapwaySync.Models.Subscribers.Cannonical
 
-  @spec group([Cannonical.t()], atom()) :: [[Cannonical.t()]]
+  @spec group([Cannonical.t()], atom()) :: %{atom() => %{String.t() => Cannonical.t()}}
+  @doc """
+  Groups Trinity subscribers into categories:
+  - active_subscribers: subscribers not cancelled or expired
+  - inactive_subscribers: subscribers that are cancelled or expired
+  - locked_subscribers: active subscribers with subscription_type "locked"
+  """
   def group(subscribers, :trinity) do
     active_subscribers =
-      Enum.filter(subscribers, fn sub -> sub.trinity_status not in [:cancelled, :expired] end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.trinity_status not in [:cancelled, :expired] do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     inactive_subscribers =
-      Enum.filter(subscribers, fn sub -> sub.trinity_status in [:cancelled, :expired] end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.trinity_status in [:cancelled, :expired] do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     locked_subscribers =
-      Enum.filter(active_subscribers, fn sub -> sub.subscription_type == "locked" end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.trinity_status not in [:cancelled, :expired] and sub.subscription_type == "locked" do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     %{
-      active_subscribers: %{
-        data: active_subscribers,
-        map_set: MapSet.new(Enum.map(active_subscribers, & &1.trinity_subscriber_id))
-      },
-      inactive_subscribers: %{
-        data: inactive_subscribers,
-        map_set: MapSet.new(Enum.map(inactive_subscribers, & &1.trinity_subscriber_id))
-      },
-      locked_subscribers: %{
-        data: locked_subscribers,
-        map_set: MapSet.new(Enum.map(locked_subscribers, & &1.trinity_subscriber_id))
-      }
+      active_subscribers: active_subscribers,
+      inactive_subscribers: inactive_subscribers,
+      locked_subscribers: locked_subscribers
     }
   end
 
+  @doc """
+  Groups Capway subscribers into categories:
+  - active_subscribers: subscribers with capway_active_status = true
+  - inactive_subscribers: subscribers with capway_active_status = false
+  - above_collector_threshold: subscribers with collection >= 2
+  """
   def group(subscribers, :capway) do
     active_subscribers =
-      Enum.filter(subscribers, fn sub -> sub.capway_active_status == true end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.capway_active_status == true do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     inactive_subscribers =
-      Enum.filter(subscribers, fn sub -> sub.capway_active_status == false end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.capway_active_status == false do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     above_collector_threshold =
-      Enum.filter(subscribers, fn sub -> sub.collection != nil and sub.collection >= 2 end)
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.collection != nil and sub.collection >= 2 do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
 
     %{
-      active_subscribers: %{
-        data: active_subscribers,
-        map_set: MapSet.new(Enum.map(active_subscribers, & &1.trinity_subscriber_id))
-      },
-      inactive_subscribers: %{
-        data: inactive_subscribers,
-        map_set: MapSet.new(Enum.map(inactive_subscribers, & &1.trinity_subscriber_id))
-      },
-      above_collector_threshold: %{
-        data: above_collector_threshold,
-        map_set: MapSet.new(Enum.map(above_collector_threshold, & &1.trinity_subscriber_id))
-      }
+      active_subscribers: active_subscribers,
+      inactive_subscribers: inactive_subscribers,
+      above_collector_threshold: above_collector_threshold
     }
   end
 end
