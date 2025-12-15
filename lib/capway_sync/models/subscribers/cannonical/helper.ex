@@ -57,7 +57,15 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     %{
       active_subscribers: active_subscribers,
       cancelled_subscribers: cancelled_subscribers,
-      locked_subscribers: locked_subscribers
+      locked_subscribers: locked_subscribers,
+      map_sets: %{
+        active_national_ids:
+          Enum.filter(active_subscribers, fn {_id, sub} ->
+            presence?(sub.national_id)
+          end)
+          |> Enum.map(fn {_id, sub} -> sub.national_id end)
+          |> MapSet.new()
+      }
     }
   end
 

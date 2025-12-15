@@ -162,8 +162,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
                trinity_subscriber_data,
                capway_sub.trinity_subscriber_id
              ),
-           false <- trinity_sub == nil,
-           false <- trinity_sub.national_id == capway_sub.national_id do
+           true <- check_for_missing_attrs(capway_sub, trinity_sub) do
         # National IDs are different, mark for update
         item =
           ActionItem.create_action_item(:capway_update_contract, %{
@@ -177,6 +176,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         _ -> acc
       end
     end)
+  end
+
+  defp check_for_missing_attrs(capway_sub, trinity_sub) do
+    capway_sub.national_id == nil or
+      capway_sub.national_id != trinity_sub.national_id or
+      capway_sub.trinity_subscriber_id == nil or
+      capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
   end
 
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
