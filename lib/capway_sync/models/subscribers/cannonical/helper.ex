@@ -9,13 +9,20 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
   alias CapwaySync.Models.Subscribers.Cannonical
 
-  @spec group([Cannonical.t()], atom()) :: %{atom() => %{String.t() => Cannonical.t()}}
   @doc """
-  Groups Trinity subscribers into categories:
+  Groups subscribers into categories based on the source system.
+
+  For Trinity (:trinity):
   - active_subscribers: subscribers not cancelled or expired
-  - inactive_subscribers: subscribers that are cancelled or expired
+  - cancelled_subscribers: subscribers that are cancelled or expired
   - locked_subscribers: active subscribers with subscription_type "locked"
+
+  For Capway (:capway):
+  - active_subscribers: subscribers with capway_active_status = true
+  - cancelled_subscribers: subscribers with capway_active_status = false
+  - above_collector_threshold: subscribers with collection >= 2
   """
+  @spec group([Cannonical.t()], atom()) :: %{atom() => %{String.t() => Cannonical.t()}}
   def group(subscribers, :trinity) do
     active_subscribers =
       subscribers
@@ -27,7 +34,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
         end
       end)
 
-    inactive_subscribers =
+    cancelled_subscribers =
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.trinity_status in [:cancelled, :expired] do
@@ -49,17 +56,11 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     %{
       active_subscribers: active_subscribers,
-      inactive_subscribers: inactive_subscribers,
+      cancelled_subscribers: cancelled_subscribers,
       locked_subscribers: locked_subscribers
     }
   end
 
-  @doc """
-  Groups Capway subscribers into categories:
-  - active_subscribers: subscribers with capway_active_status = true
-  - inactive_subscribers: subscribers with capway_active_status = false
-  - above_collector_threshold: subscribers with collection >= 2
-  """
   def group(subscribers, :capway) do
     active_subscribers =
       subscribers
@@ -71,7 +72,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
         end
       end)
 
-    inactive_subscribers =
+    cancelled_subscribers =
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.capway_active_status == false do
@@ -93,7 +94,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     %{
       active_subscribers: active_subscribers,
-      inactive_subscribers: inactive_subscribers,
+      cancelled_subscribers: cancelled_subscribers,
       above_collector_threshold: above_collector_threshold
     }
   end

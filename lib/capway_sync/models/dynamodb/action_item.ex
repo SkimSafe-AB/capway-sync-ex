@@ -32,6 +32,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
   @spec create_action_item(atom(), map()) :: t()
   def create_action_item(action, data) do
     %__MODULE__{
+      id: UUID.uuid4(),
       trinity_subscriber_id: Map.get(data, :trinity_subscriber_id, nil),
       national_id: Map.get(data, :national_id, nil),
       created_at: DateTime.utc_now() |> DateTime.to_iso8601(),

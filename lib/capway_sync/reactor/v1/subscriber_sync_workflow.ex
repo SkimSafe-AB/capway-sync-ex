@@ -14,7 +14,8 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   }
 
   alias CapwaySync.Models.GeneralSyncReport
-  alias CapwaySync.Dynamodb.{GeneralSyncReportRepository, ActionItemRepository}
+  alias CapwaySync.Dynamodb.ActionItemRepositoryV2
+  alias CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2
 
   require Logger
 
@@ -61,6 +62,50 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   step(:compare_data, CompareDataV2) do
     argument(:data, result(:group_subscribers))
     max_retries(2)
+  end
+
+  # step(:dynamodb_store_action_items) do
+  #   argument(:result, result(:compare_data))
+
+  #   run(fn args, context ->
+  #     args.result.capway.cancel_contracts
+  #     |> Enum.each(fn {_id, action_item} ->
+  #       case ActionItemRepositoryV2.store_action_item(action_item) do
+  #         :ok ->
+  #           Logger.info(
+  #             "Successfully stored action item for Capway subscriber #{action_item.national_id} to DynamoDB"
+  #           )
+
+  #         {:error, reason} ->
+  #           Logger.error(
+  #             "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
+  #           )
+  #       end
+  #     end)
+  #   end)
+
+  #   {:ok, :done}
+  # end
+
+  step(:dynamodb_store_report) do
+    argument(:result, result(:compare_data))
+    argument(:data, result(:group_subscribers))
+
+    run(fn args, _context ->
+      case GeneralSyncReportRepositoryV2.store_report(
+             args.result,
+             args.data.capway,
+             args.data.trinity
+           ) do
+        {:ok, report_id} ->
+          Logger.info("Successfully stored GeneralSyncReport to DynamoDB with ID: #{report_id}")
+          {:ok, report_id}
+
+        {:error, reason} ->
+          Logger.error("Failed to store GeneralSyncReport to DynamoDB: #{inspect(reason)}")
+          {:error, reason}
+      end
+    end)
   end
 
   # # Compares Trinity and Capway subscriber data in canonical format.

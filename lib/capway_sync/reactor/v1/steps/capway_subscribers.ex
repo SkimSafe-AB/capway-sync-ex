@@ -12,9 +12,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   def run(_map, _context, _options) do
     Logger.info("Starting parallel Capway subscriber fetch with #{@worker_count} workers")
 
+    # Get max pages configuration
+    max_pages = Application.get_env(:capway_sync, :capway_max_pages)
+
     with {:ok, access_token} <- AccessToken.run(),
          {:ok, total_count} <- CustomerCount.run(access_token),
-         {:ok, all_subscribers} <- fetch_with_parallel_workers(total_count) do
+         limited_count <- apply_page_limit(total_count, max_pages),
+         {:ok, all_subscribers} <- fetch_with_parallel_workers(limited_count) do
       Logger.info(
         "Successfully fetched #{length(all_subscribers)} total subscribers using parallel workers"
       )
@@ -26,6 +30,23 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         {:error, "Failed to fetch capway subscribers: #{inspect(reason)}"}
     end
   end
+
+  # Apply page limit to total count if configured
+  defp apply_page_limit(total_count, nil), do: total_count
+  defp apply_page_limit(total_count, 0), do: total_count
+  defp apply_page_limit(total_count, max_pages) when max_pages > 0 do
+    max_records = max_pages * 100  # 100 records per page
+    limited = min(total_count, max_records)
+
+    if limited < total_count do
+      Logger.warning(
+        "⚠️ Limiting Capway fetch to #{max_pages} pages (#{limited} records) out of #{total_count} total records"
+      )
+    end
+
+    limited
+  end
+  defp apply_page_limit(total_count, _), do: total_count
 
   # Fetch subscribers using 4 parallel workers that divide the total count.
   # Each worker uses SOAP generate_report with pagination (offset/maxrows).

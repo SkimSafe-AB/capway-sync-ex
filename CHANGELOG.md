@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 -   Personal number details to the synchronization process.
+-   Configurable page limit for Capway data fetching via `CAPWAY_MAX_PAGES` environment variable:
+    - Each page contains 100 records
+    - Defaults to unlimited if not set
+    - Significantly speeds up tests when limited (e.g., `CAPWAY_MAX_PAGES=6` for 600 records)
+    - Logs warning when limiting is applied to ensure visibility
 
 ### Fixed
 -   Fixed `Enum.reduce` arity error in `CapwaySync.Models.Subscribers.Cannonical.Helper.group/2` function:

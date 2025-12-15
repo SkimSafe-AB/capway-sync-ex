@@ -14,6 +14,24 @@ CapwaySync is an Elixir application that integrates with SOAP web services for r
 - `docker-compose -f docker-compose-test.yml up` - Run all tests (always run after making changes)
 - `iex -S mix` - Start interactive shell with application loaded
 
+### Performance Optimization for Testing
+To speed up tests, you can limit the number of pages fetched from Capway:
+
+```bash
+# Limit to 6 pages (600 records) for faster tests
+export CAPWAY_MAX_PAGES=6
+mix test
+
+# Or set per command:
+CAPWAY_MAX_PAGES=6 mix test
+```
+
+The page limit configuration:
+- Each page contains 100 records
+- Default: unlimited (fetches all available records)
+- Set `CAPWAY_MAX_PAGES` to limit the number of pages
+- Useful for development and testing to reduce API calls and improve performance
+
 ### Mock Capway SOAP for Development
 For faster local development, use mock SOAP responses instead of slow external calls:
 

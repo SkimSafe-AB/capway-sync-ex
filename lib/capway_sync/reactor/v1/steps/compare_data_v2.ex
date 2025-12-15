@@ -31,40 +31,39 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       "Capway active subscriber mapset: #{inspect(capway_subscriber_data.active_subscribers)}"
     )
 
-    cancel_contracts =
+    capway_cancel_contracts =
       get_contracts_to_cancel(
         capway_subscriber_data.active_subscribers,
         trinity_subscriber_data.active_subscribers
       )
 
-    update_contracts =
+    capway_update_contracts =
       get_contracts_to_update(
         capway_subscriber_data.active_subscribers,
         trinity_subscriber_data.active_subscribers
       )
 
-    create_contracts =
+    capway_create_contracts =
       get_contracts_to_create(
         trinity_subscriber_data.active_subscribers,
         capway_subscriber_data.active_subscribers
       )
 
-    {suspend_accounts, cancel_accounts_2} =
+    {trinity_suspend_accounts, trinity_cancel_accounts} =
       get_accounts_to_suspend_or_cancel(
-        capway_subscriber_data.inactive_subscribers,
+        capway_subscriber_data.cancelled_subscribers,
         trinity_subscriber_data.active_subscribers
       )
 
-    cancel_accounts = Map.merge(cancel_accounts_2, cancel_contracts)
-
     data = %{
       trinity: %{
-        suspend_accounts: suspend_accounts
+        cancel_accounts: trinity_cancel_accounts,
+        suspend_accounts: trinity_suspend_accounts
       },
       capway: %{
-        cancel_contracts: cancel_contracts,
-        update_contracts: update_contracts,
-        create_contracts: create_contracts
+        cancel_contracts: capway_cancel_contracts,
+        update_contracts: capway_update_contracts,
+        create_contracts: capway_create_contracts
       }
     }
 
@@ -175,6 +174,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
     Enum.reduce(capway_subscriber_data, %{}, fn {trinity_subscriber_id, capway_sub}, acc ->
+      Logger.info(
+        "Checking Capway subscriber #{trinity_subscriber_id} for cancellation against Trinity data"
+      )
+
       if Map.has_key?(
            trinity_subscriber_data,
            trinity_subscriber_id
@@ -182,7 +185,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         # Subscriber exists in both systems, no action needed
         acc
       else
-        Logger.info("Marking Capway subscriber #{trinity_subscriber_id} for cancellation")
+        # Logger.info("Marking Capway subscriber #{trinity_subscriber_id} for cancellation")
 
         # Subscriber missing in Trinity, mark for cancellation
         item =
