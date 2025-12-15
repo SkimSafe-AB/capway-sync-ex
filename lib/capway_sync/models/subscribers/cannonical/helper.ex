@@ -64,23 +64,33 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
   def group(subscribers, :capway) do
     # All subscribers are considered orphaned in Capway context
     # if they dont have any trinity subscriber id present
-    orphaned_subscribers =
-      subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
-        if sub.trinity_subscriber_id == nil do
-          Map.put(acc, sub.capway_contract_ref, sub)
-        else
-          acc
-        end
-      end)
+    # orphaned_subscribers =
+    #   subscribers
+    #   |> Enum.reduce(%{}, fn sub, acc ->
+    #     if !presence?(sub.trinity_subscriber_id) do
+    #       Map.put(acc, sub.capway_contract_ref, sub)
+    #     else
+    #       acc
+    #     end
+    #   end)
 
-    associated_subscribers =
+    # associated_subscribers =
+    #   subscribers
+    #   |> Enum.reduce(%{}, fn sub, acc ->
+    #     if presence?(sub.trinity_subscriber_id) do
+    #       Map.put(acc, sub.trinity_subscriber_id, sub)
+    #     else
+    #       acc
+    #     end
+    #   end)
+
+    {orphaned_subscribers, associated_subscribers} =
       subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
-        if sub.trinity_subscriber_id != nil do
-          Map.put(acc, sub.trinity_subscriber_id, sub)
+      |> Enum.reduce({%{}, %{}}, fn sub, {orphaned_acc, associated_acc} ->
+        if presence?(sub.trinity_subscriber_id) do
+          {orphaned_acc, Map.put(associated_acc, sub.trinity_subscriber_id, sub)}
         else
-          acc
+          {Map.put(orphaned_acc, sub.capway_contract_ref, sub), associated_acc}
         end
       end)
 
@@ -121,4 +131,8 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       above_collector_threshold: above_collector_threshold
     }
   end
+
+  defp presence?(nil), do: false
+  defp presence?(val) when is_binary(val), do: String.trim(val) != ""
+  defp presence?(_), do: true
 end
