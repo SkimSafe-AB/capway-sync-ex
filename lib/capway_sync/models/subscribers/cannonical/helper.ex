@@ -47,7 +47,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     locked_subscribers =
       active_subscribers
       |> Enum.reduce(%{}, fn {_id, sub}, acc ->
-        if sub.subscription_type == :locked do
+        if sub.subscription_type == :locked and sub.payment_method == "capway" do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
           acc
