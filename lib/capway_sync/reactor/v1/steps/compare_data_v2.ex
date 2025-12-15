@@ -74,21 +74,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-   This function identifies Capway contracts that needs to be either suspended or cancelled in Trinity.
-   The current rule is based on whetever the trinity subscription is locked in or not. Ie if it has a time based contract.
-   If it is locked in, it should be suspended, otherwise cancelled.
+  This function identifies Capway contracts that needs to be either suspended or cancelled in Trinity.
+  The current rule is based on whetever the trinity subscription is locked in or not. Ie if it has a time based contract.
+  If it is locked in, it should be suspended, otherwise cancelled.
   """
 
   def get_accounts_to_suspend_or_cancel(capway_subscriber_data, trinity_subscriber_data) do
-    suspend = %{}
-    cancellations = %{}
-
-    Enum.each(capway_subscriber_data, fn {_id, capway_sub} ->
+    Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {_id, capway_sub},
+                                                       {acc_suspend, acc_cancel} ->
       if Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id) do
-        {_id, trinity_sub} = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
+        trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
 
         if trinity_sub.subscription_type == "locked" do
-          # Should be suspended
           item =
             ActionItem.create_action_item(:suspend, %{
               national_id: capway_sub.national_id,
@@ -96,7 +93,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
               reason: "Should be suspended in Trinity due to locked subscription"
             })
 
-          Map.put(suspend, capway_sub.trinity_subscriber_id, item)
+          {Map.put(acc_suspend, capway_sub.trinity_subscriber_id, item), acc_cancel}
         else
           item =
             ActionItem.create_action_item(:trinity_cancel_subscription, %{
@@ -105,18 +102,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
               reason: "Should be cancelled in Trinity due to inactive Capway status"
             })
 
-          Map.put(cancellations, capway_sub.trinity_subscriber_id, item)
+          {acc_suspend, Map.put(acc_cancel, capway_sub.trinity_subscriber_id, item)}
         end
+      else
+        {acc_suspend, acc_cancel}
       end
     end)
-
-    {suspend, cancellations}
   end
 
   @doc """
-   This function identifies Capway contracts that needs to be created.
-   It will focus on checking for all active Trinity subscribers
-   and see if they exist in Capway data, if not they will be marked for creation.
+  This function identifies Capway contracts that needs to be created.
+  It will focus on checking for all active Trinity subscribers
+  and see if they exist in Capway data, if not they will be marked for creation.
   """
   def get_contracts_to_create(trinity_subscriber_data, capway_subscriber_data) do
     Enum.reduce(trinity_subscriber_data, %{}, fn {trinity_subscriber_id, trinity_sub}, acc ->
@@ -150,7 +147,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     # First filter out the Capway subscribers that have no national_id
     Enum.reduce(capway_subscriber_data, %{}, fn {_id, capway_sub}, acc ->
       with true <- Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
-           {_id, trinity_sub} <-
+           trinity_sub <-
              Map.get(
                trinity_subscriber_data,
                capway_sub.trinity_subscriber_id
