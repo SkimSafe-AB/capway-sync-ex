@@ -83,6 +83,21 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
         end
       end)
 
+      args.result.actions.capway.create_contracts
+      |> Enum.each(fn {_id, action_item} ->
+        case ActionItemRepositoryV2.store_action_item(action_item) do
+          :ok ->
+            Logger.debug(
+              "Successfully stored action item for Capway subscriber #{action_item.national_id} to DynamoDB"
+            )
+
+          {:error, reason} ->
+            Logger.error(
+              "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
+            )
+        end
+      end)
+
       {:ok, :done}
     end)
   end
