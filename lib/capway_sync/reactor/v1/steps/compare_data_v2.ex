@@ -50,7 +50,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     {trinity_suspend_accounts, trinity_cancel_accounts} =
       get_accounts_to_suspend_or_cancel(
         capway_subscriber_data.cancelled_subscribers,
-        trinity_subscriber_data.active_subscribers
+        trinity_subscriber_data.active_subscribers,
+        trinity_subscriber_data.map_sets
       )
 
     data = %{
@@ -83,10 +84,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   If it is locked in, it should be suspended, otherwise cancelled.
   """
 
-  def get_accounts_to_suspend_or_cancel(capway_subscriber_data, trinity_subscriber_data) do
+  def get_accounts_to_suspend_or_cancel(
+        capway_subscriber_data,
+        trinity_subscriber_data,
+        trinity_map_set
+      ) do
     Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {_id, capway_sub},
                                                        {acc_suspend, acc_cancel} ->
-      if Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id) do
+      if Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id) or
+           MapSet.member?(
+             trinity_map_set.active_national_ids,
+             capway_sub.national_id
+           ) do
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
 
         if trinity_sub.subscription_type == "locked" do
