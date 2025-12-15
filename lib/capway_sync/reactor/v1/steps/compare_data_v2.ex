@@ -129,15 +129,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         # Subscriber exists in both systems, no action needed
         acc
       else
-        # Subscriber missing in Capway, mark for creation
-        item =
-          ActionItem.create_action_item(:capway_create_contract, %{
-            national_id: trinity_sub.national_id,
-            trinity_subscriber_id: trinity_subscriber_id,
-            reason: "Missing in Capway system"
-          })
+        if(trinity_sub.payment_method == "capway") do
+          # Subscriber missing in Capway, mark for creation
+          item =
+            ActionItem.create_action_item(:capway_create_contract, %{
+              national_id: trinity_sub.national_id,
+              trinity_subscriber_id: trinity_subscriber_id,
+              reason: "Missing in Capway system"
+            })
 
-        Map.put(acc, trinity_sub.trinity_subscriber_id, item)
+          Map.put(acc, trinity_sub.trinity_subscriber_id, item)
+        else
+          acc
+        end
       end
     end)
   end
