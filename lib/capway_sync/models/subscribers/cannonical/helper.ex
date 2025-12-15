@@ -118,16 +118,18 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       above_collector_threshold: above_collector_threshold,
       map_sets: %{
         active_national_ids:
-          Enum.filter(active_subscribers, fn {_id, sub} ->
-            presence?(sub.national_id)
+          subscribers
+          |> Enum.filter(fn sub ->
+            sub.capway_active_status == true and presence?(sub.national_id)
           end)
-          |> Enum.map(fn {_id, sub} -> sub.national_id end)
+          |> Enum.map(fn sub -> sub.national_id end)
           |> MapSet.new(),
         active_trinity_ids:
-          Enum.filter(active_subscribers, fn {_id, sub} ->
-            presence?(sub.trinity_subscriber_id)
+          subscribers
+          |> Enum.filter(fn sub ->
+            sub.capway_active_status == true and presence?(sub.trinity_subscriber_id)
           end)
-          |> Enum.map(fn {_id, sub} -> sub.trinity_subscriber_id end)
+          |> Enum.map(fn sub -> sub.trinity_subscriber_id end)
           |> MapSet.new()
       }
     }
