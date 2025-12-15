@@ -58,14 +58,20 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     IO.inspect(map_size(capway_create_contracts), label: "Capway Create Contracts")
 
     data = %{
-      trinity: %{
-        cancel_accounts: trinity_cancel_accounts,
-        suspend_accounts: trinity_suspend_accounts
+      source: %{
+        trinity: trinity_subscriber_data,
+        capway: capway_subscriber_data
       },
-      capway: %{
-        cancel_contracts: capway_cancel_contracts,
-        update_contracts: capway_update_contracts,
-        create_contracts: capway_create_contracts
+      actions: %{
+        trinity: %{
+          cancel_accounts: trinity_cancel_accounts,
+          suspend_accounts: trinity_suspend_accounts
+        },
+        capway: %{
+          cancel_contracts: capway_cancel_contracts,
+          update_contracts: capway_update_contracts,
+          create_contracts: capway_create_contracts
+        }
       }
     }
 
@@ -120,7 +126,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   def get_contracts_to_create(trinity_subscriber_data, capway_subscriber_data) do
     Enum.reduce(trinity_subscriber_data, %{}, fn {trinity_subscriber_id, trinity_sub}, acc ->
       Logger.info("Checking Trinity subscriber ID #{trinity_subscriber_id} for creation")
-      Logger.info("trinity sub", inspect(trinity_sub))
+      Logger.info("trinity sub: #{inspect(trinity_sub)}")
 
       if Map.has_key?(
            capway_subscriber_data,
