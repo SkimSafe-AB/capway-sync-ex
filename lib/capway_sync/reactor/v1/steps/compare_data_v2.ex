@@ -119,6 +119,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   """
   def get_contracts_to_create(trinity_subscriber_data, capway_subscriber_data) do
     Enum.reduce(trinity_subscriber_data, %{}, fn {trinity_subscriber_id, trinity_sub}, acc ->
+      Logger.info("Checking Trinity subscriber ID #{trinity_subscriber_id} for creation")
+      Logger.info("trinity sub", inspect(trinity_sub))
+
       if Map.has_key?(
            capway_subscriber_data,
            trinity_subscriber_id
