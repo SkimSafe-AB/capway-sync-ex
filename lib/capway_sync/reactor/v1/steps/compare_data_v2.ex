@@ -55,6 +55,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         trinity_subscriber_data.active_subscribers
       )
 
+    IO.inspect(map_size(capway_create_contracts), label: "Capway Create Contracts")
+
     data = %{
       trinity: %{
         cancel_accounts: trinity_cancel_accounts,
@@ -171,10 +173,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
     Enum.reduce(capway_subscriber_data, %{}, fn {trinity_subscriber_id, capway_sub}, acc ->
-      Logger.info(
-        "Checking Capway subscriber #{trinity_subscriber_id} for cancellation against Trinity data"
-      )
-
       if Map.has_key?(
            trinity_subscriber_data,
            trinity_subscriber_id
