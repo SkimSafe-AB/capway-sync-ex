@@ -27,9 +27,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       "Trinity active subscriber mapset: #{inspect(trinity_subscriber_data.active_subscribers)}"
     )
 
-    Logger.info(
-      "Capway active subscriber mapset: #{inspect(capway_subscriber_data.active_subscribers)}"
-    )
+    Logger.info("Capway active subscriber mapset: #{inspect(capway_subscriber_data.map_sets)}")
 
     capway_cancel_contracts =
       get_contracts_to_cancel(
@@ -46,7 +44,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     capway_create_contracts =
       get_contracts_to_create(
         trinity_subscriber_data.active_subscribers,
-        capway_subscriber_data.active_subscribers
+        capway_subscriber_data.map_sets
       )
 
     {trinity_suspend_accounts, trinity_cancel_accounts} =
@@ -54,8 +52,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway_subscriber_data.cancelled_subscribers,
         trinity_subscriber_data.active_subscribers
       )
-
-    IO.inspect(map_size(capway_create_contracts), label: "Capway Create Contracts")
 
     data = %{
       source: %{
@@ -122,47 +118,32 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   This function identifies Capway contracts that needs to be created.
   It will focus on checking for all active Trinity subscribers
   and see if they exist in Capway data, if not they will be marked for creation.
+  Currently we check against both national_id and trinity_subscriber_id to determine existence.
   """
-  def get_contracts_to_create(trinity_subscriber_data, capway_subscriber_data) do
-    Enum.reduce(trinity_subscriber_data, %{}, fn {trinity_subscriber_id, trinity_sub}, acc ->
-      # Logger.info("Checking Trinity subscriber ID #{trinity_subscriber_id} for creation")
-      # Logger.info("trinity sub: #{inspect(trinity_sub)}")
+  def get_contracts_to_create(trinity_subscriber_data, capway_map_sets) do
+    Enum.filter(trinity_subscriber_data, fn {_id, trinity_sub} ->
+      trinity_sub.payment_method == "capway"
+    end)
+    |> Enum.reject(fn {_id, trinity_sub} ->
+      MapSet.member?(
+        capway_map_sets.active_national_ids,
+        trinity_sub.national_id
+      ) or
+        MapSet.member?(
+          capway_map_sets.active_trinity_ids,
+          trinity_sub.trinity_subscriber_id
+        )
+    end)
+    |> Map.new(fn {_id, sub} ->
+      # Subscriber missing in Capway, mark for creation
+      item =
+        ActionItem.create_action_item(:capway_create_contract, %{
+          national_id: sub.national_id,
+          trinity_subscriber_id: sub.trinity_subscriber_id,
+          reason: "Missing in Capway system"
+        })
 
-      # has_key =
-      #   Map.has_key?(
-      #     capway_subscriber_data,
-      #     trinity_subscriber_id
-      #   )
-
-      # Logger.info("Exists in Capway data: #{inspect(has_key)}")
-
-      if Map.has_key?(
-           capway_subscriber_data,
-           trinity_subscriber_id
-         ) do
-        # Subscriber exists in both systems, no action needed
-        acc
-      else
-        if(trinity_sub.payment_method == "capway") do
-          Logger.info(
-            "Marking Trinity subscriber ID #{trinity_subscriber_id} for Capway contract creation"
-          )
-
-          Logger.info("trinity sub: #{inspect(trinity_sub)}")
-
-          # Subscriber missing in Capway, mark for creation
-          item =
-            ActionItem.create_action_item(:capway_create_contract, %{
-              national_id: trinity_sub.national_id,
-              trinity_subscriber_id: trinity_subscriber_id,
-              reason: "Missing in Capway system"
-            })
-
-          Map.put(acc, trinity_sub.trinity_subscriber_id, item)
-        else
-          acc
-        end
-      end
+      {sub.trinity_subscriber_id, item}
     end)
   end
 

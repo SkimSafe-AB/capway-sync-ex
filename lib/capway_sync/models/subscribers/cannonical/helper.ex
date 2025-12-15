@@ -62,28 +62,6 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
   end
 
   def group(subscribers, :capway) do
-    # All subscribers are considered orphaned in Capway context
-    # if they dont have any trinity subscriber id present
-    # orphaned_subscribers =
-    #   subscribers
-    #   |> Enum.reduce(%{}, fn sub, acc ->
-    #     if !presence?(sub.trinity_subscriber_id) do
-    #       Map.put(acc, sub.capway_contract_ref, sub)
-    #     else
-    #       acc
-    #     end
-    #   end)
-
-    # associated_subscribers =
-    #   subscribers
-    #   |> Enum.reduce(%{}, fn sub, acc ->
-    #     if presence?(sub.trinity_subscriber_id) do
-    #       Map.put(acc, sub.trinity_subscriber_id, sub)
-    #     else
-    #       acc
-    #     end
-    #   end)
-
     {orphaned_subscribers, associated_subscribers} =
       subscribers
       |> Enum.reduce({%{}, %{}}, fn sub, {orphaned_acc, associated_acc} ->
@@ -128,7 +106,21 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       orphaned_subscribers: orphaned_subscribers,
       active_subscribers: active_subscribers,
       cancelled_subscribers: cancelled_subscribers,
-      above_collector_threshold: above_collector_threshold
+      above_collector_threshold: above_collector_threshold,
+      map_sets: %{
+        active_national_ids:
+          Enum.filter(active_subscribers, fn {_id, sub} ->
+            presence?(sub.national_id)
+          end)
+          |> Enum.map(fn {_id, sub} -> sub.national_id end)
+          |> MapSet.new(),
+        active_trinity_ids:
+          Enum.filter(active_subscribers, fn {_id, sub} ->
+            presence?(sub.trinity_subscriber_id)
+          end)
+          |> Enum.map(fn {_id, sub} -> sub.trinity_subscriber_id end)
+          |> MapSet.new()
+      }
     }
   end
 
