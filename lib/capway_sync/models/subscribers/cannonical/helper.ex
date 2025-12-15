@@ -86,7 +86,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     active_subscribers =
       associated_subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
+      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
         if sub.capway_active_status == true do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
@@ -96,7 +96,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     cancelled_subscribers =
       associated_subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
+      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
         if sub.capway_active_status == false do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
@@ -106,7 +106,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     above_collector_threshold =
       associated_subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
+      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
         if sub.collection != nil and sub.collection >= 2 do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
