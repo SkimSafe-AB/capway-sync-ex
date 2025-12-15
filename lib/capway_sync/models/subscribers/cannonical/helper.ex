@@ -62,8 +62,30 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
   end
 
   def group(subscribers, :capway) do
-    active_subscribers =
+    # All subscribers are considered orphaned in Capway context
+    # if they dont have any trinity subscriber id present
+    orphaned_subscribers =
       subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.trinity_subscriber_id == nil do
+          Map.put(acc, sub.capway_contract_ref, sub)
+        else
+          acc
+        end
+      end)
+
+    associated_subscribers =
+      subscribers
+      |> Enum.reduce(%{}, fn sub, acc ->
+        if sub.trinity_subscriber_id != nil do
+          Map.put(acc, sub.trinity_subscriber_id, sub)
+        else
+          acc
+        end
+      end)
+
+    active_subscribers =
+      associated_subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.capway_active_status == true do
           Map.put(acc, sub.trinity_subscriber_id, sub)
@@ -73,7 +95,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       end)
 
     cancelled_subscribers =
-      subscribers
+      associated_subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.capway_active_status == false do
           Map.put(acc, sub.trinity_subscriber_id, sub)
@@ -83,7 +105,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       end)
 
     above_collector_threshold =
-      subscribers
+      associated_subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.collection != nil and sub.collection >= 2 do
           Map.put(acc, sub.trinity_subscriber_id, sub)
@@ -93,6 +115,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       end)
 
     %{
+      orphaned_subscribers: orphaned_subscribers,
       active_subscribers: active_subscribers,
       cancelled_subscribers: cancelled_subscribers,
       above_collector_threshold: above_collector_threshold

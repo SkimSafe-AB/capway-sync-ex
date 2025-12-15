@@ -14,6 +14,11 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
     Logger.info("actions: #{inspect(actions)}")
     Logger.info("trinity: #{inspect(trinity)}")
     Logger.info("capway: #{inspect(capway)}")
+    Logger.info("Capway Active Contracts: #{inspect(Map.get(capway, :active_subscribers))}")
+
+    Logger.info(
+      "Capway Active Contracts: #{inspect(Map.get(capway, :active_subscribers) |> map_size())}"
+    )
 
     report = %{
       "id" => UUID.uuid4(),
@@ -23,6 +28,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
         "active" => get_map_length(Map.get(capway, :active_subscribers)),
         "above_collector_threshold" =>
           get_map_length(Map.get(capway, :above_collector_threshold)),
+        "orphaned" => get_map_length(Map.get(capway, :orphaned_subscribers)),
         "actions" => %{
           "cancel_contracts" => get_map_length(Map.get(actions.capway, :cancel_contracts, %{})),
           "update_contracts" => get_map_length(Map.get(actions.capway, :update_contracts, %{})),
