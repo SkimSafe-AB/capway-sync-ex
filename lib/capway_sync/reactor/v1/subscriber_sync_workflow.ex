@@ -64,28 +64,28 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     max_retries(2)
   end
 
-  # step(:dynamodb_store_action_items) do
-  #   argument(:result, result(:compare_data))
+  step(:dynamodb_store_action_items) do
+    argument(:result, result(:compare_data))
 
-  #   run(fn args, context ->
-  #     args.result.capway.cancel_contracts
-  #     |> Enum.each(fn {_id, action_item} ->
-  #       case ActionItemRepositoryV2.store_action_item(action_item) do
-  #         :ok ->
-  #           Logger.info(
-  #             "Successfully stored action item for Capway subscriber #{action_item.national_id} to DynamoDB"
-  #           )
+    run(fn args, context ->
+      args.result.actions.capway.cancel_contracts
+      |> Enum.each(fn {_id, action_item} ->
+        case ActionItemRepositoryV2.store_action_item(action_item) do
+          :ok ->
+            Logger.debug(
+              "Successfully stored action item for Capway subscriber #{action_item.national_id} to DynamoDB"
+            )
 
-  #         {:error, reason} ->
-  #           Logger.error(
-  #             "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
-  #           )
-  #       end
-  #     end)
-  #   end)
+          {:error, reason} ->
+            Logger.error(
+              "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
+            )
+        end
+      end)
 
-  #   {:ok, :done}
-  # end
+      {:ok, :done}
+    end)
+  end
 
   step(:dynamodb_store_report) do
     argument(:result, result(:compare_data))

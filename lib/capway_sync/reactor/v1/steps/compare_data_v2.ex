@@ -96,7 +96,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
              trinity_map_set.active_national_ids,
              capway_sub.national_id
            ) do
-        trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
+        trinity_sub =
+          Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
+          |> ensure_map_get(capway_sub.national_id, capway_subscriber_data)
 
         if trinity_sub.subscription_type == "locked" do
           item =
@@ -122,6 +124,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       end
     end)
   end
+
+  defp ensure_map_get(data, key, capway_subs) when is_nil(data) do
+    # We need to fetch the data with the national_id instead
+    {_id, cw_sub} =
+      Enum.find(capway_subs, fn {_id, sub} ->
+        sub.national_id == key
+      end)
+
+    cw_sub
+  end
+
+  defp ensure_map_get(data, _key, _capway_subs), do: data
 
   @doc """
   This function identifies Capway contracts that needs to be created.
