@@ -148,6 +148,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
             "Marking Trinity subscriber ID #{trinity_subscriber_id} for Capway contract creation"
           )
 
+          Logger.info("trinity sub: #{inspect(trinity_sub)}")
+
           # Subscriber missing in Capway, mark for creation
           item =
             ActionItem.create_action_item(:capway_create_contract, %{
