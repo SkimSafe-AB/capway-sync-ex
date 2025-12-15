@@ -22,7 +22,7 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
 
     report = %{
       "id" => UUID.uuid4(),
-      "created_at" => Timex.now() |> Timex.format!("{ISO:Extended}"),
+      "created_at" => Date.utc_today() |> Date.to_string(),
       "capway" => %{
         "cancelled" => get_map_length(Map.get(capway, :cancelled_subscribers)),
         "active" => get_map_length(Map.get(capway, :active_subscribers)),

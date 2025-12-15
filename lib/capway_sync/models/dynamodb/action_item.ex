@@ -35,7 +35,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
       id: UUID.uuid4(),
       trinity_subscriber_id: Map.get(data, :trinity_subscriber_id, nil),
       national_id: Map.get(data, :national_id, nil),
-      created_at: DateTime.utc_now() |> DateTime.to_iso8601(),
+      created_at: Date.utc_today() |> Date.to_string(),
       timestamp: DateTime.utc_now() |> DateTime.to_unix(),
       action: action,
       status: :pending,
