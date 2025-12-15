@@ -76,12 +76,12 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
         if presence?(sub.trinity_subscriber_id) do
           {orphaned_acc, Map.put(associated_acc, sub.trinity_subscriber_id, sub)}
         else
-          {Map.put(orphaned_acc, sub.capway_contract_ref, sub), associated_acc}
+          {Map.put(orphaned_acc, UUID.uuid4(), sub), associated_acc}
         end
       end)
 
     active_subscribers =
-      associated_subscribers
+      subscribers
       |> Enum.reduce(%{}, fn {_id, sub}, acc ->
         if sub.capway_active_status == true do
           Map.put(acc, sub.trinity_subscriber_id, sub)
@@ -112,6 +112,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     %{
       orphaned_subscribers: orphaned_subscribers,
+      associated_subscribers: associated_subscribers,
       active_subscribers: active_subscribers,
       cancelled_subscribers: cancelled_subscribers,
       above_collector_threshold: above_collector_threshold,
