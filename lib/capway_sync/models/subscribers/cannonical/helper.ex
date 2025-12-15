@@ -45,9 +45,9 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       end)
 
     locked_subscribers =
-      subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
-        if sub.trinity_status not in [:cancelled, :expired] and sub.subscription_type == :locked do
+      active_subscribers
+      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
+        if sub.subscription_type == :locked do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
           acc

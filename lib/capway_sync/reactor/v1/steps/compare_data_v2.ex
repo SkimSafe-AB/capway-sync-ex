@@ -24,7 +24,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     Logger.info("Starting data comparison between Trinity and Capway subscribers")
 
     Logger.info(
-      "Trinity active subscriber mapset: #{inspect(trinity_subscriber_data.active_subscribers)}"
+      "Trinity locked subscribers: #{inspect(trinity_subscriber_data.locked_subscribers)}"
     )
 
     Logger.info("Capway active subscriber mapset: #{inspect(capway_subscriber_data.map_sets)}")

@@ -22,11 +22,11 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
       "comment" => action_item.comment
     }
 
-    IO.inspect(item, label: "DynamoDB Item to Store")
+    # IO.inspect(item, label: "DynamoDB Item to Store")
 
     case Client.put_item(table_name, item) do
       {:ok, _response} ->
-        Logger.info("Successfully stored action item #{action_item.id} in DynamoDB")
+        # Logger.info("Successfully stored action item #{action_item.id} in DynamoDB")
         :ok
 
       {:error, reason} ->
