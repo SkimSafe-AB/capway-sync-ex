@@ -94,8 +94,8 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     run(fn args, _context ->
       case GeneralSyncReportRepositoryV2.store_report(
              args.result,
-             args.data.capway,
-             args.data.trinity
+             args.data.trinity,
+             args.data.capway
            ) do
         {:ok, report_id} ->
           Logger.info("Successfully stored GeneralSyncReport to DynamoDB with ID: #{report_id}")
