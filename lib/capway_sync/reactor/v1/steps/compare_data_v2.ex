@@ -128,6 +128,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       Logger.info("Checking Trinity subscriber ID #{trinity_subscriber_id} for creation")
       Logger.info("trinity sub: #{inspect(trinity_sub)}")
 
+      has_key =
+        Map.has_key?(
+          capway_subscriber_data,
+          trinity_subscriber_id
+        )
+
+      Logger.info("Exists in Capway data: #{inspect(has_key)}")
+
       if Map.has_key?(
            capway_subscriber_data,
            trinity_subscriber_id
