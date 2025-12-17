@@ -100,7 +100,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
           Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
           |> ensure_map_get(capway_sub.national_id, capway_subscriber_data)
 
-        if trinity_sub.subscription_type == "locked" do
+        if trinity_sub.subscription_type == :locked do
           item =
             ActionItem.create_action_item(:suspend, %{
               national_id: capway_sub.national_id,
