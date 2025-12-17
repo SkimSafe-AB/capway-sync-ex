@@ -26,13 +26,24 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
       "capway" => %{
         "cancelled" => get_map_length(Map.get(capway, :cancelled_subscribers)),
         "active" => get_map_length(Map.get(capway, :active_subscribers)),
-        "above_collector_threshold" =>
-          get_map_length(Map.get(capway, :above_collector_threshold)),
+        "above_collector_threshold" => %{
+          "count" => get_map_length(Map.get(capway, :above_collector_threshold)),
+          "ids" => Map.keys(Map.get(capway, :above_collector_threshold))
+        },
         "orphaned" => get_map_length(Map.get(capway, :orphaned_subscribers)),
         "actions" => %{
-          "cancel_contracts" => get_map_length(Map.get(actions.capway, :cancel_contracts, %{})),
-          "update_contracts" => get_map_length(Map.get(actions.capway, :update_contracts, %{})),
-          "create_contracts" => get_map_length(Map.get(actions.capway, :create_contracts, %{}))
+          "cancel_contracts" => %{
+            "count" => get_map_length(Map.get(actions.capway, :cancel_contracts, %{})),
+            "ids" => Map.keys(Map.get(actions.capway, :cancel_contracts, %{}))
+          },
+          "update_contracts" => %{
+            "count" => get_map_length(Map.get(actions.capway, :update_contracts, %{})),
+            "ids" => Map.keys(Map.get(actions.capway, :update_contracts, %{}))
+          },
+          "create_contracts" => %{
+            "count" => get_map_length(Map.get(actions.capway, :create_contracts, %{})),
+            "ids" => Map.keys(Map.get(actions.capway, :create_contracts, %{}))
+          }
         }
       },
       "trinity" => %{
@@ -40,8 +51,14 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
         "active" => get_map_length(Map.get(trinity, :active_subscribers)),
         "locked" => get_map_length(Map.get(trinity, :locked_subscribers)),
         "actions" => %{
-          "cancel_accounts" => get_map_length(Map.get(actions.trinity, :cancel_accounts, %{})),
-          "suspend_accounts" => get_map_length(Map.get(actions.trinity, :suspend_accounts, %{}))
+          "cancel_accounts" => %{
+            "count" => get_map_length(Map.get(actions.trinity, :cancel_accounts, %{})),
+            "ids" => Map.keys(Map.get(actions.trinity, :cancel_accounts, %{}))
+          },
+          "suspend_accounts" => %{
+            "count" => get_map_length(Map.get(actions.trinity, :suspend_accounts, %{})),
+            "ids" => Map.keys(Map.get(actions.trinity, :suspend_accounts, %{}))
+          }
         }
       }
     }
