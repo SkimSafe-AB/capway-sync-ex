@@ -232,7 +232,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       else
         trinity_sub = Map.get(trinity_subscriber_data, trinity_subscriber_id)
 
-        if trinity_sub != nil and trinity_sub.trinity_status == :pending_cancel do
+        # Use Timex to check if subscription trinity_subscription_updated_at is older than yesterday
+        older_than_yesterday =
+          case trinity_sub do
+            nil ->
+              false
+
+            _ ->
+              case trinity_sub.trinity_subscription_updated_at do
+                nil ->
+                  false
+
+                dt ->
+                  dt
+                  |> Timex.to_datetime("Etc/UTC")
+                  |> Timex.before?(Timex.shift(Timex.now("Etc/UTC"), days: -1))
+              end
+          end
+
+        if (trinity_sub != nil and trinity_sub.trinity_status == :pending_cancel) or
+             not older_than_yesterday do
           # Subscriber is already pending cancel in Trinity, no action needed
           acc
         else
