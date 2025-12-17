@@ -25,7 +25,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwayExportSubscribers do
 
     with {:ok, capway_data} <- validate_argument(arguments, :capway_data) do
       # Filter subscribers with unpaid invoices or collections
-      subscribers_to_export = filter_subscribers_for_export(capway_data)
+      # subscribers_to_export = filter_subscribers_for_export(capway_data)
+      subscribers_to_export = capway_data
 
       # Generate CSV content
       csv_content = generate_csv_content(subscribers_to_export)

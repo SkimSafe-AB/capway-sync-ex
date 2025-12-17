@@ -218,22 +218,19 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   #   max_retries(2)
   # end
 
-  # # Exports Capway subscribers with unpaid invoices and collections to CSV.
-  # # Creates a CSV file containing subscribers that have either unpaid invoices > 0
-  # # or collections > 0 for further analysis and reporting.
-  # step :capway_export_subscribers_csv do
-  #   argument(:capway_data, result(:fetch_capway_data))
+  # Exports Capway subscribers with unpaid invoices and collections to CSV.
+  # Creates a CSV file containing subscribers that have either unpaid invoices > 0
+  # or collections > 0 for further analysis and reporting.
+  step :capway_export_subscribers_csv do
+    argument(:capway_data, result(:fetch_capway_data))
 
-  #   run(fn args, context ->
-  #     # Extract raw Capway data for CSV export
-  #     capway_raw_data = args.capway_data.raw
+    run(fn args, context ->
+      # Call the export step with raw data
+      CapwayExportSubscribers.run(%{capway_data: args.capway_data}, context)
+    end)
 
-  #     # Call the export step with raw data
-  #     CapwayExportSubscribers.run(%{capway_data: capway_raw_data}, context)
-  #   end)
-
-  #   max_retries(2)
-  # end
+    max_retries(2)
+  end
 
   # # Final step that processes and logs all workflow results.
   # # Creates a GeneralSyncReport struct with all workflow data and logs summary.

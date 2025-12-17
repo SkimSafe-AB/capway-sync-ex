@@ -10,6 +10,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
   @impl true
   def run(_map, _context, _options) do
+    # Clear previous debug file
+    File.write("priv/soap_response.xml", "")
+
     Logger.info("Starting parallel Capway subscriber fetch with #{@worker_count} workers")
 
     # Get max pages configuration
@@ -34,8 +37,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   # Apply page limit to total count if configured
   defp apply_page_limit(total_count, nil), do: total_count
   defp apply_page_limit(total_count, 0), do: total_count
+
   defp apply_page_limit(total_count, max_pages) when max_pages > 0 do
-    max_records = max_pages * 100  # 100 records per page
+    # 100 records per page
+    max_records = max_pages * 100
     limited = min(total_count, max_records)
 
     if limited < total_count do
@@ -46,6 +51,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
     limited
   end
+
   defp apply_page_limit(total_count, _), do: total_count
 
   # Fetch subscribers using 4 parallel workers that divide the total count.
@@ -151,11 +157,16 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
     case GenerateReport.generate_report(
            "CAP_q_contracts_skimsafe",
            "Data",
-           [%{name: "creditor", value: "202623"}],
+           [
+             %{name: "creditor", value: "202623"}
+           ],
            offset: current_offset,
            maxrows: chunk_size
          ) do
       {:ok, xml_data} ->
+        # Append raw XML to debug file
+        append_to_debug_file(xml_data, current_offset, chunk_size, worker_id)
+
         case Saxy.parse_string(xml_data, ResponseHandler, []) do
           {:ok, subscribers} ->
             fetched_count = length(subscribers)
@@ -277,6 +288,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
           {:error, {:all_workers_failed, failures}}
         end
     end
+  end
+
+  # Append raw XML response to debug file for debugging purposes
+  defp append_to_debug_file(xml_data, _offset, _maxrows, write_id) do
+    filepath = "priv/soap_response-#{write_id}.xml"
+    # Append raw XML directly to file
+    File.write(filepath, xml_data, [:append])
   end
 
   @impl true

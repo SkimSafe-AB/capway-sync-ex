@@ -331,15 +331,15 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepository do
       existing_in_both: decode_json_field.("existing_in_both"),
       suspend_accounts: decode_json_field.("suspend_accounts"),
       unsuspend_accounts: decode_json_field.("unsuspend_accounts"),
-      
+
       # For IDs which are stored as raw lists (or should be)
       missing_in_capway_ids: get_list_field.("create_capway_contracts"), # Mapped from create_capway_contracts
       missing_in_trinity_ids: [], # Not currently stored in actions
       existing_in_both_ids: [], # Not currently stored in actions
-      
+
       cancel_capway_contracts: [], # We only store IDs now
       cancel_capway_contracts_ids: get_list_field.("cancel_capway_contracts"),
-      
+
       update_capway_contract: [], # We only store IDs now
       update_capway_contract_ids: get_list_field.("update_capway_contracts")
     }
