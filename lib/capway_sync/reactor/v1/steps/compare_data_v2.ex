@@ -49,7 +49,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
     {trinity_suspend_accounts, trinity_cancel_accounts} =
       get_accounts_to_suspend_or_cancel(
-        capway_subscriber_data.cancelled_subscribers,
+        capway_subscriber_data.above_collector_threshold,
         trinity_subscriber_data.active_subscribers,
         trinity_subscriber_data.map_sets
       )
