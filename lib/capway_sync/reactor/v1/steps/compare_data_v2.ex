@@ -82,6 +82,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   This function identifies Capway contracts that needs to be either suspended or cancelled in Trinity.
   The current rule is based on whetever the trinity subscription is locked in or not. Ie if it has a time based contract.
   If it is locked in, it should be suspended, otherwise cancelled.
+  If the sub is pending_cancel or payment_method isnt capway we should not move it to cancel.
   """
 
   def get_accounts_to_suspend_or_cancel(
@@ -110,7 +111,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
           {Map.put(acc_suspend, capway_sub.trinity_subscriber_id, item), acc_cancel}
         else
-          if trinity_sub.trinity_status == :pending_cancel do
+          if trinity_sub.trinity_status == :pending_cancel or
+               trinity_sub.payment_method != "capway" do
             # Already pending cancel, no action needed
             {acc_suspend, acc_cancel}
           else
