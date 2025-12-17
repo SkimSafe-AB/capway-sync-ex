@@ -110,14 +110,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
           {Map.put(acc_suspend, capway_sub.trinity_subscriber_id, item), acc_cancel}
         else
-          item =
-            ActionItem.create_action_item(:trinity_cancel_subscription, %{
-              national_id: capway_sub.national_id,
-              trinity_subscriber_id: capway_sub.trinity_subscriber_id,
-              reason: "Should be cancelled in Trinity due to inactive Capway status"
-            })
+          if trinity_sub.trinity_status == :pending_cancel do
+            # Already pending cancel, no action needed
+            {acc_suspend, acc_cancel}
+          else
+            item =
+              ActionItem.create_action_item(:trinity_cancel_subscription, %{
+                national_id: capway_sub.national_id,
+                trinity_subscriber_id: capway_sub.trinity_subscriber_id,
+                reason: "Should be cancelled in Trinity due to inactive Capway status"
+              })
 
-          {acc_suspend, Map.put(acc_cancel, capway_sub.trinity_subscriber_id, item)}
+            {acc_suspend, Map.put(acc_cancel, capway_sub.trinity_subscriber_id, item)}
+          end
         end
       else
         {acc_suspend, acc_cancel}
