@@ -138,6 +138,9 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ARM64-SE-RELEASE-2-1-${{ github.sha }}
+          REST_API_BASE_URL: ""
+          REST_API_USERNAME: ""
+          REST_API_PASSWORD: ""
         run: |
           # Build a docker container and
           # push it to ECR so that it can
