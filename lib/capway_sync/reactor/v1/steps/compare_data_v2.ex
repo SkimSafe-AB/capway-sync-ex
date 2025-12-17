@@ -208,6 +208,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
   end
 
+  @doc """
+  This function identifies Capway contracts that needs to be cancelled.
+  It will focus on checking for all active Capway subscribers
+  and see if they exist in Trinity data, if not they will be marked for cancellation.
+  It should filter out any subscribers that are in :pending_cancel
+  """
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
     Enum.reduce(capway_subscriber_data, %{}, fn {trinity_subscriber_id, capway_sub}, acc ->
       if Map.has_key?(
@@ -217,17 +223,22 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         # Subscriber exists in both systems, no action needed
         acc
       else
-        # Logger.info("Marking Capway subscriber #{trinity_subscriber_id} for cancellation")
+        trinity_sub = Map.get(trinity_subscriber_data, trinity_subscriber_id)
 
-        # Subscriber missing in Trinity, mark for cancellation
-        item =
-          ActionItem.create_action_item(:capway_cancel_contract, %{
-            national_id: capway_sub.national_id,
-            trinity_subscriber_id: trinity_subscriber_id,
-            reason: "Missing in Trinity system"
-          })
+        if trinity_sub != nil and trinity_sub.trinity_status == :pending_cancel do
+          # Subscriber is already pending cancel in Trinity, no action needed
+          acc
+        else
+          # Subscriber missing in Trinity, mark for cancellation
+          item =
+            ActionItem.create_action_item(:capway_cancel_contract, %{
+              national_id: capway_sub.national_id,
+              trinity_subscriber_id: trinity_subscriber_id,
+              reason: "Missing in Trinity system"
+            })
 
-        Map.put(acc, trinity_subscriber_id, item)
+          Map.put(acc, trinity_subscriber_id, item)
+        end
       end
     end)
   end
