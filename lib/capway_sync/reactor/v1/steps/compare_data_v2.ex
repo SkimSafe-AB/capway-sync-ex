@@ -156,7 +156,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         sub.payment_method == "capway",
         not MapSet.member?(capway_map_sets.active_national_ids, sub.national_id),
         not MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id),
-        not older_than_yesterday?(sub),
+        older_than_yesterday?(sub),
         into: %{} do
       reason = "Missing in Capway system"
       {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, sub, reason)}
@@ -204,7 +204,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         trinity_sub = Map.get(trinity_subscriber_data, id),
         trinity_sub != nil,
         trinity_sub.trinity_status != :pending_cancel,
-        older_than_yesterday?(trinity_sub) == false,
+        older_than_yesterday?(trinity_sub),
         into: %{} do
       reason = "Missing in Trinity system"
 
