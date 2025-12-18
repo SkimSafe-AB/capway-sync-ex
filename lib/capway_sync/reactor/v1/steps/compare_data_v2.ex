@@ -84,52 +84,53 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   If it is locked in, it should be suspended, otherwise cancelled.
   If the sub is pending_cancel or payment_method isnt capway we should not move it to cancel.
   """
-
   def get_accounts_to_suspend_or_cancel(
         capway_subscriber_data,
         trinity_subscriber_data,
         trinity_map_set
       ) do
-    Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {_id, capway_sub},
-                                                       {acc_suspend, acc_cancel} ->
-      if Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id) or
-           MapSet.member?(
-             trinity_map_set.active_national_ids,
-             capway_sub.national_id
-           ) do
-        trinity_sub =
-          Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
-          |> ensure_map_get(capway_sub.national_id, capway_subscriber_data)
-
-        if trinity_sub.subscription_type == :locked do
-          item =
-            ActionItem.create_action_item(:suspend, %{
-              national_id: capway_sub.national_id,
-              trinity_subscriber_id: capway_sub.trinity_subscriber_id,
-              reason: "Should be suspended in Trinity due to locked subscription"
-            })
-
-          {Map.put(acc_suspend, capway_sub.trinity_subscriber_id, item), acc_cancel}
-        else
-          if trinity_sub.trinity_status == :pending_cancel or
-               trinity_sub.payment_method != "capway" do
-            # Already pending cancel, no action needed
-            {acc_suspend, acc_cancel}
-          else
-            item =
-              ActionItem.create_action_item(:trinity_cancel_subscription, %{
-                national_id: capway_sub.national_id,
-                trinity_subscriber_id: capway_sub.trinity_subscriber_id,
-                reason: "Should be cancelled in Trinity due to inactive Capway status"
-              })
-
-            {acc_suspend, Map.put(acc_cancel, capway_sub.trinity_subscriber_id, item)}
-          end
-        end
+    # Initialize the accumulator as a tuple of two maps: {suspend_acc, cancel_acc}
+    Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {_id, capway_sub}, {suspend, cancel} ->
+      # Use 'with' to handle your filtering logic cleanly
+      with true <- Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+           true <- confirm_relationship(trinity_subscriber_data, trinity_map_set, capway_sub),
+           trinity_sub when not is_nil(trinity_sub) <-
+             Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
+             |> ensure_map_get(capway_sub.national_id, capway_subscriber_data) do
+        # Logic to decide which bucket to update
+        suspend_or_cancel_action(capway_sub, trinity_sub, suspend, cancel)
       else
-        {acc_suspend, acc_cancel}
+        # If any check in 'with' fails (returns false/nil), return accumulators unchanged
+        _ -> {suspend, cancel}
       end
     end)
+  end
+
+  defp confirm_relationship(t_sub_data, t_map_sets, c_sub) do
+    Map.has_key?(t_sub_data, c_sub.trinity_subscriber_id) or
+      MapSet.member?(t_map_sets.active_national_ids, c_sub.national_id)
+  end
+
+  defp suspend_or_cancel_action(capway_sub, trinity_sub, suspend_acc, cancel_acc) do
+    if trinity_sub.subscription_type == :locked do
+      reason = "Should be suspended in Trinity due to locked subscription"
+      action = :suspend
+      item = build_action_item(action, capway_sub, reason)
+
+      {Map.put(suspend_acc, capway_sub.trinity_subscriber_id, item), cancel_acc}
+    else
+      if trinity_sub.trinity_status == :pending_cancel or
+           trinity_sub.payment_method != "capway" do
+        # Already pending cancel, no action needed
+        {suspend_acc, cancel_acc}
+      else
+        reason = "Should be cancelled in Trinity due to inactive Capway status"
+        action = :trinity_cancel_subscription
+        item = build_action_item(action, capway_sub, reason)
+
+        {suspend_acc, Map.put(cancel_acc, capway_sub.trinity_subscriber_id, item)}
+      end
+    end
   end
 
   defp ensure_map_get(data, key, capway_subs) when is_nil(data) do
@@ -151,30 +152,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   Currently we check against both national_id and trinity_subscriber_id to determine existence.
   """
   def get_contracts_to_create(trinity_subscriber_data, capway_map_sets) do
-    Enum.filter(trinity_subscriber_data, fn {_id, trinity_sub} ->
-      trinity_sub.payment_method == "capway"
-    end)
-    |> Enum.reject(fn {_id, trinity_sub} ->
-      MapSet.member?(
-        capway_map_sets.active_national_ids,
-        trinity_sub.national_id
-      ) or
-        MapSet.member?(
-          capway_map_sets.active_trinity_ids,
-          trinity_sub.trinity_subscriber_id
-        )
-    end)
-    |> Map.new(fn {_id, sub} ->
-      # Subscriber missing in Capway, mark for creation
-      item =
-        ActionItem.create_action_item(:capway_create_contract, %{
-          national_id: sub.national_id,
-          trinity_subscriber_id: sub.trinity_subscriber_id,
-          reason: "Missing in Capway system"
-        })
-
-      {sub.trinity_subscriber_id, item}
-    end)
+    for {_id, sub} <- trinity_subscriber_data,
+        sub.payment_method == "capway",
+        not MapSet.member?(capway_map_sets.active_national_ids, sub.national_id),
+        not MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id),
+        not older_than_yesterday?(sub),
+        into: %{} do
+      reason = "Missing in Capway system"
+      {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, sub, reason)}
+    end
   end
 
   @doc """
@@ -184,28 +170,16 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   different than the one in Trinity, it will be marked for update.
   """
   def get_contracts_to_update(capway_subscriber_data, trinity_subscriber_data) do
-    # First filter out the Capway subscribers that have no national_id
-    Enum.reduce(capway_subscriber_data, %{}, fn {_id, capway_sub}, acc ->
-      with true <- Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
-           trinity_sub <-
-             Map.get(
-               trinity_subscriber_data,
-               capway_sub.trinity_subscriber_id
-             ),
-           true <- check_for_missing_attrs(capway_sub, trinity_sub) do
-        # National IDs are different, mark for update
-        item =
-          ActionItem.create_action_item(:capway_update_contract, %{
-            national_id: trinity_sub.national_id,
-            trinity_subscriber_id: capway_sub.trinity_subscriber_id,
-            reason: "National ID mismatch"
-          })
+    for {_id, capway_sub} <- capway_subscriber_data,
+        Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        check_for_missing_attrs(capway_sub, trinity_sub),
+        into: %{} do
+      reason = "National ID mismatch"
 
-        Map.put(acc, capway_sub.trinity_subscriber_id, item)
-      else
-        _ -> acc
-      end
-    end)
+      {capway_sub.trinity_subscriber_id,
+       build_action_item(:capway_update_contract, capway_sub, reason)}
+    end
   end
 
   defp check_for_missing_attrs(capway_sub, trinity_sub) do
@@ -222,50 +196,36 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   It should filter out any subscribers that are in :pending_cancel
   """
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
-    Enum.reduce(capway_subscriber_data, %{}, fn {trinity_subscriber_id, capway_sub}, acc ->
-      if Map.has_key?(
-           trinity_subscriber_data,
-           trinity_subscriber_id
-         ) do
-        # Subscriber exists in both systems, no action needed
-        acc
-      else
-        trinity_sub = Map.get(trinity_subscriber_data, trinity_subscriber_id)
+    for {id, capway_sub} <- capway_subscriber_data,
+        Map.has_key?(
+          trinity_subscriber_data,
+          id
+        ) == false,
+        trinity_sub = Map.get(trinity_subscriber_data, id),
+        trinity_sub != nil,
+        trinity_sub.trinity_status != :pending_cancel,
+        older_than_yesterday?(trinity_sub) == false,
+        into: %{} do
+      reason = "Missing in Trinity system"
 
-        # Use Timex to check if subscription trinity_subscription_updated_at is older than yesterday
-        older_than_yesterday =
-          case trinity_sub do
-            nil ->
-              false
+      {id, build_action_item(:capway_cancel_contract, capway_sub, reason)}
+    end
+  end
 
-            _ ->
-              case trinity_sub.trinity_subscription_updated_at do
-                nil ->
-                  false
+  defp build_action_item(action, sub, reason) do
+    ActionItem.create_action_item(action, %{
+      national_id: sub.national_id,
+      trinity_subscriber_id: sub.trinity_subscriber_id,
+      reason: reason
+    })
+  end
 
-                dt ->
-                  dt
-                  |> Timex.to_datetime("Etc/UTC")
-                  |> Timex.before?(Timex.shift(Timex.now("Etc/UTC"), days: -1))
-              end
-          end
+  defp older_than_yesterday?(nil), do: false
+  defp older_than_yesterday?(%{trinity_subscription_updated_at: nil} = _sub), do: false
 
-        if (trinity_sub != nil and trinity_sub.trinity_status == :pending_cancel) or
-             not older_than_yesterday do
-          # Subscriber is already pending cancel in Trinity, no action needed
-          acc
-        else
-          # Subscriber missing in Trinity, mark for cancellation
-          item =
-            ActionItem.create_action_item(:capway_cancel_contract, %{
-              national_id: capway_sub.national_id,
-              trinity_subscriber_id: trinity_subscriber_id,
-              reason: "Missing in Trinity system"
-            })
-
-          Map.put(acc, trinity_subscriber_id, item)
-        end
-      end
-    end)
+  defp older_than_yesterday?(%{trinity_subscription_updated_at: dt} = _sub) do
+    dt
+    |> Timex.to_datetime("Etc/UTC")
+    |> Timex.before?(Timex.shift(Timex.now("Etc/UTC"), days: -1))
   end
 end
