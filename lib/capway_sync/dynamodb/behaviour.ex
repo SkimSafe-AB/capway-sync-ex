@@ -49,4 +49,17 @@ defmodule CapwaySync.Dynamodb.Behaviour do
   - `{:error, reason}` on failure
   """
   @callback delete_item(String.t(), map()) :: {:ok, term()} | {:error, term()}
+
+  @doc """
+  Queries items from the specified DynamoDB table using the provided options.
+
+  ## Parameters
+  - `table`: The name of the DynamoDB table
+  - `opts`: Query options (key condition expression, expression attribute values, etc.)
+
+  ## Returns
+  - `{:ok, result}` on success
+  - `{:error, reason}` on failure
+  """
+  @callback query(String.t(), keyword()) :: {:ok, term()} | {:error, term()}
 end

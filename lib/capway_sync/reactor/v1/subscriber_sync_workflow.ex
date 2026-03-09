@@ -2,7 +2,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   use Reactor
 
   alias CapwaySync.Reactor.V1.Steps.{
-    CapwaySubscribers,
+    CachedCapwaySubscribers,
     CapwayExportSubscribers,
     CancelCapwayContracts,
     CompareDataV2,
@@ -39,7 +39,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   # Fetches existing subscriber data from Capway system.
   # Retrieves current subscriber records from Capway to compare
   # against Trinity data for synchronization.
-  step(:fetch_capway_data, CapwaySubscribers) do
+  step(:fetch_capway_data, CachedCapwaySubscribers) do
     max_retries(3)
     async?(true)
   end

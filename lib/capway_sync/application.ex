@@ -27,7 +27,8 @@ defmodule CapwaySync.Application do
   defp required_envs() do
     [
       "SYNC_REPORTS_TABLE",
-      "ACTION_ITEMS_TABLE"
+      "ACTION_ITEMS_TABLE",
+      "CAPWAY_CACHE_TABLE"
     ]
     |> Enum.each(fn env ->
       System.get_env(env) || raise("#{env} is not set")

@@ -19,4 +19,9 @@ defmodule CapwaySync.Dynamodb.Client do
     ExAws.Dynamo.delete_item(table, key)
     |> ExAws.request()
   end
+
+  def query(table, opts) do
+    ExAws.Dynamo.query(table, opts)
+    |> ExAws.request()
+  end
 end

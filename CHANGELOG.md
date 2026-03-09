@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+-   DynamoDB cache layer for Capway subscriber data (`CapwayCacheRepository`):
+    - Caches SOAP API results in DynamoDB keyed by date, since data only updates once per day
+    - Subscribers chunked into groups of 200 to stay within DynamoDB's 400KB item limit
+    - Manifest item per date tracks total count, chunk count, and timestamp
+    - TTL of 2 days for automatic cleanup
+    - `CAPWAY_CACHE_BYPASS=true` env var to force fresh SOAP fetch
+    - New `CAPWAY_CACHE_TABLE` env var for table name configuration
+-   `CachedCapwaySubscribers` Reactor step wrapping `CapwaySubscribers` with cache logic
+-   `query/2` function to DynamoDB Client and Behaviour
 -   Personal number details to the synchronization process.
 -   Configurable page limit for Capway data fetching via `CAPWAY_MAX_PAGES` environment variable:
     - Each page contains 100 records

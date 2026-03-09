@@ -13,6 +13,7 @@ services:
       MIX_ENV: test
       SYNC_REPORTS_TABLE: asd
       ACTION_ITEMS_TABLE: asd
+      CAPWAY_CACHE_TABLE: capway-subscriber-cache-test
       TRINITY_DB_VAULT_KEY: PFbK4O5r0GpDMgKQ0tp41PVvBqnxOti+xXw2X3KG4wM=
       # TRINITY_DB_VAULT_KEY_RETIRED: PFbK4O5s0GpDMgKQ0tp41PVvBqnxOti+xXw2X3KG4wM=
     volumes:

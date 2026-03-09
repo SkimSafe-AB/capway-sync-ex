@@ -4,6 +4,7 @@ config :capway_sync,
   report_wsdl: System.get_env("SOAP_REPORT_WSDL"),
   sync_reports_table: System.get_env("SYNC_REPORTS_TABLE"),
   action_items_table: System.get_env("ACTION_ITEMS_TABLE"),
+  capway_cache_table: System.get_env("CAPWAY_CACHE_TABLE"),
   # Max pages to fetch from Capway (each page is 100 records)
   # Set to nil or 0 for unlimited, or a positive integer for limit
   capway_max_pages: System.get_env("CAPWAY_MAX_PAGES") |> then(fn
