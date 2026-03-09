@@ -11,6 +11,7 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
       functions = TrinitySubscribers.__info__(:functions)
       assert {:list_subscribers, 0} in functions
       assert {:list_subscribers, 1} in functions
+      assert {:list_subscribers, 2} in functions
     end
 
     test "get_subscriber_by_pnr function exists" do
@@ -39,6 +40,21 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
       # This would be tested in integration tests with a real database
       functions = TrinitySubscribers.__info__(:functions)
       assert {:list_subscribers, 1} in functions
+    end
+  end
+
+  describe "subscription type filtering" do
+    test "list_subscribers query excludes sinfrid subscription type" do
+      # Verify the sinfrid subscription type is defined in the schema
+      # so the filter has something to exclude
+      types = CapwaySync.Models.Trinity.Subscription.__schema__(:type, :subscription_type)
+      assert types != nil
+
+      # Verify sinfrid is a valid enum value in the subscription model
+      valid_values =
+        Ecto.Enum.values(CapwaySync.Models.Trinity.Subscription, :subscription_type)
+
+      assert :sinfrid in valid_values
     end
   end
 

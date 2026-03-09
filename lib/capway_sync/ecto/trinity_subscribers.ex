@@ -18,7 +18,7 @@ defmodule CapwaySync.Ecto.TrinitySubscribers do
     query =
       Subscriber
       |> join(:inner, [s], sub in assoc(s, :subscription))
-      # |> where([s, sub], sub.payment_method == "capway")
+      |> where([_s, sub], sub.subscription_type != :sinfrid)
       |> filter_by_payment_method?(payment_method)
       |> preload_subscription?(preload_subscription)
 
