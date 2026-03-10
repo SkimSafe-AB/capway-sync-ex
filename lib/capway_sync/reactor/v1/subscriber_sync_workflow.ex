@@ -67,32 +67,32 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   step(:dynamodb_store_action_items) do
     argument(:result, result(:compare_data))
 
-    Logger.info(
-      "Storing action items to DynamoDB for identified subscriber synchronization actions"
-    )
-
-    run(fn args, context ->
+    run(fn args, _context ->
       Logger.info(
-        "Number of Cancel Contracts :#{length(args.result.actions.capway.cancel_contracts)}"
+        "Storing action items to DynamoDB for identified subscriber synchronization actions"
       )
 
       Logger.info(
-        "Number of Create Contracts :#{length(args.result.actions.capway.create_contracts)}"
+        "Number of Cancel Contracts: #{map_size(args.result.actions.capway.cancel_contracts)}"
       )
 
       Logger.info(
-        "Number of Update Contracts :#{length(args.result.actions.capway.update_contracts)}"
+        "Number of Create Contracts: #{map_size(args.result.actions.capway.create_contracts)}"
+      )
+
+      Logger.info(
+        "Number of Update Contracts: #{map_size(args.result.actions.capway.update_contracts)}"
       )
 
       args.result.actions.capway.cancel_contracts
       |> Enum.each(fn {_id, action_item} ->
         case ActionItemRepositoryV2.store_action_item(action_item) do
           :ok ->
-            {:ok, "done"}
+            :ok
 
           {:error, reason} ->
             Logger.error(
-              "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
+              "Failed to store cancel action item for subscriber #{action_item.national_id}: #{inspect(reason)}"
             )
         end
       end)
@@ -102,12 +102,12 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
         case ActionItemRepositoryV2.store_action_item(action_item) do
           :ok ->
             Logger.debug(
-              "Successfully stored action item for Capway subscriber #{action_item.national_id} to DynamoDB"
+              "Stored create action item for subscriber #{action_item.national_id}"
             )
 
           {:error, reason} ->
             Logger.error(
-              "Failed to store action item for Capway subscriber #{action_item.national_id} to DynamoDB: #{inspect(reason)}"
+              "Failed to store create action item for subscriber #{action_item.national_id}: #{inspect(reason)}"
             )
         end
       end)
