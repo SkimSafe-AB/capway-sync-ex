@@ -67,7 +67,23 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   step(:dynamodb_store_action_items) do
     argument(:result, result(:compare_data))
 
+    Logger.info(
+      "Storing action items to DynamoDB for identified subscriber synchronization actions"
+    )
+
     run(fn args, context ->
+      Logger.info(
+        "Number of Cancel Contracts :#{length(args.result.actions.capway.cancel_contracts)}"
+      )
+
+      Logger.info(
+        "Number of Create Contracts :#{length(args.result.actions.capway.create_contracts)}"
+      )
+
+      Logger.info(
+        "Number of Update Contracts :#{length(args.result.actions.capway.update_contracts)}"
+      )
+
       args.result.actions.capway.cancel_contracts
       |> Enum.each(fn {_id, action_item} ->
         case ActionItemRepositoryV2.store_action_item(action_item) do
