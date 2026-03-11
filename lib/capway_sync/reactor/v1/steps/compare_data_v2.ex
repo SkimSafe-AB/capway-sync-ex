@@ -120,8 +120,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       {Map.put(suspend_acc, capway_sub.trinity_subscriber_id, item), cancel_acc}
     else
       if trinity_sub.trinity_status == :pending_cancel or
-           trinity_sub.payment_method != "capway" do
-        # Already pending cancel, no action needed
+           trinity_sub.payment_method != "capway" or
+           capway_sub.last_invoice_status == "Paid" do
+        # No action needed — already pending cancel, non-capway payment, or latest invoice paid
         {suspend_acc, cancel_acc}
       else
         reason = "Should be cancelled in Trinity due to inactive Capway status"
@@ -183,8 +184,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   defp check_for_missing_attrs(capway_sub, trinity_sub) do
-    capway_sub.national_id == nil or
-      capway_sub.national_id != trinity_sub.national_id or
+    capway_sub.national_id != trinity_sub.national_id or
       capway_sub.trinity_subscriber_id == nil or
       capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
   end
