@@ -32,7 +32,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     capway_cancel_contracts =
       get_contracts_to_cancel(
         capway_subscriber_data.active_subscribers,
-        trinity_subscriber_data.active_subscribers
+        trinity_subscriber_data.active_subscribers,
+        trinity_subscriber_data.map_sets
       )
 
     capway_update_contracts =
@@ -187,16 +188,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  This function identifies Capway contracts that needs to be cancelled.
-  It will focus on checking for all active Capway subscribers
-  and see if they exist in Trinity data, if not they will be marked for cancellation.
-  It should filter out any subscribers that are in :pending_cancel
+  Identifies Capway contracts that have no relationship to any Trinity account.
+
+  A contract is only flagged for cancellation if it cannot be linked to Trinity
+  by either `trinity_subscriber_id` or `national_id`. Contracts that can be
+  matched to Trinity are handled by the suspend/cancel logic instead.
   """
-  def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
+  def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data, trinity_map_sets) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        not MapSet.member?(trinity_map_sets.active_national_ids, capway_sub.national_id),
         into: %{} do
-      reason = "Missing in Trinity system"
+      reason = "No matching Trinity account found"
 
       {contract_ref, build_action_item(:capway_cancel_contract, capway_sub, reason)}
     end

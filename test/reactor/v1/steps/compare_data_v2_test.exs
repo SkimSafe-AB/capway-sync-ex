@@ -222,4 +222,58 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert action_item.national_id == "199001011234"
     end
   end
+
+  describe "get_contracts_to_cancel/3" do
+    test "cancels contract with no matching trinity account by id or national_id" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 9999,
+          national_id: "000000000000",
+          capway_contract_ref: "C-orphan"
+        })
+
+      trinity_sub = build_trinity_sub(%{})
+
+      capway_data = %{"C-orphan" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-orphan")
+    end
+
+    test "does not cancel contract when matched by trinity_subscriber_id" do
+      capway_sub = build_capway_sub(%{trinity_subscriber_id: 1, capway_contract_ref: "C-001"})
+      trinity_sub = build_trinity_sub(%{})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not cancel contract when matched by national_id" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 9999,
+          national_id: "199001011234",
+          capway_contract_ref: "C-001"
+        })
+
+      trinity_sub = build_trinity_sub(%{})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+
+      assert map_size(result) == 0
+    end
+  end
 end
