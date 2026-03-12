@@ -221,6 +221,51 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert action_item.trinity_subscriber_id == 1
       assert action_item.national_id == "199001011234"
     end
+
+    test "excludes already suspended subscriber" do
+      capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Invoice"})
+      trinity_sub = build_trinity_sub(%{trinity_status: :suspended})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      assert map_size(suspend) == 0
+      assert map_size(cancel) == 0
+    end
+
+    test "excludes already cancelled subscriber" do
+      capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Invoice"})
+      trinity_sub = build_trinity_sub(%{trinity_status: :cancelled})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      assert map_size(suspend) == 0
+      assert map_size(cancel) == 0
+    end
+
+    test "excludes suspended subscriber even with locked subscription" do
+      capway_sub = build_capway_sub(%{collection: 3})
+      trinity_sub = build_trinity_sub(%{subscription_type: :locked, trinity_status: :suspended})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      assert map_size(suspend) == 0
+      assert map_size(cancel) == 0
+    end
   end
 
   describe "get_contracts_to_cancel/3" do

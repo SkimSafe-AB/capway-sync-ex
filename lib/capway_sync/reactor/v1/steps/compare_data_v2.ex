@@ -100,7 +100,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
            true <- confirm_relationship(trinity_subscriber_data, trinity_map_set, capway_sub),
            trinity_sub when not is_nil(trinity_sub) <-
              Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
-             |> ensure_map_get(capway_sub.national_id, capway_subscriber_data) do
+             |> ensure_map_get(capway_sub.national_id, capway_subscriber_data),
+           true <- trinity_sub.trinity_status != :suspended,
+           true <- trinity_sub.trinity_status != :cancelled do
         suspend_or_cancel_action(contract_ref, capway_sub, trinity_sub, suspend, cancel)
       else
         _ -> {suspend, cancel}
