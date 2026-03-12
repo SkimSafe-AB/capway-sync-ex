@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+-   **Breaking**: Capway subscriber data is now keyed by `capway_contract_ref` instead of `trinity_subscriber_id`:
+    -   Each contract is treated as a unique entity — multiple active contracts for the same customer are preserved separately
+    -   Two active contracts for the same customer now produce two separate action items
+    -   `above_collector_threshold` now only includes active contracts (previously included inactive contracts with stale collection data)
+    -   Fixes false-positive suspend actions caused by old/inactive contracts with historical collection values overwriting current clean contracts
+-   Added `capway_contract_ref` field to `ActionItem` model and DynamoDB storage for contract-level traceability
+-   Action item result maps in `CompareDataV2` are keyed by `capway_contract_ref` for Capway-originated actions
+-   `get_contracts_to_cancel` logic simplified — no longer has contradictory `has_key? == false` + `Map.get != nil` guard
+
 ### Added
 -   DynamoDB cache layer for Capway subscriber data (`CapwayCacheRepository`):
     - Caches SOAP API results in DynamoDB keyed by date, since data only updates once per day

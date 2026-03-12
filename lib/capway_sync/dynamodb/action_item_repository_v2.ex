@@ -15,6 +15,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
       "id" => action_item.id || UUID.uuid4(),
       "trinity_subscriber_id" => action_item.trinity_subscriber_id,
       "national_id" => action_item.national_id,
+      "capway_contract_ref" => action_item.capway_contract_ref,
       "created_at" => action_item.created_at,
       "timestamp" => action_item.timestamp,
       "action" => action_item.action,

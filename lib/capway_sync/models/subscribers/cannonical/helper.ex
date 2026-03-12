@@ -13,16 +13,18 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
   Groups subscribers into categories based on the source system.
 
   For Trinity (:trinity):
-  - active_subscribers: subscribers not cancelled or expired
+  - active_subscribers: subscribers not cancelled or expired (keyed by trinity_subscriber_id)
   - cancelled_subscribers: subscribers that are cancelled or expired
   - locked_subscribers: active subscribers with subscription_type "locked"
 
   For Capway (:capway):
-  - active_subscribers: subscribers with capway_active_status = true
-  - cancelled_subscribers: subscribers with capway_active_status = false
-  - above_collector_threshold: subscribers with collection >= 2
+  - active_subscribers: active contracts (keyed by capway_contract_ref)
+  - cancelled_subscribers: inactive contracts (keyed by capway_contract_ref)
+  - above_collector_threshold: active contracts with collection >= 2
   """
   @spec group([Cannonical.t()], atom()) :: %{atom() => %{String.t() => Cannonical.t()}}
+  def group(subscribers, source)
+
   def group(subscribers, :trinity) do
     active_subscribers =
       subscribers
@@ -74,18 +76,18 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     {orphaned_subscribers, associated_subscribers} =
       subscribers
       |> Enum.reduce({%{}, %{}}, fn sub, {orphaned_acc, associated_acc} ->
-        if presence?(sub.trinity_subscriber_id) do
-          {orphaned_acc, Map.put(associated_acc, sub.trinity_subscriber_id, sub)}
+        if presence?(sub.trinity_subscriber_id) and presence?(sub.capway_contract_ref) do
+          {orphaned_acc, Map.put(associated_acc, sub.capway_contract_ref, sub)}
         else
           {Map.put(orphaned_acc, UUID.uuid4(), sub), associated_acc}
         end
       end)
 
     active_subscribers =
-      subscribers
-      |> Enum.reduce(%{}, fn sub, acc ->
+      associated_subscribers
+      |> Enum.reduce(%{}, fn {contract_ref, sub}, acc ->
         if sub.capway_active_status == true do
-          Map.put(acc, sub.trinity_subscriber_id, sub)
+          Map.put(acc, contract_ref, sub)
         else
           acc
         end
@@ -93,19 +95,19 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
 
     cancelled_subscribers =
       associated_subscribers
-      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
+      |> Enum.reduce(%{}, fn {contract_ref, sub}, acc ->
         if sub.capway_active_status == false do
-          Map.put(acc, sub.trinity_subscriber_id, sub)
+          Map.put(acc, contract_ref, sub)
         else
           acc
         end
       end)
 
     above_collector_threshold =
-      associated_subscribers
-      |> Enum.reduce(%{}, fn {_id, sub}, acc ->
+      active_subscribers
+      |> Enum.reduce(%{}, fn {contract_ref, sub}, acc ->
         if sub.collection != nil and sub.collection >= 2 do
-          Map.put(acc, sub.trinity_subscriber_id, sub)
+          Map.put(acc, contract_ref, sub)
         else
           acc
         end

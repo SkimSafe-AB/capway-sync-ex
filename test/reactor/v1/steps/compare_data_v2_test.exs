@@ -44,7 +44,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Invoice"})
       trinity_sub = build_trinity_sub(%{})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -53,13 +53,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(cancel) == 1
       assert map_size(suspend) == 0
+      assert Map.has_key?(cancel, "C-001")
     end
 
     test "excludes subscriber with last_invoice_status Paid from cancel" do
       capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Paid"})
       trinity_sub = build_trinity_sub(%{})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -74,7 +75,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Paid"})
       trinity_sub = build_trinity_sub(%{subscription_type: :locked})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -83,13 +84,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(suspend) == 1
       assert map_size(cancel) == 0
+      assert Map.has_key?(suspend, "C-001")
     end
 
     test "excludes pending_cancel subscriber from cancel" do
       capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Invoice"})
       trinity_sub = build_trinity_sub(%{trinity_status: :pending_cancel})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -104,7 +106,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Reminder"})
       trinity_sub = build_trinity_sub(%{payment_method: "invoice"})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -119,7 +121,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_sub = build_capway_sub(%{collection: 4, last_invoice_status: "Collection Agency"})
       trinity_sub = build_trinity_sub(%{})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -134,7 +136,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_sub = build_capway_sub(%{collection: 2, last_invoice_status: "Reminder"})
       trinity_sub = build_trinity_sub(%{})
 
-      capway_data = %{1 => capway_sub}
+      capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
       trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
 
@@ -143,6 +145,81 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(cancel) == 1
       assert map_size(suspend) == 0
+    end
+
+    test "two active contracts for same customer produce two separate action items" do
+      capway_sub_1 =
+        build_capway_sub(%{
+          capway_contract_ref: "C-001",
+          collection: 3,
+          last_invoice_status: "Invoice"
+        })
+
+      capway_sub_2 =
+        build_capway_sub(%{
+          capway_contract_ref: "C-002",
+          collection: 4,
+          last_invoice_status: "Reminder"
+        })
+
+      trinity_sub = build_trinity_sub(%{})
+
+      capway_data = %{"C-001" => capway_sub_1, "C-002" => capway_sub_2}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      assert map_size(cancel) == 2
+      assert map_size(suspend) == 0
+      assert Map.has_key?(cancel, "C-001")
+      assert Map.has_key?(cancel, "C-002")
+    end
+
+    test "two locked contracts produce two separate suspend action items" do
+      capway_sub_1 =
+        build_capway_sub(%{
+          capway_contract_ref: "C-001",
+          collection: 3
+        })
+
+      capway_sub_2 =
+        build_capway_sub(%{
+          capway_contract_ref: "C-002",
+          collection: 2
+        })
+
+      trinity_sub = build_trinity_sub(%{subscription_type: :locked})
+
+      capway_data = %{"C-001" => capway_sub_1, "C-002" => capway_sub_2}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      assert map_size(suspend) == 2
+      assert map_size(cancel) == 0
+      assert Map.has_key?(suspend, "C-001")
+      assert Map.has_key?(suspend, "C-002")
+    end
+
+    test "action item includes capway_contract_ref" do
+      capway_sub = build_capway_sub(%{collection: 3, capway_contract_ref: "C-999"})
+      trinity_sub = build_trinity_sub(%{subscription_type: :locked})
+
+      capway_data = %{"C-999" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, _cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(capway_data, trinity_data, trinity_map_set)
+
+      action_item = Map.get(suspend, "C-999")
+      assert action_item.capway_contract_ref == "C-999"
+      assert action_item.trinity_subscriber_id == 1
+      assert action_item.national_id == "199001011234"
     end
   end
 end

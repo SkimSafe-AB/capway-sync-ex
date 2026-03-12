@@ -79,28 +79,29 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  This function identifies Capway contracts that needs to be either suspended or cancelled in Trinity.
-  The current rule is based on whetever the trinity subscription is locked in or not. Ie if it has a time based contract.
-  If it is locked in, it should be suspended, otherwise cancelled.
-  If the sub is pending_cancel or payment_method isnt capway we should not move it to cancel.
+  Identifies Capway contracts that need to be either suspended or cancelled in Trinity.
+
+  Capway data is keyed by `capway_contract_ref`, so each contract is evaluated independently.
+  Two active contracts for the same customer produce two separate action items.
+
+  The rule is based on whether the Trinity subscription is locked or not:
+  - Locked → suspend
+  - Not locked → cancel (unless pending_cancel, non-capway payment, or last invoice paid)
   """
   def get_accounts_to_suspend_or_cancel(
         capway_subscriber_data,
         trinity_subscriber_data,
         trinity_map_set
       ) do
-    # Initialize the accumulator as a tuple of two maps: {suspend_acc, cancel_acc}
-    Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {_id, capway_sub}, {suspend, cancel} ->
-      # Use 'with' to handle your filtering logic cleanly
+    Enum.reduce(capway_subscriber_data, {%{}, %{}}, fn {contract_ref, capway_sub},
+                                                       {suspend, cancel} ->
       with true <- Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
            true <- confirm_relationship(trinity_subscriber_data, trinity_map_set, capway_sub),
            trinity_sub when not is_nil(trinity_sub) <-
              Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
              |> ensure_map_get(capway_sub.national_id, capway_subscriber_data) do
-        # Logic to decide which bucket to update
-        suspend_or_cancel_action(capway_sub, trinity_sub, suspend, cancel)
+        suspend_or_cancel_action(contract_ref, capway_sub, trinity_sub, suspend, cancel)
       else
-        # If any check in 'with' fails (returns false/nil), return accumulators unchanged
         _ -> {suspend, cancel}
       end
     end)
@@ -111,25 +112,22 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       MapSet.member?(t_map_sets.active_national_ids, c_sub.national_id)
   end
 
-  defp suspend_or_cancel_action(capway_sub, trinity_sub, suspend_acc, cancel_acc) do
+  defp suspend_or_cancel_action(contract_ref, capway_sub, trinity_sub, suspend_acc, cancel_acc) do
     if trinity_sub.subscription_type == :locked do
       reason = "Should be suspended in Trinity due to locked subscription"
-      action = :suspend
-      item = build_action_item(action, capway_sub, reason)
+      item = build_action_item(:suspend, capway_sub, reason)
 
-      {Map.put(suspend_acc, capway_sub.trinity_subscriber_id, item), cancel_acc}
+      {Map.put(suspend_acc, contract_ref, item), cancel_acc}
     else
       if trinity_sub.trinity_status == :pending_cancel or
            trinity_sub.payment_method != "capway" or
            capway_sub.last_invoice_status == "Paid" do
-        # No action needed — already pending cancel, non-capway payment, or latest invoice paid
         {suspend_acc, cancel_acc}
       else
         reason = "Should be cancelled in Trinity due to inactive Capway status"
-        action = :trinity_cancel_subscription
-        item = build_action_item(action, capway_sub, reason)
+        item = build_action_item(:trinity_cancel_subscription, capway_sub, reason)
 
-        {suspend_acc, Map.put(cancel_acc, capway_sub.trinity_subscriber_id, item)}
+        {suspend_acc, Map.put(cancel_acc, contract_ref, item)}
       end
     end
   end
@@ -171,15 +169,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   different than the one in Trinity, it will be marked for update.
   """
   def get_contracts_to_update(capway_subscriber_data, trinity_subscriber_data) do
-    for {_id, capway_sub} <- capway_subscriber_data,
+    for {contract_ref, capway_sub} <- capway_subscriber_data,
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         check_for_missing_attrs(capway_sub, trinity_sub),
         into: %{} do
       reason = "National ID mismatch"
 
-      {capway_sub.trinity_subscriber_id,
-       build_action_item(:capway_update_contract, capway_sub, reason)}
+      {contract_ref, build_action_item(:capway_update_contract, capway_sub, reason)}
     end
   end
 
@@ -196,19 +193,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   It should filter out any subscribers that are in :pending_cancel
   """
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
-    for {id, capway_sub} <- capway_subscriber_data,
-        Map.has_key?(
-          trinity_subscriber_data,
-          id
-        ) == false,
-        trinity_sub = Map.get(trinity_subscriber_data, id),
-        trinity_sub != nil,
-        trinity_sub.trinity_status != :pending_cancel,
-        older_than_yesterday?(trinity_sub),
+    for {contract_ref, capway_sub} <- capway_subscriber_data,
+        not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         into: %{} do
       reason = "Missing in Trinity system"
 
-      {id, build_action_item(:capway_cancel_contract, capway_sub, reason)}
+      {contract_ref, build_action_item(:capway_cancel_contract, capway_sub, reason)}
     end
   end
 
@@ -216,6 +206,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     ActionItem.create_action_item(action, %{
       national_id: sub.national_id,
       trinity_subscriber_id: sub.trinity_subscriber_id,
+      capway_contract_ref: sub.capway_contract_ref,
       reason: reason
     })
   end
