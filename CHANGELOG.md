@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+-   `CapwayContractRepository` — stores every Capway contract as its own DynamoDB item keyed by `contract_ref_no`:
+    -   Provides fast contract-level lookups without hitting the slow Capway SOAP API
+    -   Query by `contract_ref_no` (primary key), `customer_ref` (GSI), or `id_number` (GSI)
+    -   Automatically populated during the sync workflow after Capway data is fetched
+    -   Table name configured via `CAPWAY_CONTRACTS_TABLE` env var (default: "capway-contracts")
+
 ### Changed
 -   **Breaking**: Capway subscriber data is now keyed by `capway_contract_ref` instead of `trinity_subscriber_id`:
     -   Each contract is treated as a unique entity — multiple active contracts for the same customer are preserved separately

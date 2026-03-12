@@ -15,6 +15,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
 
   alias CapwaySync.Models.GeneralSyncReport
   alias CapwaySync.Dynamodb.ActionItemRepositoryV2
+  alias CapwaySync.Dynamodb.CapwayContractRepository
   alias CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2
 
   require Logger
@@ -57,6 +58,25 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   step(:fetch_capway_data, CachedCapwaySubscribers) do
     max_retries(3)
     async?(true)
+  end
+
+  # Stores each Capway contract as its own DynamoDB item for fast lookups.
+  step(:store_capway_contracts) do
+    argument(:capway_data, result(:fetch_capway_data))
+
+    run(fn args, _context ->
+      subscribers = args.capway_data
+
+      Logger.info("Storing #{length(subscribers)} Capway contracts to DynamoDB")
+
+      {stored, errors} = CapwayContractRepository.store_contracts(subscribers)
+
+      Logger.info(
+        "Capway contracts stored: #{stored} successful, #{errors} failed"
+      )
+
+      {:ok, {stored, errors}}
+    end)
   end
 
   # Converts Trinity subscriber data to canonical format.
