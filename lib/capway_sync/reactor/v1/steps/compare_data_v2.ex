@@ -209,7 +209,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data, trinity_map_sets) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
-        not MapSet.member?(trinity_map_sets.active_national_ids, capway_sub.national_id),
         into: %{} do
       reason = "No matching Trinity account found"
 
