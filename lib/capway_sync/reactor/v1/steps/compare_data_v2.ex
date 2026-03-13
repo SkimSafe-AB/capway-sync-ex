@@ -160,6 +160,17 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         older_than_yesterday?(sub),
         into: %{} do
       reason = "Missing in Capway system"
+
+      Logger.info(
+        "Subscriber #{sub.trinity_subscriber_id} is missing in Capway, marking for contract creation"
+      )
+
+      found = MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id)
+
+      Logger.info(
+        "Check if subscriber #{sub.trinity_subscriber_id} exists in Capway active Trinity IDs: #{found}"
+      )
+
       {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, sub, reason)}
     end
   end
