@@ -14,10 +14,12 @@ defmodule CapwaySync.Ecto.TrinitySubscribers do
 
   # get all subscribers with subscription and its payment_method == capway
   # the payment_method is stored in the subscription table
+  # Only fetches account holders, not family members, to align with Capway's data structure
   def list_subscribers(preload_subscription \\ false, payment_method \\ nil) do
     query =
       Subscriber
       |> join(:inner, [s], sub in assoc(s, :subscription))
+      |> where([s, _sub], s.type == :account_holder)
       |> where([_s, sub], sub.subscription_type != :sinfrid)
       |> filter_by_payment_method?(payment_method)
       |> preload_subscription?(preload_subscription)
