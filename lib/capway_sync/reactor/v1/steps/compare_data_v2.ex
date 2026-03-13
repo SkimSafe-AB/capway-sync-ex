@@ -156,7 +156,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   def get_contracts_to_create(trinity_subscriber_data, capway_map_sets) do
     for {_id, sub} <- trinity_subscriber_data,
         sub.payment_method == "capway",
-        not MapSet.member?(capway_map_sets.active_national_ids, sub.national_id),
         not MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id),
         older_than_yesterday?(sub),
         into: %{} do
