@@ -268,12 +268,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
-  describe "get_contracts_to_cancel/3" do
-    test "cancels contract with no matching trinity account by id or national_id" do
+  describe "get_contracts_to_cancel/2" do
+    test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =
         build_capway_sub(%{
           trinity_subscriber_id: 9999,
-          national_id: "000000000000",
           capway_contract_ref: "C-orphan"
         })
 
@@ -281,9 +280,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       capway_data = %{"C-orphan" => capway_sub}
       trinity_data = %{1 => trinity_sub}
-      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
 
-      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data)
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-orphan")
@@ -295,14 +293,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
-      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
 
-      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data)
 
       assert map_size(result) == 0
     end
 
-    test "does not cancel contract when matched by national_id" do
+    test "cancels contract even if national_id matches but trinity_subscriber_id does not" do
       capway_sub =
         build_capway_sub(%{
           trinity_subscriber_id: 9999,
@@ -314,11 +311,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
-      trinity_map_sets = %{active_national_ids: MapSet.new(["199001011234"])}
 
-      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, trinity_map_sets)
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data)
 
-      assert map_size(result) == 0
+      assert map_size(result) == 1
     end
   end
 end

@@ -32,8 +32,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     capway_cancel_contracts =
       get_contracts_to_cancel(
         capway_subscriber_data.active_subscribers,
-        trinity_subscriber_data.active_subscribers,
-        trinity_subscriber_data.map_sets
+        trinity_subscriber_data.active_subscribers
       )
 
     capway_update_contracts =
@@ -200,13 +199,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  Identifies Capway contracts that have no relationship to any Trinity account.
+  Identifies Capway contracts with no matching Trinity subscriber by `trinity_subscriber_id`.
 
-  A contract is only flagged for cancellation if it cannot be linked to Trinity
-  by either `trinity_subscriber_id` or `national_id`. Contracts that can be
-  matched to Trinity are handled by the suspend/cancel logic instead.
+  Contracts that can be matched are handled by the suspend/cancel logic instead.
   """
-  def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data, trinity_map_sets) do
+  def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         into: %{} do
