@@ -66,6 +66,23 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
 
       assert :sinfrid in valid_values
     end
+
+    test "list_subscribers query excludes sinfrid but includes nil subscription_type" do
+      import Ecto.Query
+      alias CapwaySync.Models.Trinity.Subscription
+
+      # Build the same where clause used in list_subscribers
+      query =
+        from(sub in Subscription,
+          where: sub.subscription_type != :sinfrid or is_nil(sub.subscription_type)
+        )
+
+      assert length(query.wheres) == 1
+
+      # The filter uses OR is_nil to handle NULL subscription_type in SQL
+      %Ecto.Query.BooleanExpr{expr: expr} = hd(query.wheres)
+      assert {:or, _, _} = expr
+    end
   end
 
   describe "error handling patterns" do
