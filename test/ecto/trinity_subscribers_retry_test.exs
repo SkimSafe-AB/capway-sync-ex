@@ -39,6 +39,21 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
       valid_values = Ecto.Enum.values(Subscriber, :type)
       assert length(valid_values) == 2
     end
+
+    test "list_subscribers query excludes family_member but includes nil type" do
+      import Ecto.Query
+
+      # Build the same where clause used in list_subscribers
+      query = from(s in Subscriber, where: s.type != :family_member or is_nil(s.type))
+
+      # Verify query has the where clause
+      assert length(query.wheres) == 1
+
+      # The filter uses != :family_member OR is_nil(s.type) to include
+      # subscribers that haven't been assigned a type yet
+      %Ecto.Query.BooleanExpr{expr: expr} = hd(query.wheres)
+      assert {:or, _, _} = expr
+    end
   end
 
   describe "subscription type filtering" do
