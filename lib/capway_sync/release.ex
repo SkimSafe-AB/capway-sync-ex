@@ -8,8 +8,10 @@ defmodule CapwaySync.Release do
 
   @doc """
   Triggers the subscriber sync workflow.
+  Ensures all required applications are started before running.
   """
   def run_sync do
+    start_applications()
     Logger.info("Starting subscriber sync workflow via release task")
 
     case Reactor.run(CapwaySync.Reactor.V1.SubscriberSyncWorkflow, %{}) do
@@ -21,5 +23,10 @@ defmodule CapwaySync.Release do
         Logger.error("Subscriber sync workflow failed: #{inspect(reason)}")
         {:error, reason}
     end
+  end
+
+  defp start_applications do
+    Application.ensure_all_started(:reactor)
+    Application.ensure_all_started(:capway_sync)
   end
 end
