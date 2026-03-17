@@ -130,5 +130,103 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.HelperTest do
 
       assert Map.has_key?(result.active_subscribers, 1)
     end
+
+    test "excludes subscriber with recent trinity_capway_last_updated" do
+      today = Timex.now("Etc/UTC") |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_last_updated: today
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 0
+    end
+
+    test "excludes subscriber with recent trinity_capway_created_at" do
+      today = Timex.now("Etc/UTC") |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_created_at: today
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 0
+    end
+
+    test "includes subscriber with old trinity_capway_last_updated" do
+      old_date =
+        Timex.now("Etc/UTC")
+        |> Timex.shift(days: -3)
+        |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_last_updated: old_date
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 1
+    end
+
+    test "includes subscriber with nil capway metadata dates" do
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_last_updated: nil,
+        trinity_capway_created_at: nil
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 1
+    end
+
+    test "excludes when one date is recent even if other is old" do
+      old_date =
+        Timex.now("Etc/UTC")
+        |> Timex.shift(days: -3)
+        |> Timex.format!("{ISO:Extended}")
+
+      today = Timex.now("Etc/UTC") |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_last_updated: old_date,
+        trinity_capway_created_at: today
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 0
+    end
   end
 end

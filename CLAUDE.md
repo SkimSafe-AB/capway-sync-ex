@@ -109,3 +109,6 @@ export SYNC_REPORTS_TABLE="capway-sync-reports-prod"
 - DynamoDB integration tests use LocalStack (configure with DYNAMODB_TEST_HOST/PORT)
 - its essential that the test are covering 100% of the functionality in this app, as its cruxial there are no errors when we run it.
 - Always ensure tests are valid and passed
+
+## Database
+The database is external and this application should not hold any migrations or such.

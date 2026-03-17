@@ -85,6 +85,31 @@ defmodule CapwaySyncTest.Ecto.TrinitySubscribersRetryTest do
     end
   end
 
+  describe "subscriber metadata" do
+    test "subscriber schema has metadata association" do
+      associations = Subscriber.__schema__(:associations)
+      assert :metadata in associations
+    end
+
+    test "metadata model is properly loaded" do
+      assert Code.ensure_loaded?(CapwaySync.Models.Trinity.Subscriber.Metadata)
+
+      fields = CapwaySync.Models.Trinity.Subscriber.Metadata.__schema__(:fields)
+      assert :key in fields
+      assert :value in fields
+      assert :subscriber_id in fields
+    end
+
+    test "preload includes metadata alongside subscription" do
+      import Ecto.Query
+
+      query = from(s in Subscriber, preload: [:subscription, :metadata])
+      preloads = query.preloads
+      assert :subscription in preloads
+      assert :metadata in preloads
+    end
+  end
+
   describe "error handling patterns" do
     test "modules are properly structured for retry logic" do
       assert Code.ensure_loaded?(TrinitySubscribers)

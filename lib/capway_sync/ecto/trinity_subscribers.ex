@@ -27,7 +27,7 @@ defmodule CapwaySync.Ecto.TrinitySubscribers do
     execute_with_retry(fn -> TrinityRepo.all(query) end, 3)
   end
 
-  defp preload_subscription?(query, true), do: Ecto.Query.preload(query, :subscription)
+  defp preload_subscription?(query, true), do: Ecto.Query.preload(query, [:subscription, :metadata])
   defp preload_subscription?(query, false), do: query
 
   defp filter_by_payment_method?(query, nil), do: query

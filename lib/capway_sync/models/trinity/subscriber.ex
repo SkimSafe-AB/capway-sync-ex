@@ -15,6 +15,7 @@ defmodule CapwaySync.Models.Trinity.Subscriber do
     field(:activated, :boolean, default: false)
     field(:type, Ecto.Enum, values: @subscriber_types)
     belongs_to(:subscription, CapwaySync.Models.Trinity.Subscription)
+    has_many(:metadata, CapwaySync.Models.Trinity.Subscriber.Metadata)
     timestamps()
   end
 

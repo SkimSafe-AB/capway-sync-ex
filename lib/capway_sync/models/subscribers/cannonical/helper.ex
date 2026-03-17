@@ -30,7 +30,8 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.trinity_status not in [:cancelled, :expired] and
-             sub.subscription_type != :sinfrid do
+             sub.subscription_type != :sinfrid and
+             capway_metadata_older_than_yesterday?(sub) do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
           acc
@@ -137,6 +138,40 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       }
     }
   end
+
+  @doc """
+  Returns true if both `trinity_capway_last_updated` and `trinity_capway_created_at`
+  are either nil or older than 1 day. If either date is younger than 1 day,
+  the subscriber is considered too recent for comparison and returns false.
+  """
+  def capway_metadata_older_than_yesterday?(sub) do
+    older_than_yesterday?(sub.trinity_capway_last_updated) and
+      older_than_yesterday?(sub.trinity_capway_created_at)
+  end
+
+  defp older_than_yesterday?(nil), do: true
+
+  defp older_than_yesterday?(date_string) when is_binary(date_string) do
+    yesterday = Timex.shift(Timex.now("Etc/UTC"), days: -1)
+
+    case Timex.parse(date_string, "{ISO:Extended}") do
+      {:ok, dt} ->
+        Timex.before?(dt, yesterday)
+
+      _ ->
+        case Timex.parse(date_string, "{YYYY}-{0M}-{0D}") do
+          {:ok, dt} ->
+            dt
+            |> Timex.to_datetime("Etc/UTC")
+            |> Timex.before?(yesterday)
+
+          _ ->
+            true
+        end
+    end
+  end
+
+  defp older_than_yesterday?(_), do: true
 
   defp presence?(nil), do: false
   defp presence?(val) when is_binary(val), do: String.trim(val) != ""

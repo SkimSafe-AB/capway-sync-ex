@@ -43,6 +43,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "195712260115",
         id: 1001,
+        metadata: [],
         subscription: %{
           id: 2001,
           payment_method: "capway",
@@ -53,6 +54,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "198311074051",
         id: 1002,
+        metadata: [],
         subscription: %{
           id: 2002,
           payment_method: "capway",
@@ -65,6 +67,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "196304014878",
         id: 1003,
+        metadata: [],
         subscription: %{
           id: 2003,
           # Changed from capway to bank
@@ -78,6 +81,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "999888777666",
         id: 1004,
+        metadata: [],
         subscription: %{
           id: 2004,
           payment_method: "capway",
@@ -88,6 +92,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "999888777777",
         id: 1005,
+        metadata: [],
         subscription: %{
           id: 2005,
           payment_method: "capway",
@@ -100,6 +105,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "888777666555",
         id: 1006,
+        metadata: [],
         subscription: %{
           id: 2006,
           payment_method: "bank",
@@ -110,6 +116,7 @@ defmodule CapwaySync.Reactor.V1.Steps.TrinitySubscribers do
       %{
         personal_number: "777666555444",
         id: 1007,
+        metadata: [],
         subscription: %{
           id: 2007,
           payment_method: "card",

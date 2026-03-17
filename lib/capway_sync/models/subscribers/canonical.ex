@@ -48,7 +48,10 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           last_invoice_status: String.t() | nil,
           paid_invoices: integer() | nil,
           unpaid_invoices: integer() | nil,
-          collection: integer() | nil
+          collection: integer() | nil,
+          # Capway metadata stored in Trinity
+          trinity_capway_last_updated: String.t() | nil,
+          trinity_capway_created_at: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -66,7 +69,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             last_invoice_status: nil,
             paid_invoices: nil,
             unpaid_invoices: nil,
-            collection: nil
+            collection: nil,
+            trinity_capway_last_updated: nil,
+            trinity_capway_created_at: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -81,7 +86,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
         personal_number: personal_number,
         subscription: subscription,
         id: trinity_subscriber_id
-      }) do
+      } = subscriber) do
+    metadata = Map.get(subscriber, :metadata, [])
+
     %__MODULE__{
       national_id: personal_number,
       trinity_subscriber_id: trinity_subscriber_id |> format_string_to_integer(),
@@ -97,7 +104,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       last_invoice_status: nil,
       paid_invoices: nil,
       unpaid_invoices: nil,
-      collection: nil
+      collection: nil,
+      trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
+      trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at")
     }
   end
 
@@ -169,4 +178,13 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   end
 
   defp format_string_to_integer(val), do: val
+
+  defp find_metadata_value(metadata, key) when is_list(metadata) do
+    case Enum.find(metadata, fn m -> m.key == key end) do
+      nil -> nil
+      m -> m.value
+    end
+  end
+
+  defp find_metadata_value(_, _), do: nil
 end
