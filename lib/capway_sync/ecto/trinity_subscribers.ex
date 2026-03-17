@@ -20,7 +20,6 @@ defmodule CapwaySync.Ecto.TrinitySubscribers do
       Subscriber
       |> join(:inner, [s], sub in assoc(s, :subscription))
       |> where([s, _sub], s.type != :family_member or is_nil(s.type))
-      |> where([_s, sub], sub.subscription_type != :sinfrid or is_nil(sub.subscription_type))
       |> filter_by_payment_method?(payment_method)
       |> preload_subscription?(preload_subscription)
 

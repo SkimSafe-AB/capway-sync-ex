@@ -30,7 +30,6 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
         if sub.trinity_status not in [:cancelled, :expired] and
-             sub.subscription_type != :sinfrid and
              capway_metadata_older_than_yesterday?(sub) do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
