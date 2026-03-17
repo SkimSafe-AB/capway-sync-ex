@@ -51,6 +51,10 @@ defmodule CapwaySync.MixProject do
       {:cloak, "~> 1.1"},
       {:cloak_ecto, "~> 1.2"},
       #
+      # Personal Numbers for Sweden
+      #
+      {:personnummer, "~> 0.1.0"},
+      #
       # AWS
       #
       {:ex_aws, "~> 2.1"},

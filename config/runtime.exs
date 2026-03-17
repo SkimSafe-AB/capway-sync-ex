@@ -1,6 +1,14 @@
 import Config
 require Logger
 
+market_env = System.get_env("MARKET")
+
+if is_nil(market_env) and config_env() != :test do
+  raise "MARKET environment variable is not set (e.g. \"se\")"
+end
+
+config :capway_sync, :market, String.to_atom(market_env || "se")
+
 config :capway_sync, Trinity.Db.Hashed.HMAC,
   algorithm: :sha512,
   secret: System.get_env("TRINITY_HASHED_HMAC")

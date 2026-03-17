@@ -193,9 +193,21 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   defp check_for_missing_attrs(capway_sub, trinity_sub) do
-    capway_sub.national_id != trinity_sub.national_id or
-      capway_sub.trinity_subscriber_id == nil or
-      capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
+    has_mismatch =
+      capway_sub.national_id != trinity_sub.national_id or
+        capway_sub.trinity_subscriber_id == nil or
+        capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
+
+    has_mismatch and valid_national_id?(trinity_sub.national_id)
+  end
+
+  defp valid_national_id?(nil), do: false
+
+  defp valid_national_id?(national_id) do
+    case Application.get_env(:capway_sync, :market) do
+      :se -> Personnummer.valid?(national_id)
+      _ -> true
+    end
   end
 
   @doc """

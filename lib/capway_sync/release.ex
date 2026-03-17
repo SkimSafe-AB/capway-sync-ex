@@ -15,28 +15,20 @@ defmodule CapwaySync.Release do
     Logger.info("Starting subscriber sync workflow via release task")
 
     case Reactor.run(CapwaySync.Reactor.V1.SubscriberSyncWorkflow, %{}) do
-      {:ok, result} ->
+      {:ok, _result} ->
         Logger.info("Subscriber sync workflow completed successfully")
-        result
+        System.halt(0)
 
       {:error, reason} ->
         Logger.error("Subscriber sync workflow failed: #{inspect(reason)}")
-        {:error, reason}
+        System.halt(1)
     end
   end
 
   defp start_applications do
-    Application.ensure_all_started(:reactor)
     Application.ensure_all_started(:capway_sync)
-    load_modules()
-  end
 
-  defp load_modules do
-    Code.ensure_loaded!(CapwaySync.Models.CapwaySubscriber)
-    Code.ensure_loaded!(CapwaySync.Models.Subscribers.Canonical)
-    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscriber)
-    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscription)
-    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscriber.Metadata)
-    Code.ensure_loaded!(CapwaySync.Models.Dynamodb.ActionItem)
+    {:ok, modules} = :application.get_key(:capway_sync, :modules)
+    Enum.each(modules, &Code.ensure_loaded!/1)
   end
 end

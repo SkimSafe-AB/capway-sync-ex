@@ -268,6 +268,76 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "get_contracts_to_update/2" do
+    test "marks contract for update when national_id differs and trinity pnr is valid" do
+      capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-001")
+    end
+
+    test "does not mark contract for update when national_ids match" do
+      capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not mark contract for update when trinity national_id is invalid personnummer" do
+      capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "invalid_pnr"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not mark contract for update when trinity national_id is nil" do
+      capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: nil})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not match when capway trinity_subscriber_id is nil" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: nil,
+          capway_contract_ref: "C-001"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      # No match because Map.has_key?(trinity_data, nil) is false
+      assert map_size(result) == 0
+    end
+  end
+
   describe "get_contracts_to_cancel/2" do
     test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =
