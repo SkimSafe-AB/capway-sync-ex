@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+RELEASE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+"${RELEASE_ROOT}/bin/capway_sync" eval "CapwaySync.Release.run_sync()"

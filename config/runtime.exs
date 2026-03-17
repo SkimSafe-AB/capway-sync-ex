@@ -38,4 +38,11 @@ if config_env() == :prod do
     access_key_id: [{:awscli, "profile_name", 30}],
     awscli_auth_adapter: ExAws.STS.AuthCache.AssumeRoleWebIdentityAdapter,
     region: System.get_env("AWS_REGION")
+
+  if log_level = System.get_env("LOG_LEVEL") do
+    config :logger, level: String.to_atom(log_level)
+  end
+
+  config :logger, :default_handler,
+    formatter: LoggerJSON.Formatters.Basic.new(metadata: [:request_id])
 end

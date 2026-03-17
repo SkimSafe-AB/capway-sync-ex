@@ -7,7 +7,12 @@ defmodule CapwaySync.MixProject do
       version: "0.1.0",
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      releases: [
+        capway_sync: [
+          steps: [:assemble, &copy_bin_scripts/1]
+        ]
+      ]
     ]
   end
 
@@ -17,6 +22,11 @@ defmodule CapwaySync.MixProject do
       extra_applications: [:logger, :reactor, :soap, :runtime_tools],
       mod: {CapwaySync.Application, []}
     ]
+  end
+
+  defp copy_bin_scripts(release) do
+    File.cp!("bin/run_sync", Path.join(release.path, "bin/run_sync"))
+    release
   end
 
   # Run "mix help deps" to learn about dependencies.
@@ -60,7 +70,11 @@ defmodule CapwaySync.MixProject do
       #
       # Timex
       #
-      {:timex, "~> 3.7"}
+      {:timex, "~> 3.7"},
+      #
+      # Logger JSON
+      #
+      {:logger_json, "~> 7.0"}
     ]
   end
 end
