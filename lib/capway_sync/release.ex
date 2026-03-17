@@ -28,5 +28,15 @@ defmodule CapwaySync.Release do
   defp start_applications do
     Application.ensure_all_started(:reactor)
     Application.ensure_all_started(:capway_sync)
+    load_modules()
+  end
+
+  defp load_modules do
+    Code.ensure_loaded!(CapwaySync.Models.CapwaySubscriber)
+    Code.ensure_loaded!(CapwaySync.Models.Subscribers.Canonical)
+    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscriber)
+    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscription)
+    Code.ensure_loaded!(CapwaySync.Models.Trinity.Subscriber.Metadata)
+    Code.ensure_loaded!(CapwaySync.Models.Dynamodb.ActionItem)
   end
 end
