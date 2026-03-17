@@ -25,6 +25,7 @@ COPY elixir_cache/_build /app/_build
 RUN mix local.hex --force \
   && mix local.rebar --force
 
+COPY bin bin
 COPY config config
 COPY lib lib
 
