@@ -1,48 +1,98 @@
 defmodule CapwaySync.Models.CapwaySubscriber do
   @doc """
   This struct is based on the XML headers provided below:
-  <Headers>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>customerref</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>idnumber</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>name</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>contractrefno</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>regdate</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>startdate</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>enddate</Title>
-    </ReportResultHeader>
-    <ReportResultHeader>
-      <Format/>
-      <Name i:nil="true"/>
-      <Title>active</Title>
-    </ReportResultHeader>
-  </Headers>
+   <Headers>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>customerref</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>idnumber</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>name</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>contractrefno</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>regdate</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>startdate</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>enddate</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>active</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>paidInvoices</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>unpaidInvoices</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>collection</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>lastInvoicestatus</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>countBF</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>contractprice</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>email</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>customerid</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>nextinvoicedate</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>counter</Title>
+          </ReportResultHeader>
+        </Headers>
   """
   @derive Jason.Encoder
   defstruct customer_ref: nil,
