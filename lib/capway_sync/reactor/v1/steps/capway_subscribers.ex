@@ -11,7 +11,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   @impl true
   def run(_map, _context, _options) do
     # Clear previous debug file
-    File.write("priv/soap_response.xml", "")
+    file_dir = System.get_env("CAPWAY_DEBUG_FILE_DIR") || "priv"
+    file_path = Path.join(file_dir, "soap_response.xml")
+    File.write(file_path, "")
 
     Logger.info("Starting parallel Capway subscriber fetch with #{@worker_count} workers")
 
@@ -292,9 +294,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
   # Append raw XML response to debug file for debugging purposes
   defp append_to_debug_file(xml_data, _offset, _maxrows, write_id) do
-    filepath = "priv/soap_response-#{write_id}.xml"
+    file_dir = System.get_env("CAPWAY_DEBUG_FILE_DIR") || "priv"
+    file_path = Path.join(file_dir, "soap_response-#{write_id}.xml")
+    # filepath = "priv/soap_response-#{write_id}.xml"
     # Append raw XML directly to file
-    File.write(filepath, xml_data, [:append])
+    File.write(file_path, xml_data, [:append])
   end
 
   @impl true
