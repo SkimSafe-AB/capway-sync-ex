@@ -139,9 +139,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
   def serialize(%CapwaySubscriber{} = subscriber) do
     %{
       "contract_ref_no" => subscriber.contract_ref_no,
-      "capway_customer_id" => subscriber.capway_customer_id,
-      "contract_price" => subscriber.capway_contract_price,
-      "next_invoice_date" => subscriber.capway_next_invoice_date,
+      "customer_id" => subscriber.customer_id,
+      "contract_price" => subscriber.contract_price,
+      "next_invoice_date" => subscriber.next_invoice_date,
       "customer_ref" => subscriber.customer_ref,
       "id_number" => subscriber.id_number,
       "name" => subscriber.name,
@@ -177,6 +177,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
       unpaid_invoices: get_value(item, "unpaid_invoices"),
       collection: get_value(item, "collection"),
       last_invoice_status: get_value(item, "last_invoice_status"),
+      customer_id: get_value(item, "customer_id"),
+      contract_price: get_value(item, "contract_price"),
+      next_invoice_date: get_value(item, "next_invoice_date"),
       origin: :capway,
       capway_id: get_value(item, "customer_ref"),
       trinity_id: nil,

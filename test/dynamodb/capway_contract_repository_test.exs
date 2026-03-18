@@ -19,6 +19,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
         unpaid_invoices: "0",
         collection: "0",
         last_invoice_status: "Paid",
+        customer_id: "CID-001",
+        contract_price: "199.00",
+        next_invoice_date: "2026-04-01",
         origin: :capway,
         capway_id: "9490",
         trinity_id: nil,
@@ -42,6 +45,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert result["unpaid_invoices"] == "0"
       assert result["collection"] == "0"
       assert result["last_invoice_status"] == "Paid"
+      assert result["customer_id"] == "CID-001"
+      assert result["contract_price"] == "199.00"
+      assert result["next_invoice_date"] == "2026-04-01"
       assert result["reg_date"] == "2025-10-02"
       assert result["start_date"] == "2025-10-02"
       assert Map.has_key?(result, "updated_at")
@@ -75,7 +81,10 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
         "collection" => "0",
         "last_invoice_status" => "Paid",
         "reg_date" => "2025-10-02",
-        "start_date" => "2025-10-02"
+        "start_date" => "2025-10-02",
+        "customer_id" => "CID-001",
+        "contract_price" => "199.00",
+        "next_invoice_date" => "2026-04-01"
       }
 
       result = CapwayContractRepository.deserialize(item)
@@ -89,6 +98,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert result.paid_invoices == "4"
       assert result.origin == :capway
       assert result.capway_id == "9490"
+      assert result.customer_id == "CID-001"
+      assert result.contract_price == "199.00"
+      assert result.next_invoice_date == "2026-04-01"
       assert result.raw_data == nil
     end
 
@@ -127,6 +139,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert deserialized.unpaid_invoices == subscriber.unpaid_invoices
       assert deserialized.collection == subscriber.collection
       assert deserialized.last_invoice_status == subscriber.last_invoice_status
+      assert deserialized.customer_id == subscriber.customer_id
+      assert deserialized.contract_price == subscriber.contract_price
+      assert deserialized.next_invoice_date == subscriber.next_invoice_date
       assert deserialized.origin == :capway
     end
   end
