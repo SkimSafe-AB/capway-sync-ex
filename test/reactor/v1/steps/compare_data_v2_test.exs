@@ -387,4 +387,99 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 1
     end
   end
+
+  describe "exclude_existing_by_national_id/2" do
+    test "removes create action when national_id exists in capway active national ids" do
+      action_item = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "196403273813",
+        trinity_subscriber_id: 1,
+        capway_contract_ref: nil,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      create_contracts = %{1 => action_item}
+      capway_map_sets = %{active_national_ids: MapSet.new(["196403273813"])}
+
+      result = CompareDataV2.exclude_existing_by_national_id(create_contracts, capway_map_sets)
+
+      assert map_size(result) == 0
+    end
+
+    test "keeps create action when national_id does not exist in capway" do
+      action_item = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "196403273813",
+        trinity_subscriber_id: 1,
+        capway_contract_ref: nil,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      create_contracts = %{1 => action_item}
+      capway_map_sets = %{active_national_ids: MapSet.new(["198507099805"])}
+
+      result = CompareDataV2.exclude_existing_by_national_id(create_contracts, capway_map_sets)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, 1)
+    end
+
+    test "filters mixed results correctly" do
+      existing_item = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "196403273813",
+        trinity_subscriber_id: 1,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      new_item = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "198507099805",
+        trinity_subscriber_id: 2,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      create_contracts = %{1 => existing_item, 2 => new_item}
+      capway_map_sets = %{active_national_ids: MapSet.new(["196403273813"])}
+
+      result = CompareDataV2.exclude_existing_by_national_id(create_contracts, capway_map_sets)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, 2)
+    end
+
+    test "returns empty map when all are excluded" do
+      item1 = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "196403273813",
+        trinity_subscriber_id: 1,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      item2 = %CapwaySync.Models.Dynamodb.ActionItem{
+        national_id: "198507099805",
+        trinity_subscriber_id: 2,
+        action: :capway_create_contract,
+        status: :pending
+      }
+
+      create_contracts = %{1 => item1, 2 => item2}
+
+      capway_map_sets = %{
+        active_national_ids: MapSet.new(["196403273813", "198507099805"])
+      }
+
+      result = CompareDataV2.exclude_existing_by_national_id(create_contracts, capway_map_sets)
+
+      assert map_size(result) == 0
+    end
+
+    test "handles empty create_contracts" do
+      capway_map_sets = %{active_national_ids: MapSet.new(["196403273813"])}
+
+      result = CompareDataV2.exclude_existing_by_national_id(%{}, capway_map_sets)
+
+      assert map_size(result) == 0
+    end
+  end
 end

@@ -46,6 +46,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         trinity_subscriber_data.active_subscribers,
         capway_subscriber_data.map_sets
       )
+      |> exclude_existing_by_national_id(capway_subscriber_data.map_sets)
 
     {trinity_suspend_accounts, trinity_cancel_accounts} =
       get_accounts_to_suspend_or_cancel(
@@ -172,6 +173,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
       {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, sub, reason)}
     end
+  end
+
+  @doc """
+  Excludes subscribers from contract creation if their `national_id` already
+  exists in Capway's active subscribers. This catches cases where a subscriber
+  exists in Capway without a `trinity_subscriber_id` (e.g. sinfrid customers).
+  """
+  @spec exclude_existing_by_national_id(%{integer() => map()}, %{active_national_ids: MapSet.t()}) ::
+          %{integer() => map()}
+  def exclude_existing_by_national_id(create_contracts, capway_map_sets) do
+    Map.reject(create_contracts, fn {_id, action_item} ->
+      MapSet.member?(capway_map_sets.active_national_ids, action_item.national_id)
+    end)
   end
 
   @doc """
