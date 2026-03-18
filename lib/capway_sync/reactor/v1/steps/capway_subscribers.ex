@@ -173,9 +173,17 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
           {:ok, subscribers} ->
             fetched_count = length(subscribers)
 
-            Logger.info(
-              "Worker #{worker_id}: Successfully fetched #{fetched_count} subscribers from chunk"
-            )
+            if fetched_count == 0 do
+              Logger.warning(
+                "⚠️ Worker #{worker_id}: Got 0 subscribers from offset=#{current_offset}, " <>
+                  "chunk_size=#{chunk_size}. XML byte size: #{byte_size(xml_data)}"
+              )
+            else
+              Logger.info(
+                "Worker #{worker_id}: Fetched #{fetched_count}/#{chunk_size} subscribers " <>
+                  "at offset=#{current_offset}"
+              )
+            end
 
             # Continue fetching remaining records
             new_offset = current_offset + chunk_size
@@ -250,6 +258,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
           {success_acc, [{:timeout, reason} | failure_acc]}
       end)
 
+    # Log per-worker breakdown
+    Enum.each(successes, fn {worker_id, subscribers} ->
+      Logger.info(
+        "📊 Worker #{worker_id} result: #{length(subscribers)} subscribers fetched"
+      )
+    end)
+
     case failures do
       [] ->
         # All workers succeeded, merge the data
@@ -258,8 +273,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
           |> Enum.sort_by(fn {worker_id, _} -> worker_id end)
           |> Enum.flat_map(fn {_worker_id, subscribers} -> subscribers end)
 
+        nil_contract_count =
+          Enum.count(all_subscribers, fn s -> is_nil(s.contract_ref_no) end)
+
         Logger.info(
-          "All #{length(successes)} workers succeeded, merged #{length(all_subscribers)} total subscribers"
+          "All #{length(successes)} workers succeeded, merged #{length(all_subscribers)} total subscribers " <>
+            "(#{nil_contract_count} with nil contract_ref_no)"
         )
 
         {:ok, all_subscribers}
