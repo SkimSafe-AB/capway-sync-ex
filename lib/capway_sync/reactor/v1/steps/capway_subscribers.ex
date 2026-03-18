@@ -174,9 +174,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
             fetched_count = length(subscribers)
 
             if fetched_count == 0 do
+              # Log first 2000 chars of XML to diagnose parsing failures
+              xml_preview = String.slice(xml_data, 0, 2000)
+
               Logger.warning(
                 "⚠️ Worker #{worker_id}: Got 0 subscribers from offset=#{current_offset}, " <>
-                  "chunk_size=#{chunk_size}. XML byte size: #{byte_size(xml_data)}"
+                  "chunk_size=#{chunk_size}. XML byte size: #{byte_size(xml_data)}. " <>
+                  "XML preview: #{xml_preview}"
               )
             else
               Logger.info(

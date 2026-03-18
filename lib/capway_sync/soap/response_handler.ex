@@ -29,7 +29,7 @@ defmodule CapwaySync.Soap.ResponseHandler do
   # Handle start of XML elements
   def handle_event(:start_element, {tag_name, attributes}, state) do
     case tag_name do
-      "DataRows" ->
+      tag when tag in ["DataRows", "FooterRows"] ->
         {:ok, %{state | in_data_rows: true}}
 
       "ReportResults" when state.in_data_rows ->
@@ -78,7 +78,7 @@ defmodule CapwaySync.Soap.ResponseHandler do
   # Handle end of XML elements
   def handle_event(:end_element, tag_name, state) do
     case tag_name do
-      "DataRows" ->
+      tag when tag in ["DataRows", "FooterRows"] ->
         {:ok, %{state | in_data_rows: false}}
 
       "ReportResults" when state.in_report_results ->
