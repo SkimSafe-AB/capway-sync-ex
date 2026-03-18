@@ -66,16 +66,52 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
 
     run(fn args, _context ->
       subscribers = args.capway_data
+      total = length(subscribers)
 
-      Logger.info("Storing #{length(subscribers)} Capway contracts to DynamoDB")
+      nil_contract_ref_count =
+        Enum.count(subscribers, fn s -> is_nil(s.contract_ref_no) end)
 
-      {stored, errors} = CapwayContractRepository.store_contracts(subscribers)
+      unique_contract_refs =
+        subscribers
+        |> Enum.map(& &1.contract_ref_no)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
+        |> length()
+
+      duplicate_contract_refs = total - nil_contract_ref_count - unique_contract_refs
 
       Logger.info(
-        "Capway contracts stored: #{stored} successful, #{errors} failed"
+        "📊 Capway contracts pre-store breakdown: " <>
+          "total=#{total}, " <>
+          "nil_contract_ref_no=#{nil_contract_ref_count}, " <>
+          "unique_contract_refs=#{unique_contract_refs}, " <>
+          "duplicate_contract_refs=#{duplicate_contract_refs}"
       )
 
-      {:ok, {stored, errors}}
+      if nil_contract_ref_count > 0 do
+        nil_samples =
+          subscribers
+          |> Enum.filter(fn s -> is_nil(s.contract_ref_no) end)
+          |> Enum.take(5)
+          |> Enum.map(fn s ->
+            "customer_ref=#{s.customer_ref}, id_number=#{s.id_number}, name=#{s.name}"
+          end)
+
+        Logger.warning(
+          "⚠️ #{nil_contract_ref_count} subscribers have nil contract_ref_no (will be skipped). " <>
+            "Samples: #{inspect(nil_samples)}"
+        )
+      end
+
+      {stored, errors, skipped} = CapwayContractRepository.store_contracts(subscribers)
+
+      Logger.info(
+        "✅ Capway contracts post-store: " <>
+          "stored=#{stored}, errors=#{errors}, skipped=#{skipped}, " <>
+          "total_input=#{total}"
+      )
+
+      {:ok, {stored, errors, skipped}}
     end)
   end
 

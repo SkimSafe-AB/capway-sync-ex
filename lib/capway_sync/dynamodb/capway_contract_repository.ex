@@ -27,10 +27,14 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
   @doc """
   Stores a single Capway contract in DynamoDB.
   """
-  @spec store_contract(%CapwaySubscriber{}) :: :ok | {:error, term()}
-  def store_contract(%CapwaySubscriber{contract_ref_no: nil}) do
-    Logger.warning("Skipping contract with nil contract_ref_no")
-    :ok
+  @spec store_contract(%CapwaySubscriber{}) :: :ok | :skipped | {:error, term()}
+  def store_contract(%CapwaySubscriber{contract_ref_no: nil} = subscriber) do
+    Logger.warning(
+      "Skipping contract with nil contract_ref_no: " <>
+        "customer_ref=#{subscriber.customer_ref}, id_number=#{subscriber.id_number}"
+    )
+
+    :skipped
   end
 
   def store_contract(%CapwaySubscriber{} = subscriber) do
@@ -52,13 +56,15 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
 
   Skips contracts without a `contract_ref_no`. Returns `{stored_count, error_count}`.
   """
-  @spec store_contracts([%CapwaySubscriber{}]) :: {non_neg_integer(), non_neg_integer()}
+  @spec store_contracts([%CapwaySubscriber{}]) ::
+          {non_neg_integer(), non_neg_integer(), non_neg_integer()}
   def store_contracts(subscribers) when is_list(subscribers) do
     subscribers
-    |> Enum.reduce({0, 0}, fn subscriber, {ok_count, err_count} ->
+    |> Enum.reduce({0, 0, 0}, fn subscriber, {ok_count, err_count, skip_count} ->
       case store_contract(subscriber) do
-        :ok -> {ok_count + 1, err_count}
-        {:error, _} -> {ok_count, err_count + 1}
+        :ok -> {ok_count + 1, err_count, skip_count}
+        :skipped -> {ok_count, err_count, skip_count + 1}
+        {:error, _} -> {ok_count, err_count + 1, skip_count}
       end
     end)
   end
@@ -181,7 +187,7 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
       contract_price: get_value(item, "contract_price"),
       next_invoice_date: get_value(item, "next_invoice_date"),
       origin: :capway,
-      capway_id: get_value(item, "customer_ref"),
+      capway_id: get_value(item, "customer_id"),
       trinity_id: nil,
       raw_data: nil
     }
