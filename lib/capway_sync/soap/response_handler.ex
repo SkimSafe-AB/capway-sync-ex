@@ -205,7 +205,7 @@ defmodule CapwaySync.Soap.ResponseHandler do
     end
   end
 
-  # Finalize subscriber with raw data and set capway_id
+  # Finalize subscriber with raw data and set capway_id from contract_ref_no
   defp finalize_subscriber(subscriber, raw_data) do
     %{subscriber | origin: :capway, capway_id: subscriber.contract_ref_no, raw_data: raw_data}
   end

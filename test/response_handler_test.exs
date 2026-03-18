@@ -83,6 +83,7 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                collection: "1",
                last_invoice_status: "Invoice",
                origin: :capway,
+               capway_id: "CONTRACT123",
                raw_data: [
                  "0",
                  nil,
