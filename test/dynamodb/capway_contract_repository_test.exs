@@ -97,7 +97,7 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert result.active == "true"
       assert result.paid_invoices == "4"
       assert result.origin == :capway
-      assert result.capway_id == "9490"
+      assert result.capway_id == "CID-001"
       assert result.customer_id == "CID-001"
       assert result.contract_price == "199.00"
       assert result.next_invoice_date == "2026-04-01"

@@ -158,10 +158,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareData do
         invalid_trinity_list
 
     # Separate "update_capway_contract" candidates from "missing_in_capway"
-    # Logic: If Trinity ID exists in Capway (via contract_ref_no/capway_id) AND Capway has missing/nil id_number
+    # Logic: If Trinity ID exists in Capway (via customer_id/capway_id) AND Capway has missing/nil id_number
     # then it's an UPDATE, not a CREATE.
 
-    # Map Capway subscribers by capway_id (contract_ref_no) for lookup
+    # Map Capway subscribers by capway_id (customer_id) for lookup
     capway_by_ref = Map.new(capway_list, fn sub -> {Map.get(sub, :capway_id), sub} end)
 
     {update_capway_contract, missing_in_capway} =

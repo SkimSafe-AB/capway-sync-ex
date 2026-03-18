@@ -5,6 +5,11 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
 
   describe "ResponseHandler" do
     test "parses simple subscriber data correctly" do
+      # Full 20-field XML matching production: rownum(0), datasetid(1), customerref(2),
+      # idnumber(3), name(4), contractrefno(5), regdate(6), startdate(7), enddate(8),
+      # active(9), paidInvoices(10), unpaidInvoices(11), collection(12),
+      # lastInvoicestatus(13), countBF(14), contractprice(15), email(16),
+      # customerid(17), nextinvoicedate(18), counter(19)
       xml = """
       <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
         <s:Body>
@@ -13,48 +18,26 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
               <DataRows>
                 <ReportResults>
                   <Rows>
-                    <ReportResultData>
-                      <Value>0</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value i:nil="true"/>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>45848</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>195712260115</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>Test User</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>CONTRACT123</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>2025-06-22T00:00:00.0000000</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>2025-06-29T00:00:00.0000000</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>2025-07-01T00:00:00.0000000</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>True</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>5</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>2</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>1</Value>
-                    </ReportResultData>
-                    <ReportResultData>
-                      <Value>Invoice</Value>
-                    </ReportResultData>
+                    <ReportResultData><Value>0</Value></ReportResultData>
+                    <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>45848</Value></ReportResultData>
+                    <ReportResultData><Value>195712260115</Value></ReportResultData>
+                    <ReportResultData><Value>Test User</Value></ReportResultData>
+                    <ReportResultData><Value>CONTRACT123</Value></ReportResultData>
+                    <ReportResultData><Value>2025-06-22T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>2025-06-29T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>2025-07-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>True</Value></ReportResultData>
+                    <ReportResultData><Value>5</Value></ReportResultData>
+                    <ReportResultData><Value>2</Value></ReportResultData>
+                    <ReportResultData><Value>1</Value></ReportResultData>
+                    <ReportResultData><Value>Invoice</Value></ReportResultData>
+                    <ReportResultData><Value>3</Value></ReportResultData>
+                    <ReportResultData><Value>199.00</Value></ReportResultData>
+                    <ReportResultData><Value>test@example.com</Value></ReportResultData>
+                    <ReportResultData><Value>CID-9490</Value></ReportResultData>
+                    <ReportResultData><Value>2026-04-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>42</Value></ReportResultData>
                   </Rows>
                 </ReportResults>
               </DataRows>
@@ -82,25 +65,15 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                unpaid_invoices: "2",
                collection: "1",
                last_invoice_status: "Invoice",
+               contract_price: "199.00",
+               customer_id: "CID-9490",
+               next_invoice_date: "2026-04-01T00:00:00.0000000",
                origin: :capway,
-               capway_id: "CONTRACT123",
-               raw_data: [
-                 "0",
-                 nil,
-                 "45848",
-                 "195712260115",
-                 "Test User",
-                 "CONTRACT123",
-                 "2025-06-22T00:00:00.0000000",
-                 "2025-06-29T00:00:00.0000000",
-                 "2025-07-01T00:00:00.0000000",
-                 "True",
-                 "5",
-                 "2",
-                 "1",
-                 "Invoice"
-               ]
+               capway_id: "CID-9490"
              } = subscriber
+
+      # Verify raw_data contains all 20 fields
+      assert length(subscriber.raw_data) == 20
     end
 
     test "handles nil values correctly" do

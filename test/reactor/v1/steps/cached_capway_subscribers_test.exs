@@ -3,6 +3,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CachedCapwaySubscribersTest do
 
   alias CapwaySync.Reactor.V1.Steps.CachedCapwaySubscribers
 
+  setup_all do
+    Code.ensure_loaded!(CachedCapwaySubscribers)
+    :ok
+  end
+
   describe "module" do
     test "compiles successfully" do
       assert Code.ensure_loaded?(CachedCapwaySubscribers)
