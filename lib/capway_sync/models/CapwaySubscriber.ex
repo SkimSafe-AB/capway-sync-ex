@@ -57,6 +57,9 @@ defmodule CapwaySync.Models.CapwaySubscriber do
             unpaid_invoices: nil,
             collection: nil,
             last_invoice_status: nil,
+            contract_price: nil,
+            customer_id: nil,
+            next_invoice_date: nil,
             # external data and debug
             origin: nil,
             trinity_id: nil,

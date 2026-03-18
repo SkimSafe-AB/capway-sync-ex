@@ -49,6 +49,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           paid_invoices: integer() | nil,
           unpaid_invoices: integer() | nil,
           collection: integer() | nil,
+          capway_customer_id: String.t() | nil,
+          capway_contract_price: String.t() | nil,
+          capway_next_invoice_date: String.t() | nil,
           # Capway metadata stored in Trinity
           trinity_capway_last_updated: String.t() | nil,
           trinity_capway_created_at: String.t() | nil
@@ -70,6 +73,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             paid_invoices: nil,
             unpaid_invoices: nil,
             collection: nil,
+            capway_customer_id: nil,
+            capway_contract_price: nil,
+            capway_next_invoice_date: nil,
             trinity_capway_last_updated: nil,
             trinity_capway_created_at: nil
 
@@ -132,6 +138,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       paid_invoices: capway_subscriber.paid_invoices |> format_string_to_integer(),
       unpaid_invoices: capway_subscriber.unpaid_invoices |> format_string_to_integer(),
       collection: capway_subscriber.collection |> format_string_to_integer(),
+      capway_customer_id: capway_subscriber.customer_id,
+      capway_contract_price: capway_subscriber.contract_price,
+      capway_next_invoice_date: capway_subscriber.next_invoice_date,
       origin: :capway,
       payment_method: nil,
       trinity_status: nil,

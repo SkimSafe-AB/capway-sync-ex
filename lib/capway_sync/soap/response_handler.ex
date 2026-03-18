@@ -172,7 +172,10 @@ defmodule CapwaySync.Soap.ResponseHandler do
   end
 
   # Map field index to CapwaySubscriber field
-  # Header structure: rownum(0), datasetid(1), customerref(2), idnumber(3), name(4), contractrefno(5), regdate(6), startdate(7), enddate(8), active(9), paidInvoices(10), unpaidInvoices(11), collection(12), lastInvoicestatus(13)
+  # Header structure: rownum(0), datasetid(1), customerref(2), idnumber(3), name(4),
+  # contractrefno(5), regdate(6), startdate(7), enddate(8), active(9), paidInvoices(10),
+  # unpaidInvoices(11), collection(12), lastInvoicestatus(13), countBF(14),
+  # contractprice(15), email(16), customerid(17), nextinvoicedate(18), counter(19)
   defp update_subscriber_field(subscriber, index, value) do
     case index do
       # rownum - ignore
@@ -191,7 +194,12 @@ defmodule CapwaySync.Soap.ResponseHandler do
       11 -> %{subscriber | unpaid_invoices: value}
       12 -> %{subscriber | collection: value}
       13 -> %{subscriber | last_invoice_status: value}
-      # Ignore extra fields
+      # countBF(14) - ignored
+      15 -> %{subscriber | contract_price: value}
+      # email(16) - ignored
+      17 -> %{subscriber | customer_id: value}
+      18 -> %{subscriber | next_invoice_date: value}
+      # counter(19) - ignored
       _ -> subscriber
     end
   end
