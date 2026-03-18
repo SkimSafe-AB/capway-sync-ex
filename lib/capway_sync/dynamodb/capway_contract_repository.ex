@@ -139,6 +139,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
   def serialize(%CapwaySubscriber{} = subscriber) do
     %{
       "contract_ref_no" => subscriber.contract_ref_no,
+      "capway_customer_id" => subscriber.capway_customer_id,
+      "contract_price" => subscriber.capway_contract_price,
+      "next_invoice_date" => subscriber.capway_next_invoice_date,
       "customer_ref" => subscriber.customer_ref,
       "id_number" => subscriber.id_number,
       "name" => subscriber.name,
