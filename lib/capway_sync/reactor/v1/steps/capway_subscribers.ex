@@ -6,7 +6,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   alias CapwaySync.Models.Subscribers.Canonical
   require Logger
 
-  @worker_count 1
+  @worker_count 3
 
   @impl true
   def run(_map, _context, _options) do
