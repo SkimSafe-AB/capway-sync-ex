@@ -230,6 +230,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     ActionItem.create_action_item(action, %{
       national_id: sub.national_id,
       trinity_subscriber_id: sub.trinity_subscriber_id,
+      trinity_subscription_id: sub.trinity_subscription_id,
+      capway_customer_id: sub.capway_customer_id,
       capway_contract_ref: sub.capway_contract_ref,
       reason: reason
     })

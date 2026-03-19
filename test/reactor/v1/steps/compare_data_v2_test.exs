@@ -9,7 +9,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       %Canonical{
         national_id: "199001011234",
         trinity_subscriber_id: 1,
+        trinity_subscription_id: 100,
         capway_contract_ref: "C-001",
+        capway_customer_id: "CID-001",
         capway_active_status: true,
         origin: :capway,
         collection: 3,
@@ -27,11 +29,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       %Canonical{
         national_id: "199001011234",
         trinity_subscriber_id: 1,
+        trinity_subscription_id: 100,
         origin: :trinity,
         payment_method: "capway",
         trinity_status: :active,
         subscription_type: :standard,
         capway_active_status: nil,
+        capway_customer_id: nil,
         collection: nil,
         last_invoice_status: nil
       },
@@ -205,8 +209,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert Map.has_key?(suspend, "C-002")
     end
 
-    test "action item includes capway_contract_ref" do
-      capway_sub = build_capway_sub(%{collection: 3, capway_contract_ref: "C-999"})
+    test "action item includes all identifying fields" do
+      capway_sub =
+        build_capway_sub(%{
+          collection: 3,
+          capway_contract_ref: "C-999",
+          capway_customer_id: "CID-999",
+          trinity_subscription_id: 555
+        })
+
       trinity_sub = build_trinity_sub(%{subscription_type: :locked})
 
       capway_data = %{"C-999" => capway_sub}
@@ -218,7 +229,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       action_item = Map.get(suspend, "C-999")
       assert action_item.capway_contract_ref == "C-999"
+      assert action_item.capway_customer_id == "CID-999"
       assert action_item.trinity_subscriber_id == 1
+      assert action_item.trinity_subscription_id == 555
       assert action_item.national_id == "199001011234"
     end
 
