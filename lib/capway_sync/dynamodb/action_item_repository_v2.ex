@@ -43,10 +43,50 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
 
   defp create_id(%{
          created_at: created_at,
+         action: action,
+         trinity_subscriber_id: nil,
+         trinity_subscription_id: nil,
+         capway_customer_id: nil,
+         capway_contract_ref: nil
+       }) do
+    "#{created_at}:#{action}:WARNINGNOREFADDEDATALL:#{UUID.uuid4()}"
+  end
+
+  defp create_id(%{
+         created_at: created_at,
+         action: action,
+         trinity_subscriber_id: subscriber_id,
+         trinity_subscription_id: nil,
+         capway_customer_id: nil,
+         capway_contract_ref: nil
+       }) do
+    "#{created_at}:#{action}:tuid:#{subscriber_id}"
+  end
+
+  defp create_id(%{
+         created_at: created_at,
+         action: action,
          trinity_subscription_id: subscription_id,
+         capway_customer_id: nil,
+         capway_contract_ref: nil
+       }) do
+    "#{created_at}:#{action}:tsuid:#{subscription_id}"
+  end
+
+  defp create_id(%{
+         created_at: created_at,
+         action: action,
          capway_customer_id: capway_customer_id,
+         capway_contract_ref: nil
+       }) do
+    "#{created_at}:#{action}:cuid:#{capway_customer_id}"
+  end
+
+  defp create_id(%{
+         created_at: created_at,
+         action: action,
          capway_contract_ref: capway_contract_ref
        }) do
-    "#{capway_contract_ref}:#{capway_customer_id}:#{subscription_id}:#{created_at}"
+    "#{created_at}:#{action}:cref:#{capway_contract_ref}"
   end
 end
