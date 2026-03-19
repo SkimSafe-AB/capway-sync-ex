@@ -49,7 +49,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
          capway_customer_id: nil,
          capway_contract_ref: nil
        }) do
-    "#{created_at}:#{action}:WARNINGNOREFADDEDATALL:#{UUID.uuid4()}"
+    "#{created_at}:#{action}:ERROR_NO_REF_AVAILABLE:#{UUID.uuid4()}"
   end
 
   defp create_id(%{

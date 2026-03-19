@@ -29,16 +29,21 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
     Logger.info("Capway active subscriber mapset: #{inspect(capway_subscriber_data.map_sets)}")
 
+    subscriber_to_subscription_ids =
+      trinity_subscriber_data.map_sets.subscriber_to_subscription_ids
+
     capway_cancel_contracts =
       get_contracts_to_cancel(
         capway_subscriber_data.active_subscribers,
-        trinity_subscriber_data.active_subscribers
+        trinity_subscriber_data.active_subscribers,
+        subscriber_to_subscription_ids
       )
 
     capway_update_contracts =
       get_contracts_to_update(
         capway_subscriber_data.active_subscribers,
-        trinity_subscriber_data.active_subscribers
+        trinity_subscriber_data.active_subscribers,
+        subscriber_to_subscription_ids
       )
 
     capway_create_contracts =
@@ -181,7 +186,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   and compare it to trinity subscriber data, if the national_id is missing or is
   different than the one in Trinity, it will be marked for update.
   """
-  def get_contracts_to_update(capway_subscriber_data, trinity_subscriber_data) do
+  def get_contracts_to_update(
+        capway_subscriber_data,
+        trinity_subscriber_data,
+        subscriber_to_subscription_ids \\ %{}
+      ) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
@@ -189,7 +198,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         into: %{} do
       reason = "National ID mismatch"
 
-      {contract_ref, build_action_item(:capway_update_contract, capway_sub, reason)}
+      enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
+      {contract_ref, build_action_item(:capway_update_contract, enriched_sub, reason)}
     end
   end
 
@@ -216,13 +226,25 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
   Contracts that can be matched are handled by the suspend/cancel logic instead.
   """
-  def get_contracts_to_cancel(capway_subscriber_data, trinity_subscriber_data) do
+  def get_contracts_to_cancel(
+        capway_subscriber_data,
+        trinity_subscriber_data,
+        subscriber_to_subscription_ids \\ %{}
+      ) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         into: %{} do
       reason = "No matching Trinity account found"
 
-      {contract_ref, build_action_item(:capway_cancel_contract, capway_sub, reason)}
+      enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
+      {contract_ref, build_action_item(:capway_cancel_contract, enriched_sub, reason)}
+    end
+  end
+
+  defp enrich_subscription_id(capway_sub, subscriber_to_subscription_ids) do
+    case Map.get(subscriber_to_subscription_ids, capway_sub.trinity_subscriber_id) do
+      nil -> capway_sub
+      subscription_id -> %{capway_sub | trinity_subscription_id: subscription_id}
     end
   end
 

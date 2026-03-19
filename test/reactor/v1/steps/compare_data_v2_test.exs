@@ -295,6 +295,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert Map.has_key?(result, "C-001")
     end
 
+    test "enriches trinity_subscription_id from subscriber_to_subscription_ids map" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          trinity_subscription_id: nil
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", trinity_subscription_id: 200})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      sub_to_sub_ids = %{1 => 200}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data, sub_to_sub_ids)
+
+      action_item = Map.get(result, "C-001")
+      assert action_item.trinity_subscription_id == 200
+    end
+
     test "does not mark contract for update when national_ids match" do
       capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
       trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
@@ -368,6 +388,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-orphan")
+    end
+
+    test "enriches trinity_subscription_id from subscriber_to_subscription_ids map" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 9999,
+          trinity_subscription_id: nil,
+          capway_contract_ref: "C-orphan"
+        })
+
+      trinity_sub = build_trinity_sub(%{})
+
+      capway_data = %{"C-orphan" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+      sub_to_sub_ids = %{9999 => 500}
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, sub_to_sub_ids)
+
+      action_item = Map.get(result, "C-orphan")
+      assert action_item.trinity_subscription_id == 500
     end
 
     test "does not cancel contract when matched by trinity_subscriber_id" do

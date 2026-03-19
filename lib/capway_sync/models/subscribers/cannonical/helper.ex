@@ -67,7 +67,12 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
             presence?(sub.national_id)
           end)
           |> Enum.map(fn {_id, sub} -> sub.national_id end)
-          |> MapSet.new()
+          |> MapSet.new(),
+        subscriber_to_subscription_ids:
+          active_subscribers
+          |> Enum.reduce(%{}, fn {_id, sub}, acc ->
+            Map.put(acc, sub.trinity_subscriber_id, sub.trinity_subscription_id)
+          end)
       }
     }
   end
