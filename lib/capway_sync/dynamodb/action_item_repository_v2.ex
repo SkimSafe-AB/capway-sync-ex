@@ -12,7 +12,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
     table_name = System.get_env(@table_name_env, @default_table_name)
 
     item = %{
-      "id" => action_item.id || UUID.uuid4(),
+      "id" => create_id(action_item),
       "trinity_subscriber_id" => action_item.trinity_subscriber_id,
       "trinity_subscription_id" => action_item.trinity_subscription_id,
       "capway_customer_id" => action_item.capway_customer_id,
@@ -39,5 +39,14 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
 
         {:error, reason}
     end
+  end
+
+  defp create_id(%{
+         created_at: created_at,
+         trinity_subscription_id: subscription_id,
+         capway_customer_id: capway_customer_id,
+         capway_contract_ref: capway_contract_ref
+       }) do
+    "#{capway_contract_ref}:#{capway_customer_id}:#{subscription_id}:#{created_at}"
   end
 end
