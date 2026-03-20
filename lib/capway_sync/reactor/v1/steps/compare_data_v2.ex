@@ -198,6 +198,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         check_for_missing_attrs(capway_sub, trinity_sub),
+        (capway_sub.collection || 0) < 2,
         into: %{} do
       reason = "National ID mismatch"
 

@@ -283,7 +283,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
   describe "get_contracts_to_update/2" do
     test "marks contract for update when national_id differs and trinity pnr is valid" do
-      capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1})
+      capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 0})
       trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
 
       capway_data = %{"C-001" => capway_sub}
@@ -300,7 +300,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         build_capway_sub(%{
           national_id: "198507099805",
           trinity_subscriber_id: 1,
-          trinity_subscription_id: nil
+          trinity_subscription_id: nil,
+          collection: 0
         })
 
       trinity_sub = build_trinity_sub(%{national_id: "196403273813", trinity_subscription_id: 200})
@@ -351,6 +352,35 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 0
     end
 
+    test "does not mark contract for update when collection is >= 2" do
+      capway_sub =
+        build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 2})
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "marks contract for update when collection is below 2" do
+      capway_sub =
+        build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 1})
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-001")
+    end
+
     test "does not match when capway trinity_subscriber_id is nil" do
       capway_sub =
         build_capway_sub(%{
@@ -378,7 +408,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         build_capway_sub(%{
           capway_contract_ref: "C-001",
           trinity_subscriber_id: 1,
-          national_id: "198507099805"
+          national_id: "198507099805",
+          collection: 0
         })
 
       # Contract C-002: no Trinity match (cancel candidate)
@@ -426,6 +457,48 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       # C-002 should be in cancel (not in update)
       assert Map.has_key?(result.actions.capway.cancel_contracts, "C-002")
       refute Map.has_key?(result.actions.capway.update_contracts, "C-002")
+    end
+
+    test "contract with collection >= 2 excluded from update does not end up in cancel" do
+      # Contract with collection 2, exists in Trinity with mismatched national_id
+      # Should be excluded from update (collection >= 2) but NOT added to cancel
+      capway_sub =
+        build_capway_sub(%{
+          capway_contract_ref: "C-collect",
+          trinity_subscriber_id: 1,
+          national_id: "198507099805",
+          collection: 2
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{"C-collect" => capway_sub},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["198507099805"])
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => trinity_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"])
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      refute Map.has_key?(result.actions.capway.update_contracts, "C-collect")
+      refute Map.has_key?(result.actions.capway.cancel_contracts, "C-collect")
     end
   end
 
