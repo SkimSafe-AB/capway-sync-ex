@@ -29,7 +29,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     active_subscribers =
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
-        if sub.trinity_status not in [:cancelled, :expired] and
+        if sub.trinity_status not in [:cancelled, :expired, :pending] and
              capway_metadata_older_than_yesterday?(sub) do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
@@ -74,6 +74,14 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
             sub.trinity_status not in [:cancelled, :expired] and presence?(sub.national_id)
           end)
           |> Enum.map(fn sub -> sub.national_id end)
+          |> MapSet.new(),
+        all_subscriber_ids:
+          subscribers
+          |> Enum.filter(fn sub ->
+            sub.trinity_status not in [:cancelled, :expired] and
+              presence?(sub.trinity_subscriber_id)
+          end)
+          |> Enum.map(fn sub -> sub.trinity_subscriber_id end)
           |> MapSet.new(),
         subscriber_to_subscription_ids:
           active_subscribers

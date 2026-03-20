@@ -371,7 +371,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
-  describe "get_contracts_to_cancel/4" do
+  describe "get_contracts_to_cancel/5" do
     test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =
         build_capway_sub(%{
@@ -494,6 +494,36 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-sinfrid")
+    end
+
+    test "does not cancel contract when subscriber is pending with no personal_number" do
+      # Capway contract has customer_ref pointing to a pending Trinity subscriber
+      # that has no personal_number yet (activated: false)
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 59882,
+          national_id: nil,
+          capway_contract_ref: "C-pending"
+        })
+
+      capway_data = %{"C-pending" => capway_sub}
+      # Subscriber not in active_subscribers (pending status)
+      trinity_data = %{}
+      # No national_id to match
+      all_national_ids = MapSet.new()
+      # But subscriber ID exists in all_subscriber_ids
+      all_subscriber_ids = MapSet.new([59882])
+
+      result =
+        CompareDataV2.get_contracts_to_cancel(
+          capway_data,
+          trinity_data,
+          %{},
+          all_national_ids,
+          all_subscriber_ids
+        )
+
+      assert map_size(result) == 0
     end
   end
 

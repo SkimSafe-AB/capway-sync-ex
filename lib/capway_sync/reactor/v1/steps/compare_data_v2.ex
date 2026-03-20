@@ -37,7 +37,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway_subscriber_data.active_subscribers,
         trinity_subscriber_data.active_subscribers,
         subscriber_to_subscription_ids,
-        trinity_subscriber_data.map_sets.all_national_ids
+        trinity_subscriber_data.map_sets.all_national_ids,
+        trinity_subscriber_data.map_sets.all_subscriber_ids
       )
 
     capway_update_contracts =
@@ -225,19 +226,20 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   @doc """
   Identifies Capway contracts with no matching Trinity subscriber.
 
-  Checks both `trinity_subscriber_id` and `national_id` before marking for cancellation,
-  so contracts without a `customer_ref` (e.g. sinfrid) are not falsely cancelled
-  when the subscriber exists in Trinity by national_id.
+  Checks `trinity_subscriber_id`, `national_id`, and all known subscriber IDs
+  (including pending/not-yet-activated) before marking for cancellation.
   """
   def get_contracts_to_cancel(
         capway_subscriber_data,
         trinity_subscriber_data,
         subscriber_to_subscription_ids \\ %{},
-        trinity_active_national_ids \\ MapSet.new()
+        trinity_all_national_ids \\ MapSet.new(),
+        trinity_all_subscriber_ids \\ MapSet.new()
       ) do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         not Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
-        not MapSet.member?(trinity_active_national_ids, capway_sub.national_id),
+        not MapSet.member?(trinity_all_national_ids, capway_sub.national_id),
+        not MapSet.member?(trinity_all_subscriber_ids, capway_sub.trinity_subscriber_id),
         into: %{} do
       reason = "No matching Trinity account found"
 
