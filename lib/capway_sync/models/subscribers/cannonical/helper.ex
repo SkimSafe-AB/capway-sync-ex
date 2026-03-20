@@ -81,7 +81,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     {orphaned_subscribers, associated_subscribers} =
       subscribers
       |> Enum.reduce({%{}, %{}}, fn sub, {orphaned_acc, associated_acc} ->
-        if presence?(sub.trinity_subscriber_id) and presence?(sub.capway_contract_ref) do
+        if presence?(sub.capway_contract_ref) do
           {orphaned_acc, Map.put(associated_acc, sub.capway_contract_ref, sub)}
         else
           {Map.put(orphaned_acc, UUID.uuid4(), sub), associated_acc}

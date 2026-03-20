@@ -371,7 +371,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
-  describe "get_contracts_to_cancel/2" do
+  describe "get_contracts_to_cancel/4" do
     test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =
         build_capway_sub(%{
@@ -422,7 +422,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 0
     end
 
-    test "cancels contract even if national_id matches but trinity_subscriber_id does not" do
+    test "cancels contract when neither trinity_subscriber_id nor national_id match" do
       capway_sub =
         build_capway_sub(%{
           trinity_subscriber_id: 9999,
@@ -434,10 +434,46 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
+      trinity_national_ids = MapSet.new(["196403273813"])
 
-      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data)
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, %{}, trinity_national_ids)
 
       assert map_size(result) == 1
+    end
+
+    test "does not cancel contract without customer_ref when national_id matches Trinity" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: nil,
+          national_id: "199001011234",
+          capway_contract_ref: "C-sinfrid"
+        })
+
+      capway_data = %{"C-sinfrid" => capway_sub}
+      trinity_data = %{1 => build_trinity_sub(%{national_id: "199001011234"})}
+      trinity_national_ids = MapSet.new(["199001011234"])
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, %{}, trinity_national_ids)
+
+      assert map_size(result) == 0
+    end
+
+    test "cancels contract without customer_ref when national_id not in Trinity" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: nil,
+          national_id: "199001011234",
+          capway_contract_ref: "C-sinfrid"
+        })
+
+      capway_data = %{"C-sinfrid" => capway_sub}
+      trinity_data = %{}
+      trinity_national_ids = MapSet.new()
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, %{}, trinity_national_ids)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-sinfrid")
     end
   end
 
