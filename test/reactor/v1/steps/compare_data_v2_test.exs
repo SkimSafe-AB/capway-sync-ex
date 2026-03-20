@@ -458,6 +458,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 0
     end
 
+    test "does not cancel contract when Trinity subscriber exists but is too recent" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "199001011234",
+          capway_contract_ref: "C-new"
+        })
+
+      # Trinity subscriber exists but was filtered out of active_subscribers
+      # (e.g. created yesterday, capway metadata too recent)
+      # So trinity_data is empty, but all_national_ids still includes it
+      capway_data = %{"C-new" => capway_sub}
+      trinity_data = %{}
+      all_national_ids = MapSet.new(["199001011234"])
+
+      result = CompareDataV2.get_contracts_to_cancel(capway_data, trinity_data, %{}, all_national_ids)
+
+      assert map_size(result) == 0
+    end
+
     test "cancels contract without customer_ref when national_id not in Trinity" do
       capway_sub =
         build_capway_sub(%{

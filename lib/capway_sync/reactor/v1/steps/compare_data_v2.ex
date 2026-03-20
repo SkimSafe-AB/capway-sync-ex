@@ -37,7 +37,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway_subscriber_data.active_subscribers,
         trinity_subscriber_data.active_subscribers,
         subscriber_to_subscription_ids,
-        trinity_subscriber_data.map_sets.active_national_ids
+        trinity_subscriber_data.map_sets.all_national_ids
       )
 
     capway_update_contracts =

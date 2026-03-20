@@ -68,6 +68,13 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
           end)
           |> Enum.map(fn {_id, sub} -> sub.national_id end)
           |> MapSet.new(),
+        all_national_ids:
+          subscribers
+          |> Enum.filter(fn sub ->
+            sub.trinity_status not in [:cancelled, :expired] and presence?(sub.national_id)
+          end)
+          |> Enum.map(fn sub -> sub.national_id end)
+          |> MapSet.new(),
         subscriber_to_subscription_ids:
           active_subscribers
           |> Enum.reduce(%{}, fn {_id, sub}, acc ->
