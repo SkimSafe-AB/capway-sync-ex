@@ -371,6 +371,64 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "run/3 update/cancel exclusion" do
+    test "excludes update contracts that also appear in cancel contracts" do
+      # Contract C-001: exists in Trinity (update candidate due to national_id mismatch)
+      capway_sub_update =
+        build_capway_sub(%{
+          capway_contract_ref: "C-001",
+          trinity_subscriber_id: 1,
+          national_id: "198507099805"
+        })
+
+      # Contract C-002: no Trinity match (cancel candidate)
+      capway_sub_cancel =
+        build_capway_sub(%{
+          capway_contract_ref: "C-002",
+          trinity_subscriber_id: 9999,
+          national_id: "199505051234"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{
+              "C-001" => capway_sub_update,
+              "C-002" => capway_sub_cancel
+            },
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new([1, 9999]),
+              active_national_ids: MapSet.new(["198507099805", "199505051234"])
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => trinity_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"])
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      # C-001 should be in update (not in cancel)
+      assert Map.has_key?(result.actions.capway.update_contracts, "C-001")
+      refute Map.has_key?(result.actions.capway.cancel_contracts, "C-001")
+
+      # C-002 should be in cancel (not in update)
+      assert Map.has_key?(result.actions.capway.cancel_contracts, "C-002")
+      refute Map.has_key?(result.actions.capway.update_contracts, "C-002")
+    end
+  end
+
   describe "get_contracts_to_cancel/5" do
     test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =

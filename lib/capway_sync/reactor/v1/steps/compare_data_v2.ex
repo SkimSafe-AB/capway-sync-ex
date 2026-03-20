@@ -47,6 +47,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         trinity_subscriber_data.active_subscribers,
         subscriber_to_subscription_ids
       )
+      |> Map.drop(Map.keys(capway_cancel_contracts))
 
     capway_create_contracts =
       get_contracts_to_create(
