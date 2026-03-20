@@ -71,12 +71,13 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.HelperTest do
       assert Map.has_key?(result.above_collector_threshold, "C-001")
     end
 
-    test "orphaned subscribers lack trinity_subscriber_id" do
-      orphan = build_capway_sub(%{trinity_subscriber_id: nil, capway_contract_ref: "C-001"})
-      result = Helper.group([orphan], :capway)
+    test "subscribers without trinity_subscriber_id but with contract_ref are associated" do
+      sub = build_capway_sub(%{trinity_subscriber_id: nil, capway_contract_ref: "C-001"})
+      result = Helper.group([sub], :capway)
 
-      assert map_size(result.orphaned_subscribers) == 1
-      assert map_size(result.associated_subscribers) == 0
+      assert map_size(result.orphaned_subscribers) == 0
+      assert map_size(result.associated_subscribers) == 1
+      assert Map.has_key?(result.associated_subscribers, "C-001")
     end
 
     test "orphaned subscribers lack capway_contract_ref" do
