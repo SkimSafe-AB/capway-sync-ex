@@ -442,7 +442,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
               subscriber_to_subscription_ids: %{},
               all_national_ids: MapSet.new(["196403273813"]),
               all_subscriber_ids: MapSet.new([1]),
-              active_national_ids: MapSet.new(["196403273813"])
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
             }
           }
         }
@@ -489,7 +491,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
               subscriber_to_subscription_ids: %{},
               all_national_ids: MapSet.new(["196403273813"]),
               all_subscriber_ids: MapSet.new([1]),
-              active_national_ids: MapSet.new(["196403273813"])
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
             }
           }
         }
@@ -499,6 +503,92 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       refute Map.has_key?(result.actions.capway.update_contracts, "C-collect")
       refute Map.has_key?(result.actions.capway.cancel_contracts, "C-collect")
+    end
+  end
+
+  describe "get_contracts_to_create/2" do
+    test "does not create contract for pending_cancel subscriber" do
+      # A pending_cancel subscriber should never be in active_subscribers
+      # (filtered out by Helper.group), but verify create logic itself
+      # by confirming the full run/3 flow excludes it
+      pending_cancel_sub =
+        build_trinity_sub(%{
+          trinity_status: :pending_cancel,
+          trinity_subscriber_id: 42,
+          national_id: "196403273813",
+          trinity_subscription_updated_at: ~N[2025-01-01 00:00:00]
+        })
+
+      # Simulate: pending_cancel sub should NOT be in active_subscribers
+      # but IS in all_national_ids / all_subscriber_ids
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([42]),
+              active_national_ids: MapSet.new(),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      # No create action should be generated
+      assert map_size(result.actions.capway.create_contracts) == 0
+    end
+
+    test "creates contract for active subscriber missing in Capway" do
+      active_sub =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          trinity_subscription_updated_at: ~N[2025-01-01 00:00:00]
+        })
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => active_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      assert map_size(result.actions.capway.create_contracts) == 1
+      assert Map.has_key?(result.actions.capway.create_contracts, 1)
     end
   end
 
@@ -625,6 +715,93 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-sinfrid")
+    end
+
+    test "does not cancel contract when subscriber was recently cancelled in capway" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "199001011234",
+          capway_contract_ref: "C-recent-cancel"
+        })
+
+      capway_data = %{"C-recent-cancel" => capway_sub}
+      trinity_data = %{}
+      all_national_ids = MapSet.new()
+      all_subscriber_ids = MapSet.new()
+      recently_cancelled_subscriber_ids = MapSet.new([1])
+      recently_cancelled_national_ids = MapSet.new(["199001011234"])
+
+      result =
+        CompareDataV2.get_contracts_to_cancel(
+          capway_data,
+          trinity_data,
+          %{},
+          all_national_ids,
+          all_subscriber_ids,
+          recently_cancelled_subscriber_ids,
+          recently_cancelled_national_ids
+        )
+
+      assert map_size(result) == 0
+    end
+
+    test "cancels contract when capway cancellation is older than 2 days" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "199001011234",
+          capway_contract_ref: "C-old-cancel"
+        })
+
+      capway_data = %{"C-old-cancel" => capway_sub}
+      trinity_data = %{}
+      all_national_ids = MapSet.new()
+      all_subscriber_ids = MapSet.new()
+      # Not in recently cancelled sets (older than 2 days)
+      recently_cancelled_subscriber_ids = MapSet.new()
+      recently_cancelled_national_ids = MapSet.new()
+
+      result =
+        CompareDataV2.get_contracts_to_cancel(
+          capway_data,
+          trinity_data,
+          %{},
+          all_national_ids,
+          all_subscriber_ids,
+          recently_cancelled_subscriber_ids,
+          recently_cancelled_national_ids
+        )
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-old-cancel")
+    end
+
+    test "does not cancel contract when subscriber is pending_cancel" do
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "199001011234",
+          capway_contract_ref: "C-pending-cancel"
+        })
+
+      capway_data = %{"C-pending-cancel" => capway_sub}
+      # pending_cancel subscriber not in active_subscribers
+      trinity_data = %{}
+      # But still in all_national_ids and all_subscriber_ids (not fully cancelled yet)
+      all_national_ids = MapSet.new(["199001011234"])
+      all_subscriber_ids = MapSet.new([1])
+
+      result =
+        CompareDataV2.get_contracts_to_cancel(
+          capway_data,
+          trinity_data,
+          %{},
+          all_national_ids,
+          all_subscriber_ids
+        )
+
+      assert map_size(result) == 0
     end
 
     test "does not cancel contract when subscriber is pending with no personal_number" do

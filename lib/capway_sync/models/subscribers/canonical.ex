@@ -54,7 +54,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           capway_next_invoice_date: String.t() | nil,
           # Capway metadata stored in Trinity
           trinity_capway_last_updated: String.t() | nil,
-          trinity_capway_created_at: String.t() | nil
+          trinity_capway_created_at: String.t() | nil,
+          trinity_capway_cancelled_at: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -77,7 +78,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             capway_contract_price: nil,
             capway_next_invoice_date: nil,
             trinity_capway_last_updated: nil,
-            trinity_capway_created_at: nil
+            trinity_capway_created_at: nil,
+            trinity_capway_cancelled_at: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -112,7 +114,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       unpaid_invoices: nil,
       collection: nil,
       trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
-      trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at")
+      trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at"),
+      trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at")
     }
   end
 

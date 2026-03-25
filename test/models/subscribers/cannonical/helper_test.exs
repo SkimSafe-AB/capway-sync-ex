@@ -206,6 +206,92 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.HelperTest do
       assert map_size(result.active_subscribers) == 1
     end
 
+    test "excludes pending_cancel subscriber from active_subscribers" do
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :pending_cancel,
+        subscription_type: :standard,
+        payment_method: "capway"
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert map_size(result.active_subscribers) == 0
+    end
+
+    test "pending_cancel subscriber is still included in all_national_ids and all_subscriber_ids" do
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :pending_cancel,
+        subscription_type: :standard,
+        payment_method: "capway"
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert MapSet.member?(result.map_sets.all_national_ids, "199001011234")
+      assert MapSet.member?(result.map_sets.all_subscriber_ids, 1)
+    end
+
+    test "builds recently_cancelled_subscriber_ids for subscriber cancelled within 2 days" do
+      recent = Timex.now("Etc/UTC") |> Timex.shift(hours: -6) |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :cancelled,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_cancelled_at: recent
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      assert MapSet.member?(result.map_sets.recently_cancelled_subscriber_ids, 1)
+      assert MapSet.member?(result.map_sets.recently_cancelled_national_ids, "199001011234")
+    end
+
+    test "does not include subscriber in recently_cancelled if cancelled_at is older than 2 days" do
+      old = Timex.now("Etc/UTC") |> Timex.shift(days: -3) |> Timex.format!("{ISO:Extended}")
+
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :cancelled,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_cancelled_at: old
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      refute MapSet.member?(result.map_sets.recently_cancelled_subscriber_ids, 1)
+      refute MapSet.member?(result.map_sets.recently_cancelled_national_ids, "199001011234")
+    end
+
+    test "does not include subscriber in recently_cancelled if cancelled_at is nil" do
+      sub = %Canonical{
+        national_id: "199001011234",
+        trinity_subscriber_id: 1,
+        origin: :trinity,
+        trinity_status: :active,
+        subscription_type: :standard,
+        payment_method: "capway",
+        trinity_capway_cancelled_at: nil
+      }
+
+      result = Helper.group([sub], :trinity)
+
+      refute MapSet.member?(result.map_sets.recently_cancelled_subscriber_ids, 1)
+      refute MapSet.member?(result.map_sets.recently_cancelled_national_ids, "199001011234")
+    end
+
     test "excludes when one date is recent even if other is old" do
       old_date =
         Timex.now("Etc/UTC")

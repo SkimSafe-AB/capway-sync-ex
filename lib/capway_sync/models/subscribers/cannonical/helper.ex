@@ -29,7 +29,7 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
     active_subscribers =
       subscribers
       |> Enum.reduce(%{}, fn sub, acc ->
-        if sub.trinity_status not in [:cancelled, :expired, :pending] and
+        if sub.trinity_status not in [:cancelled, :expired, :pending, :pending_cancel] and
              capway_metadata_older_than_yesterday?(sub) do
           Map.put(acc, sub.trinity_subscriber_id, sub)
         else
@@ -87,7 +87,21 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
           active_subscribers
           |> Enum.reduce(%{}, fn {_id, sub}, acc ->
             Map.put(acc, sub.trinity_subscriber_id, sub.trinity_subscription_id)
+          end),
+        recently_cancelled_subscriber_ids:
+          subscribers
+          |> Enum.filter(fn sub ->
+            recently_cancelled_in_capway?(sub) and presence?(sub.trinity_subscriber_id)
           end)
+          |> Enum.map(fn sub -> sub.trinity_subscriber_id end)
+          |> MapSet.new(),
+        recently_cancelled_national_ids:
+          subscribers
+          |> Enum.filter(fn sub ->
+            recently_cancelled_in_capway?(sub) and presence?(sub.national_id)
+          end)
+          |> Enum.map(fn sub -> sub.national_id end)
+          |> MapSet.new()
       }
     }
   end
@@ -191,6 +205,35 @@ defmodule CapwaySync.Models.Subscribers.Cannonical.Helper do
   end
 
   defp older_than_yesterday?(_), do: true
+
+  @doc """
+  Returns true if the subscriber has `trinity_capway_cancelled_at` set
+  and it is within the last 2 days.
+  """
+  def recently_cancelled_in_capway?(%{trinity_capway_cancelled_at: nil}), do: false
+
+  def recently_cancelled_in_capway?(%{trinity_capway_cancelled_at: cancelled_at})
+      when is_binary(cancelled_at) do
+    two_days_ago = Timex.shift(Timex.now("Etc/UTC"), days: -2)
+
+    case Timex.parse(cancelled_at, "{ISO:Extended}") do
+      {:ok, dt} ->
+        Timex.after?(dt, two_days_ago)
+
+      _ ->
+        case Timex.parse(cancelled_at, "{YYYY}-{0M}-{0D}") do
+          {:ok, dt} ->
+            dt
+            |> Timex.to_datetime("Etc/UTC")
+            |> Timex.after?(two_days_ago)
+
+          _ ->
+            false
+        end
+    end
+  end
+
+  def recently_cancelled_in_capway?(_), do: false
 
   defp presence?(nil), do: false
   defp presence?(val) when is_binary(val), do: String.trim(val) != ""
