@@ -36,6 +36,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           trinity_subscription_id: integer() | nil,
           trinity_subscription_updated_at: DateTime.t() | nil,
           capway_contract_ref: String.t(),
+          capway_contract_guid: String.t() | nil,
           # Subscription details
           end_date: String.t() | nil,
           origin: :trinity | :capway,
@@ -64,6 +65,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             trinity_subscription_id: nil,
             trinity_subscription_updated_at: nil,
             capway_contract_ref: nil,
+            capway_contract_guid: nil,
             end_date: nil,
             origin: nil,
             payment_method: nil,
@@ -90,11 +92,13 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   ## Returns
   - `%Subscribers.Canonical{}` struct
   """
-  def from_trinity(%{
-        personal_number: personal_number,
-        subscription: subscription,
-        id: trinity_subscriber_id
-      } = subscriber) do
+  def from_trinity(
+        %{
+          personal_number: personal_number,
+          subscription: subscription,
+          id: trinity_subscriber_id
+        } = subscriber
+      ) do
     metadata = Map.get(subscriber, :metadata, [])
 
     %__MODULE__{
@@ -103,6 +107,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       trinity_subscription_id: subscription.id,
       trinity_subscription_updated_at: subscription.updated_at,
       capway_contract_ref: nil,
+      capway_contract_guid: nil,
       payment_method: subscription.payment_method,
       end_date: format_datetime(subscription.end_date),
       origin: :trinity,
@@ -135,6 +140,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       trinity_subscription_id: nil,
       trinity_subscription_updated_at: nil,
       capway_contract_ref: capway_subscriber.contract_ref_no,
+      capway_contract_guid: capway_subscriber.customer_guid,
       end_date: format_datetime(capway_subscriber.end_date),
       capway_active_status: capway_subscriber.active == "true",
       last_invoice_status: capway_subscriber.last_invoice_status,

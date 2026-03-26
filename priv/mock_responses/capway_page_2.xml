@@ -12,6 +12,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-50355</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>e8a7b123-9c4d-4e5f-8a1b-2c3d4e5f6a7b</Value>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>50355</Value>
               </ReportResultData>
               <ReportResultData>
@@ -21,7 +27,7 @@
                 <Value>Kenneth Bandgren</Value>
               </ReportResultData>
               <ReportResultData>
-                <Value>e8a7b123-9c4d-4e5f-8a1b-2c3d4e5f6a7b</Value>
+                <Value>f1a2b3c4-d5e6-7890-abcd-ef1234567890</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>2025-06-07T00:00:00.0000000</Value>
@@ -47,6 +53,21 @@
               <ReportResultData>
                 <Value>Invoice</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>1</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>179.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>kenneth.b@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-04-15T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>20</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -58,6 +79,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-51234</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>f9b8c7d6-e5f4-4a3b-9c8d-7e6f5a4b3c2d</Value>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>51234</Value>
               </ReportResultData>
               <ReportResultData>
@@ -67,7 +94,7 @@
                 <Value>Märta Ärligt</Value>
               </ReportResultData>
               <ReportResultData>
-                <Value>f9b8c7d6-e5f4-4a3b-9c8d-7e6f5a4b3c2d</Value>
+                <Value>a2b3c4d5-e6f7-8901-bcde-f12345678901</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>2025-07-05T00:00:00.0000000</Value>
@@ -92,6 +119,21 @@
               </ReportResultData>
               <ReportResultData>
                 <Value>Invoice</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>129.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>marta.a@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-05-15T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>8</Value>
               </ReportResultData>
             </Rows>
           </ReportResults>

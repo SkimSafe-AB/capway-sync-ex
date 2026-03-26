@@ -5,11 +5,11 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
 
   describe "ResponseHandler" do
     test "parses simple subscriber data correctly" do
-      # Full 20-field XML matching production: rownum(0), datasetid(1), customerref(2),
-      # idnumber(3), name(4), contractrefno(5), regdate(6), startdate(7), enddate(8),
-      # active(9), paidInvoices(10), unpaidInvoices(11), collection(12),
-      # lastInvoicestatus(13), countBF(14), contractprice(15), email(16),
-      # customerid(17), nextinvoicedate(18), counter(19)
+      # Full 21-field XML matching production: rownum(0), datasetid(1), customerid(2),
+      # customerguid(3), customerref(4), idnumber(5), name(6), contractrefno(7),
+      # regdate(8), startdate(9), enddate(10), active(11), paidInvoices(12),
+      # unpaidInvoices(13), collection(14), lastInvoicestatus(15), countBF(16),
+      # contractprice(17), email(18), nextinvoicedate(19), counter(20)
       xml = """
       <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
         <s:Body>
@@ -20,6 +20,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-9490</Value></ReportResultData>
+                    <ReportResultData><Value>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Value></ReportResultData>
                     <ReportResultData><Value>45848</Value></ReportResultData>
                     <ReportResultData><Value>195712260115</Value></ReportResultData>
                     <ReportResultData><Value>Test User</Value></ReportResultData>
@@ -35,7 +37,6 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                     <ReportResultData><Value>3</Value></ReportResultData>
                     <ReportResultData><Value>199.00</Value></ReportResultData>
                     <ReportResultData><Value>test@example.com</Value></ReportResultData>
-                    <ReportResultData><Value>CID-9490</Value></ReportResultData>
                     <ReportResultData><Value>2026-04-01T00:00:00.0000000</Value></ReportResultData>
                     <ReportResultData><Value>42</Value></ReportResultData>
                   </Rows>
@@ -53,6 +54,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       subscriber = List.first(subscribers)
 
       assert %CapwaySubscriber{
+               customer_id: "CID-9490",
+               customer_guid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                customer_ref: "45848",
                id_number: "195712260115",
                name: "Test User",
@@ -66,14 +69,13 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                collection: "1",
                last_invoice_status: "Invoice",
                contract_price: "199.00",
-               customer_id: "CID-9490",
                next_invoice_date: "2026-04-01T00:00:00.0000000",
                origin: :capway,
                capway_id: "CID-9490"
              } = subscriber
 
-      # Verify raw_data contains all 20 fields
-      assert length(subscriber.raw_data) == 20
+      # Verify raw_data contains all 21 fields
+      assert length(subscriber.raw_data) == 21
     end
 
     test "handles nil values correctly" do
@@ -92,7 +94,13 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                       <Value i:nil="true"/>
                     </ReportResultData>
                     <ReportResultData>
-                      <Value>Test User</Value>
+                      <Value>CID-001</Value>
+                    </ReportResultData>
+                    <ReportResultData>
+                      <Value i:nil="true"/>
+                    </ReportResultData>
+                    <ReportResultData>
+                      <Value>45848</Value>
                     </ReportResultData>
                     <ReportResultData>
                       <Value i:nil="true"/>
@@ -129,12 +137,15 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert length(subscribers) == 1
       subscriber = List.first(subscribers)
 
-      assert subscriber.customer_ref == "Test User"
+      assert subscriber.customer_id == "CID-001"
+      assert subscriber.customer_guid == nil
+      assert subscriber.customer_ref == "45848"
       assert subscriber.id_number == nil
       assert subscriber.name == "User Name"
       assert Enum.at(subscriber.raw_data, 1) == nil
       assert Enum.at(subscriber.raw_data, 3) == nil
-      assert length(subscriber.raw_data) == 10
+      assert Enum.at(subscriber.raw_data, 5) == nil
+      assert length(subscriber.raw_data) == 12
     end
 
     test "handles UTF-8 characters correctly" do
@@ -153,6 +164,12 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                       <Value i:nil="true"/>
                     </ReportResultData>
                     <ReportResultData>
+                      <Value>CID-49246</Value>
+                    </ReportResultData>
+                    <ReportResultData>
+                      <Value>a1b2c3d4-0000-0000-0000-000000000001</Value>
+                    </ReportResultData>
+                    <ReportResultData>
                       <Value>49246</Value>
                     </ReportResultData>
                     <ReportResultData>
@@ -160,6 +177,9 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                     </ReportResultData>
                     <ReportResultData>
                       <Value>Nils Åke Åkesson</Value>
+                    </ReportResultData>
+                    <ReportResultData>
+                      <Value>CONTRACT_UTF8</Value>
                     </ReportResultData>
                     <ReportResultData>
                       <Value>2025-07-01T00:00:00.0000000</Value>
@@ -195,8 +215,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert String.valid?(subscriber.name)
 
       # Verify raw data also contains proper UTF-8
-      assert Enum.at(subscriber.raw_data, 4) == "Nils Åke Åkesson"
-      assert String.valid?(Enum.at(subscriber.raw_data, 4))
+      assert Enum.at(subscriber.raw_data, 6) == "Nils Åke Åkesson"
+      assert String.valid?(Enum.at(subscriber.raw_data, 6))
     end
 
     test "handles multiple subscribers correctly" do
@@ -210,6 +230,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-123</Value></ReportResultData>
+                    <ReportResultData><Value>guid-0001</Value></ReportResultData>
                     <ReportResultData><Value>123</Value></ReportResultData>
                     <ReportResultData><Value>111111111111</Value></ReportResultData>
                     <ReportResultData><Value>User One</Value></ReportResultData>
@@ -224,6 +246,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>1</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-456</Value></ReportResultData>
+                    <ReportResultData><Value>guid-0002</Value></ReportResultData>
                     <ReportResultData><Value>456</Value></ReportResultData>
                     <ReportResultData><Value>222222222222</Value></ReportResultData>
                     <ReportResultData><Value>User Two</Value></ReportResultData>
@@ -246,8 +270,12 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert length(subscribers) == 2
 
       [first, second] = subscribers
+      assert first.customer_id == "CID-123"
+      assert first.customer_guid == "guid-0001"
       assert first.customer_ref == "123"
       assert first.name == "User One"
+      assert second.customer_id == "CID-456"
+      assert second.customer_guid == "guid-0002"
       assert second.customer_ref == "456"
       assert second.name == "User Two"
       assert first.active == "True"
@@ -273,7 +301,7 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert subscribers == []
     end
 
-    test "handles extra fields beyond the defined 12 fields" do
+    test "handles extra fields beyond the defined fields" do
       xml = """
       <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
         <s:Body>
@@ -284,6 +312,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-123</Value></ReportResultData>
+                    <ReportResultData><Value>guid-extra</Value></ReportResultData>
                     <ReportResultData><Value>123</Value></ReportResultData>
                     <ReportResultData><Value>111111111111</Value></ReportResultData>
                     <ReportResultData><Value>Test User</Value></ReportResultData>
@@ -313,11 +343,13 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       subscriber = List.first(subscribers)
 
       # Extra fields should be in raw_data but not affect struct fields
-      assert length(subscriber.raw_data) == 16
-      assert Enum.at(subscriber.raw_data, 14) == "Extra Field 1"
-      assert Enum.at(subscriber.raw_data, 15) == "Extra Field 2"
+      assert length(subscriber.raw_data) == 18
+      assert Enum.at(subscriber.raw_data, 16) == "Extra Field 1"
+      assert Enum.at(subscriber.raw_data, 17) == "Extra Field 2"
 
       # Struct should have all defined fields set including new ones
+      assert subscriber.customer_id == "CID-123"
+      assert subscriber.customer_guid == "guid-extra"
       assert subscriber.active == "True"
       assert subscriber.paid_invoices == "10"
       assert subscriber.unpaid_invoices == "5"
@@ -325,7 +357,7 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert subscriber.last_invoice_status == "Paid"
     end
 
-    test "handles Swedish characters ÅÄÖ correctly" do
+    test "handles Swedish characters correctly" do
       xml = """
       <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
         <s:Body>
@@ -336,6 +368,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-12345</Value></ReportResultData>
+                    <ReportResultData><Value>guid-se-001</Value></ReportResultData>
                     <ReportResultData><Value>12345</Value></ReportResultData>
                     <ReportResultData><Value>198001011234</Value></ReportResultData>
                     <ReportResultData><Value>Åsa Öberg Ärligt</Value></ReportResultData>
@@ -373,10 +407,10 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert String.valid?(subscriber.end_date)
 
       # Verify raw data also preserves UTF-8
-      assert Enum.at(subscriber.raw_data, 4) == "Åsa Öberg Ärligt"
-      assert Enum.at(subscriber.raw_data, 6) == "Göteborg"
-      assert Enum.at(subscriber.raw_data, 7) == "Västerås"
-      assert Enum.at(subscriber.raw_data, 8) == "Malmö"
+      assert Enum.at(subscriber.raw_data, 6) == "Åsa Öberg Ärligt"
+      assert Enum.at(subscriber.raw_data, 8) == "Göteborg"
+      assert Enum.at(subscriber.raw_data, 9) == "Västerås"
+      assert Enum.at(subscriber.raw_data, 10) == "Malmö"
     end
 
     test "handles mixed Swedish characters with special cases" do
@@ -390,6 +424,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-54321</Value></ReportResultData>
+                    <ReportResultData><Value>guid-se-002</Value></ReportResultData>
                     <ReportResultData><Value>54321</Value></ReportResultData>
                     <ReportResultData><Value>197012121234</Value></ReportResultData>
                     <ReportResultData><Value>Björn Längström</Value></ReportResultData>
@@ -442,6 +478,8 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
                   <Rows>
                     <ReportResultData><Value>0</Value></ReportResultData>
                     <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-67890</Value></ReportResultData>
+                    <ReportResultData><Value>guid-se-003</Value></ReportResultData>
                     <ReportResultData><Value>67890</Value></ReportResultData>
                     <ReportResultData><Value>196505051234</Value></ReportResultData>
                     <ReportResultData><Value>Åse-Britt Ängström-Öhman</Value></ReportResultData>
@@ -484,8 +522,65 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert subscriber.end_date == "Töreboda Åsele"
 
       # Verify raw_data preserves encoding
-      assert Enum.at(subscriber.raw_data, 4) == expected_name
-      assert String.valid?(Enum.at(subscriber.raw_data, 4))
+      assert Enum.at(subscriber.raw_data, 6) == expected_name
+      assert String.valid?(Enum.at(subscriber.raw_data, 6))
+    end
+
+    test "parses customer_guid field correctly" do
+      xml = """
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+        <s:Body>
+          <GenerateReportResponse xmlns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b">
+            <GenerateReportResult xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+              <DataRows>
+                <ReportResults>
+                  <Rows>
+                    <ReportResultData><Value>0</Value></ReportResultData>
+                    <ReportResultData><Value i:nil="true"/></ReportResultData>
+                    <ReportResultData><Value>CID-100</Value></ReportResultData>
+                    <ReportResultData><Value>550e8400-e29b-41d4-a716-446655440000</Value></ReportResultData>
+                    <ReportResultData><Value>100</Value></ReportResultData>
+                    <ReportResultData><Value>199001011234</Value></ReportResultData>
+                    <ReportResultData><Value>Test Guid User</Value></ReportResultData>
+                    <ReportResultData><Value>CONTRACT_GUID</Value></ReportResultData>
+                    <ReportResultData><Value>2025-01-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>2025-02-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>2025-03-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>True</Value></ReportResultData>
+                    <ReportResultData><Value>3</Value></ReportResultData>
+                    <ReportResultData><Value>0</Value></ReportResultData>
+                    <ReportResultData><Value>0</Value></ReportResultData>
+                    <ReportResultData><Value>Paid</Value></ReportResultData>
+                    <ReportResultData><Value>1</Value></ReportResultData>
+                    <ReportResultData><Value>299.00</Value></ReportResultData>
+                    <ReportResultData><Value>guid.user@example.com</Value></ReportResultData>
+                    <ReportResultData><Value>2026-05-01T00:00:00.0000000</Value></ReportResultData>
+                    <ReportResultData><Value>5</Value></ReportResultData>
+                  </Rows>
+                </ReportResults>
+              </DataRows>
+            </GenerateReportResult>
+          </GenerateReportResponse>
+        </s:Body>
+      </s:Envelope>
+      """
+
+      {:ok, subscribers} = Saxy.parse_string(xml, ResponseHandler, %{})
+
+      assert length(subscribers) == 1
+      subscriber = List.first(subscribers)
+
+      assert subscriber.customer_id == "CID-100"
+      assert subscriber.customer_guid == "550e8400-e29b-41d4-a716-446655440000"
+      assert subscriber.customer_ref == "100"
+      assert subscriber.id_number == "199001011234"
+      assert subscriber.name == "Test Guid User"
+      assert subscriber.contract_ref_no == "CONTRACT_GUID"
+      assert subscriber.contract_price == "299.00"
+      assert subscriber.next_invoice_date == "2026-05-01T00:00:00.0000000"
+      assert subscriber.capway_id == "CID-100"
+      assert subscriber.origin == :capway
+      assert length(subscriber.raw_data) == 21
     end
   end
 end

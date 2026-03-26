@@ -123,6 +123,8 @@ defmodule CapwaySync.Soap.MockDataGenerator do
     status = Enum.at(statuses, rem(index, length(statuses)))
 
     %{
+      customer_id: "CID-#{base_id}",
+      customer_guid: "#{UUID.uuid4()}",
       customer_ref: to_string(base_id),
       id_number: personal_number,
       name: name,
@@ -134,12 +136,16 @@ defmodule CapwaySync.Soap.MockDataGenerator do
       paid_invoices: to_string(paid_invoices),
       unpaid_invoices: to_string(unpaid_invoices),
       collection: to_string(collection),
-      last_invoice_status: status
+      last_invoice_status: status,
+      contract_price: "#{Enum.random(99..399)}.00",
+      next_invoice_date: generate_date_string(2026, Enum.random(1..12), 1..28)
     }
   end
 
-  defp generate_edge_case_subscriber(index) do
+  defp generate_edge_case_subscriber(_index) do
     %{
+      customer_id: "CID-99999",
+      customer_guid: nil,
       customer_ref: "99999",
       id_number: "000000000000",
       name: nil,
@@ -151,7 +157,9 @@ defmodule CapwaySync.Soap.MockDataGenerator do
       paid_invoices: "0",
       unpaid_invoices: "0",
       collection: "0",
-      last_invoice_status: nil
+      last_invoice_status: nil,
+      contract_price: nil,
+      next_invoice_date: nil
     }
   end
 
@@ -181,10 +189,12 @@ defmodule CapwaySync.Soap.MockDataGenerator do
 
   defp build_report_result(subscriber) do
     fields = [
-      # Always 0
+      # rownum - always 0
       "0",
-      # Always nil
+      # datasetid - always nil
       nil,
+      subscriber.customer_id,
+      subscriber.customer_guid,
       subscriber.customer_ref,
       subscriber.id_number,
       subscriber.name,
@@ -196,7 +206,15 @@ defmodule CapwaySync.Soap.MockDataGenerator do
       subscriber.paid_invoices,
       subscriber.unpaid_invoices,
       subscriber.collection,
-      subscriber.last_invoice_status
+      subscriber.last_invoice_status,
+      # countBF
+      "0",
+      subscriber.contract_price,
+      # email
+      nil,
+      subscriber.next_invoice_date,
+      # counter
+      "0"
     ]
 
     rows = Enum.map(fields, &build_value_element/1) |> Enum.join("\n              ")

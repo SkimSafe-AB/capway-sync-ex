@@ -12,6 +12,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-45848</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Value>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>45848</Value>
               </ReportResultData>
               <ReportResultData>
@@ -47,6 +53,21 @@
               <ReportResultData>
                 <Value>Paid</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>2</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>199.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>erik.holmqvist@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-04-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>42</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -56,6 +77,12 @@
               </ReportResultData>
               <ReportResultData>
                 <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>CID-48750</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>b2c3d4e5-f6a7-8901-bcde-f12345678901</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>48750</Value>
@@ -93,6 +120,21 @@
               <ReportResultData>
                 <Value>Invoice</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>1</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>149.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>anna.akesson@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-05-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>15</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -102,6 +144,12 @@
               </ReportResultData>
               <ReportResultData>
                 <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>CID-45767</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>c3d4e5f6-a7b8-9012-cdef-123456789012</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>45767</Value>
@@ -139,6 +187,21 @@
               <ReportResultData>
                 <Value>Pending</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>299.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>nils.oberg@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-03-15T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>7</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -148,6 +211,12 @@
               </ReportResultData>
               <ReportResultData>
                 <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>CID-99001</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>d4e5f6a7-b8c9-0123-defa-234567890123</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>99001</Value>
@@ -185,6 +254,21 @@
               <ReportResultData>
                 <Value>Paid</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>99.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>john.smith@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-06-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>3</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -194,6 +278,12 @@
               </ReportResultData>
               <ReportResultData>
                 <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>CID-99002</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>e5f6a7b8-c9d0-1234-efab-345678901234</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>99002</Value>
@@ -230,6 +320,21 @@
               </ReportResultData>
               <ReportResultData>
                 <Value>Active</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>1</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>249.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>jane.johnson@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-07-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>10</Value>
               </ReportResultData>
             </Rows>
           </ReportResults>

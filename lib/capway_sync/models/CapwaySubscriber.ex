@@ -5,6 +5,16 @@ defmodule CapwaySync.Models.CapwaySubscriber do
           <ReportResultHeader>
             <Format />
             <Name i:nil="true" />
+            <Title>customerid</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
+            <Title>customerguid</Title>
+          </ReportResultHeader>
+          <ReportResultHeader>
+            <Format />
+            <Name i:nil="true" />
             <Title>customerref</Title>
           </ReportResultHeader>
           <ReportResultHeader>
@@ -80,11 +90,6 @@ defmodule CapwaySync.Models.CapwaySubscriber do
           <ReportResultHeader>
             <Format />
             <Name i:nil="true" />
-            <Title>customerid</Title>
-          </ReportResultHeader>
-          <ReportResultHeader>
-            <Format />
-            <Name i:nil="true" />
             <Title>nextinvoicedate</Title>
           </ReportResultHeader>
           <ReportResultHeader>
@@ -109,6 +114,7 @@ defmodule CapwaySync.Models.CapwaySubscriber do
             last_invoice_status: nil,
             contract_price: nil,
             customer_id: nil,
+            customer_guid: nil,
             next_invoice_date: nil,
             # external data and debug
             origin: nil,

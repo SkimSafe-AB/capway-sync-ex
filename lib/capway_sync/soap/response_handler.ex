@@ -172,35 +172,36 @@ defmodule CapwaySync.Soap.ResponseHandler do
   end
 
   # Map field index to CapwaySubscriber field
-  # Header structure: rownum(0), datasetid(1), customerref(2), idnumber(3), name(4),
-  # contractrefno(5), regdate(6), startdate(7), enddate(8), active(9), paidInvoices(10),
-  # unpaidInvoices(11), collection(12), lastInvoicestatus(13), countBF(14),
-  # contractprice(15), email(16), customerid(17), nextinvoicedate(18), counter(19)
+  # Header structure: rownum(0), datasetid(1), customerid(2), customerguid(3),
+  # customerref(4), idnumber(5), name(6), contractrefno(7), regdate(8), startdate(9),
+  # enddate(10), active(11), paidInvoices(12), unpaidInvoices(13), collection(14),
+  # lastInvoicestatus(15), countBF(16), contractprice(17), email(18),
+  # nextinvoicedate(19), counter(20)
   defp update_subscriber_field(subscriber, index, value) do
     case index do
       # rownum - ignore
       0 -> subscriber
       # datasetid - ignore
       1 -> subscriber
-      2 -> %{subscriber | customer_ref: value}
-      3 -> %{subscriber | id_number: value}
-      4 -> %{subscriber | name: value}
-      5 -> %{subscriber | contract_ref_no: value}
-      6 -> %{subscriber | reg_date: value}
-      7 -> %{subscriber | start_date: value}
-      8 -> %{subscriber | end_date: value}
-      9 -> %{subscriber | active: value}
-
-      10 -> %{subscriber | paid_invoices: value}
-      11 -> %{subscriber | unpaid_invoices: value}
-      12 -> %{subscriber | collection: value}
-      13 -> %{subscriber | last_invoice_status: value}
-      # countBF(14) - ignored
-      15 -> %{subscriber | contract_price: value}
-      # email(16) - ignored
-      17 -> %{subscriber | customer_id: value}
-      18 -> %{subscriber | next_invoice_date: value}
-      # counter(19) - ignored
+      2 -> %{subscriber | customer_id: value}
+      3 -> %{subscriber | customer_guid: value}
+      4 -> %{subscriber | customer_ref: value}
+      5 -> %{subscriber | id_number: value}
+      6 -> %{subscriber | name: value}
+      7 -> %{subscriber | contract_ref_no: value}
+      8 -> %{subscriber | reg_date: value}
+      9 -> %{subscriber | start_date: value}
+      10 -> %{subscriber | end_date: value}
+      11 -> %{subscriber | active: value}
+      12 -> %{subscriber | paid_invoices: value}
+      13 -> %{subscriber | unpaid_invoices: value}
+      14 -> %{subscriber | collection: value}
+      15 -> %{subscriber | last_invoice_status: value}
+      # countBF(16) - ignored
+      17 -> %{subscriber | contract_price: value}
+      # email(18) - ignored
+      19 -> %{subscriber | next_invoice_date: value}
+      # counter(20) - ignored
       _ -> subscriber
     end
   end

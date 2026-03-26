@@ -159,22 +159,26 @@ defmodule Mix.Tasks.SeedData do
 
   @doc """
   Create a CapwaySubscriber from parsed XML values based on field mapping.
-  Field order: [rownum, datasetid, customerref, idnumber, name, contractrefno, regdate, startdate, enddate, active, paidInvoices, w, collection, lastInvoiceStatus]
+  Field order: [rownum, datasetid, customerid, customerguid, customerref, idnumber, name,
+  contractrefno, regdate, startdate, enddate, active, paidInvoices, unpaidInvoices,
+  collection, lastInvoiceStatus, countBF, contractprice, email, nextinvoicedate, counter]
   """
-  def create_subscriber_from_values(values) when length(values) >= 14 do
+  def create_subscriber_from_values(values) when length(values) >= 16 do
     %CapwaySubscriber{
-      customer_ref: Enum.at(values, 2),
-      id_number: Enum.at(values, 3),
-      name: Enum.at(values, 4),
-      contract_ref_no: Enum.at(values, 5),
-      reg_date: Enum.at(values, 6),
-      start_date: Enum.at(values, 7),
-      end_date: Enum.at(values, 8),
-      active: Enum.at(values, 9),
-      paid_invoices: Enum.at(values, 10),
-      unpaid_invoices: Enum.at(values, 11),
-      collection: Enum.at(values, 12),
-      last_invoice_status: Enum.at(values, 13),
+      customer_id: Enum.at(values, 2),
+      customer_guid: Enum.at(values, 3),
+      customer_ref: Enum.at(values, 4),
+      id_number: Enum.at(values, 5),
+      name: Enum.at(values, 6),
+      contract_ref_no: Enum.at(values, 7),
+      reg_date: Enum.at(values, 8),
+      start_date: Enum.at(values, 9),
+      end_date: Enum.at(values, 10),
+      active: Enum.at(values, 11),
+      paid_invoices: Enum.at(values, 12),
+      unpaid_invoices: Enum.at(values, 13),
+      collection: Enum.at(values, 14),
+      last_invoice_status: Enum.at(values, 15),
       origin: "soap_seed_data",
       raw_data: values
     }

@@ -12,6 +12,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-99999</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>99999</Value>
               </ReportResultData>
               <ReportResultData>
@@ -47,6 +53,21 @@
               <ReportResultData>
                 <Value i:nil="true"/>
               </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value i:nil="true"/>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>0</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -58,6 +79,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-88888</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Value>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>88888</Value>
               </ReportResultData>
               <ReportResultData>
@@ -67,7 +94,7 @@
                 <Value>Åsa Öberg Ärligt från Göteborg</Value>
               </ReportResultData>
               <ReportResultData>
-                <Value>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Value>
+                <Value>b3c4d5e6-f7a8-9012-cdef-123456789012</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>2025-01-01T00:00:00.0000000</Value>
@@ -93,6 +120,21 @@
               <ReportResultData>
                 <Value>Overdue</Value>
               </ReportResultData>
+              <ReportResultData>
+                <Value>5</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>599.00</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>asa.oberg@example.com</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>2026-02-01T00:00:00.0000000</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>100</Value>
+              </ReportResultData>
             </Rows>
           </ReportResults>
           <ReportResults>
@@ -104,6 +146,12 @@
                 <Value i:nil="true"/>
               </ReportResultData>
               <ReportResultData>
+                <Value>CID-77777</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid-guid-format</Value>
+              </ReportResultData>
+              <ReportResultData>
                 <Value>77777</Value>
               </ReportResultData>
               <ReportResultData>
@@ -113,7 +161,7 @@
                 <Value>Test &amp; Special &lt;Characters&gt;</Value>
               </ReportResultData>
               <ReportResultData>
-                <Value>invalid-guid-format</Value>
+                <Value>c4d5e6f7-a8b9-0123-defa-234567890123</Value>
               </ReportResultData>
               <ReportResultData>
                 <Value>invalid-date</Value>
@@ -138,6 +186,21 @@
               </ReportResultData>
               <ReportResultData>
                 <Value>Unknown Status</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>-1</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid-price</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>not-an-email</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>invalid-date</Value>
+              </ReportResultData>
+              <ReportResultData>
+                <Value>NaN</Value>
               </ReportResultData>
             </Rows>
           </ReportResults>
