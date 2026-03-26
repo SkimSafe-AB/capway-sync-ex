@@ -146,6 +146,7 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
     %{
       "contract_ref_no" => subscriber.contract_ref_no,
       "customer_id" => subscriber.customer_id,
+      "customer_guid" => subscriber.customer_guid,
       "contract_price" => subscriber.contract_price,
       "next_invoice_date" => subscriber.next_invoice_date,
       "customer_ref" => subscriber.customer_ref,
@@ -184,6 +185,7 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
       collection: get_value(item, "collection"),
       last_invoice_status: get_value(item, "last_invoice_status"),
       customer_id: get_value(item, "customer_id"),
+      customer_guid: get_value(item, "customer_guid"),
       contract_price: get_value(item, "contract_price"),
       next_invoice_date: get_value(item, "next_invoice_date"),
       origin: :capway,

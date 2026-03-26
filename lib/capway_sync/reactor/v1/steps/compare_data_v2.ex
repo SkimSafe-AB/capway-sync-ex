@@ -271,6 +271,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       trinity_subscriber_id: sub.trinity_subscriber_id,
       trinity_subscription_id: sub.trinity_subscription_id,
       capway_customer_id: sub.capway_customer_id,
+      capway_contract_guid: sub.capway_contract_guid,
       capway_contract_ref: sub.capway_contract_ref,
       reason: reason
     })
