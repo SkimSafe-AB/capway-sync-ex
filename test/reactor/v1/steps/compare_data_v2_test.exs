@@ -429,6 +429,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
               "C-001" => capway_sub_update,
               "C-002" => capway_sub_cancel
             },
+            associated_subscribers: %{
+              "C-001" => capway_sub_update,
+              "C-002" => capway_sub_cancel
+            },
             above_collector_threshold: %{},
             map_sets: %{
               active_trinity_ids: MapSet.new([1, 9999]),
@@ -478,6 +482,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         data: %{
           capway: %{
             active_subscribers: %{"C-collect" => capway_sub},
+            associated_subscribers: %{"C-collect" => capway_sub},
             above_collector_threshold: %{},
             map_sets: %{
               active_trinity_ids: MapSet.new([1]),
@@ -525,6 +530,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         data: %{
           capway: %{
             active_subscribers: %{},
+            associated_subscribers: %{},
             above_collector_threshold: %{},
             map_sets: %{
               active_trinity_ids: MapSet.new(),
@@ -564,6 +570,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         data: %{
           capway: %{
             active_subscribers: %{},
+            associated_subscribers: %{},
             above_collector_threshold: %{},
             map_sets: %{
               active_trinity_ids: MapSet.new(),
@@ -589,6 +596,104 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       assert map_size(result.actions.capway.create_contracts) == 1
       assert Map.has_key?(result.actions.capway.create_contracts, 1)
+    end
+
+    test "enriches create action item with capway references from inactive contract" do
+      # Trinity subscriber is active but Capway contract is inactive
+      active_sub =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          trinity_subscription_updated_at: ~N[2025-01-01 00:00:00]
+        })
+
+      # Inactive Capway contract for the same subscriber
+      inactive_capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          capway_active_status: false,
+          capway_contract_ref: "C-INACTIVE",
+          capway_contract_guid: "GUID-123",
+          capway_customer_id: "CID-456"
+        })
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            associated_subscribers: %{"C-INACTIVE" => inactive_capway_sub},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => active_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      assert map_size(result.actions.capway.create_contracts) == 1
+      action_item = Map.get(result.actions.capway.create_contracts, 1)
+      assert action_item.capway_customer_id == "CID-456"
+      assert action_item.capway_contract_guid == "GUID-123"
+      assert action_item.capway_contract_ref == "C-INACTIVE"
+    end
+
+    test "create action item has nil capway references when no capway contract exists" do
+      active_sub =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          trinity_subscription_updated_at: ~N[2025-01-01 00:00:00]
+        })
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            associated_subscribers: %{},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => active_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      assert map_size(result.actions.capway.create_contracts) == 1
+      action_item = Map.get(result.actions.capway.create_contracts, 1)
+      assert action_item.capway_customer_id == nil
+      assert action_item.capway_contract_guid == nil
+      assert action_item.capway_contract_ref == nil
     end
   end
 

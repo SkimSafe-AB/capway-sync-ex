@@ -54,7 +54,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     capway_create_contracts =
       get_contracts_to_create(
         trinity_subscriber_data.active_subscribers,
-        capway_subscriber_data.map_sets
+        capway_subscriber_data.map_sets,
+        capway_subscriber_data.associated_subscribers
       )
 
     {trinity_suspend_accounts, trinity_cancel_accounts} =
@@ -157,12 +158,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   defp ensure_map_get(data, _key, _capway_subs), do: data
 
   @doc """
-  This function identifies Capway contracts that needs to be created.
-  It will focus on checking for all active Trinity subscribers
-  and see if they exist in Capway data, if not they will be marked for creation.
-  Currently we check against both national_id and trinity_subscriber_id to determine existence.
+  Identifies Capway contracts that need to be created.
+
+  Checks all active Trinity subscribers against Capway data — if not found among
+  active Capway contracts, marks them for creation. When an inactive Capway contract
+  exists for the subscriber (matched by national_id or trinity_subscriber_id), the
+  action item is enriched with the existing Capway references (customer_id,
+  contract_guid, contract_ref).
   """
-  def get_contracts_to_create(trinity_subscriber_data, capway_map_sets) do
+  def get_contracts_to_create(
+        trinity_subscriber_data,
+        capway_map_sets,
+        capway_all_subscribers \\ %{}
+      ) do
     for {_id, sub} <- trinity_subscriber_data,
         sub.payment_method == "capway",
         not MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id),
@@ -175,13 +183,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         "Subscriber #{sub.trinity_subscriber_id} is missing in Capway, marking for contract creation"
       )
 
-      found = MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id)
+      enriched_sub = enrich_with_capway_data(sub, capway_all_subscribers)
 
-      Logger.info(
-        "Check if subscriber #{sub.trinity_subscriber_id} exists in Capway active Trinity IDs: #{found}"
-      )
-
-      {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, sub, reason)}
+      {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, enriched_sub, reason)}
     end
   end
 
@@ -256,6 +260,35 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
       {contract_ref, build_action_item(:capway_cancel_contract, enriched_sub, reason)}
     end
+  end
+
+  defp enrich_with_capway_data(sub, capway_all_subscribers) when map_size(capway_all_subscribers) == 0 do
+    sub
+  end
+
+  defp enrich_with_capway_data(sub, capway_all_subscribers) do
+    case find_capway_match(sub, capway_all_subscribers) do
+      nil ->
+        sub
+
+      capway_sub ->
+        %{
+          sub
+          | capway_customer_id: capway_sub.capway_customer_id,
+            capway_contract_guid: capway_sub.capway_contract_guid,
+            capway_contract_ref: capway_sub.capway_contract_ref
+        }
+    end
+  end
+
+  defp find_capway_match(sub, capway_all_subscribers) do
+    Enum.find_value(capway_all_subscribers, fn {_ref, capway_sub} ->
+      if capway_sub.national_id == sub.national_id or
+           (capway_sub.trinity_subscriber_id != nil and
+              capway_sub.trinity_subscriber_id == sub.trinity_subscriber_id) do
+        capway_sub
+      end
+    end)
   end
 
   defp enrich_subscription_id(capway_sub, subscriber_to_subscription_ids) do
