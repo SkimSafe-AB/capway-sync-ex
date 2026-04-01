@@ -6,6 +6,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           | :capway_create_contract
           | :capway_cancel_contract
           | :capway_update_contract
+          | :capway_update_customer
 
   @type t :: %__MODULE__{
           id: String.t() | nil,

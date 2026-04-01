@@ -281,18 +281,21 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
-  describe "get_contracts_to_update/2" do
-    test "marks contract for update when national_id differs and trinity pnr is valid" do
+  describe "get_customers_to_update/2" do
+    test "marks customer for update when national_id differs and trinity pnr is valid" do
       capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 0})
       trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-001")
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_customer
+      assert action_item.comment == "National ID mismatch"
     end
 
     test "enriches trinity_subscription_id from subscriber_to_subscription_ids map" do
@@ -310,49 +313,49 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       trinity_data = %{1 => trinity_sub}
       sub_to_sub_ids = %{1 => 200}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data, sub_to_sub_ids)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data, sub_to_sub_ids)
 
       action_item = Map.get(result, "C-001")
       assert action_item.trinity_subscription_id == 200
     end
 
-    test "does not mark contract for update when national_ids match" do
+    test "does not mark customer for update when national_ids match" do
       capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
       trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
     end
 
-    test "does not mark contract for update when trinity national_id is invalid personnummer" do
+    test "does not mark customer for update when trinity national_id is invalid personnummer" do
       capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1})
       trinity_sub = build_trinity_sub(%{national_id: "invalid_pnr"})
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
     end
 
-    test "does not mark contract for update when trinity national_id is nil" do
+    test "does not mark customer for update when trinity national_id is nil" do
       capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
       trinity_sub = build_trinity_sub(%{national_id: nil})
 
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
     end
 
-    test "does not mark contract for update when collection is >= 2" do
+    test "does not mark customer for update when collection is >= 2" do
       capway_sub =
         build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 2})
 
@@ -361,12 +364,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
     end
 
-    test "marks contract for update when collection is below 2" do
+    test "marks customer for update when collection is below 2" do
       capway_sub =
         build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 1})
 
@@ -375,7 +378,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 1
       assert Map.has_key?(result, "C-001")
@@ -394,16 +397,65 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       capway_data = %{"C-001" => capway_sub}
       trinity_data = %{1 => trinity_sub}
 
-      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       # No match because Map.has_key?(trinity_data, nil) is false
       assert map_size(result) == 0
     end
   end
 
+  describe "get_contracts_to_update/2" do
+    test "marks contract for update when subscriber_id mismatches but national_id matches" do
+      # Both have same national_id, but subscriber_id on capway struct differs from trinity struct
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0
+        })
+
+      # Force subscriber_id mismatch by setting a different value on the trinity struct
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", trinity_subscriber_id: 2})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 1
+      assert Map.has_key?(result, "C-001")
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_contract
+      assert action_item.comment == "Subscriber ID mismatch"
+    end
+
+    test "does not mark contract for update when national_id differs (handled by get_customers_to_update)" do
+      capway_sub = build_capway_sub(%{national_id: "198507099805", trinity_subscriber_id: 1, collection: 0})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not mark contract for update when everything matches" do
+      capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+  end
+
   describe "run/3 update/cancel exclusion" do
-    test "excludes update contracts that also appear in cancel contracts" do
-      # Contract C-001: exists in Trinity (update candidate due to national_id mismatch)
+    test "national_id mismatch goes to update_customers, not update_contracts" do
       capway_sub_update =
         build_capway_sub(%{
           capway_contract_ref: "C-001",
@@ -456,18 +508,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       {:ok, result} = CompareDataV2.run(args, %{}, [])
 
-      # C-001 should be in update (not in cancel)
-      assert Map.has_key?(result.actions.capway.update_contracts, "C-001")
+      # C-001 should be in update_customers (national ID mismatch), not update_contracts
+      assert Map.has_key?(result.actions.capway.update_customers, "C-001")
+      refute Map.has_key?(result.actions.capway.update_contracts, "C-001")
       refute Map.has_key?(result.actions.capway.cancel_contracts, "C-001")
 
       # C-002 should be in cancel (not in update)
       assert Map.has_key?(result.actions.capway.cancel_contracts, "C-002")
       refute Map.has_key?(result.actions.capway.update_contracts, "C-002")
+      refute Map.has_key?(result.actions.capway.update_customers, "C-002")
     end
 
-    test "contract with collection >= 2 excluded from update does not end up in cancel" do
-      # Contract with collection 2, exists in Trinity with mismatched national_id
-      # Should be excluded from update (collection >= 2) but NOT added to cancel
+    test "contract with collection >= 2 excluded from update_customers does not end up in cancel" do
       capway_sub =
         build_capway_sub(%{
           capway_contract_ref: "C-collect",
@@ -507,6 +559,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       {:ok, result} = CompareDataV2.run(args, %{}, [])
 
       refute Map.has_key?(result.actions.capway.update_contracts, "C-collect")
+      refute Map.has_key?(result.actions.capway.update_customers, "C-collect")
       refute Map.has_key?(result.actions.capway.cancel_contracts, "C-collect")
     end
   end

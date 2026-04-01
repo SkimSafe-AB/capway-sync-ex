@@ -43,6 +43,14 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         trinity_subscriber_data.map_sets.recently_cancelled_national_ids
       )
 
+    capway_update_customers =
+      get_customers_to_update(
+        capway_subscriber_data.active_subscribers,
+        trinity_subscriber_data.active_subscribers,
+        subscriber_to_subscription_ids
+      )
+      |> Map.drop(Map.keys(capway_cancel_contracts))
+
     capway_update_contracts =
       get_contracts_to_update(
         capway_subscriber_data.active_subscribers,
@@ -50,6 +58,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         subscriber_to_subscription_ids
       )
       |> Map.drop(Map.keys(capway_cancel_contracts))
+      |> Map.drop(Map.keys(capway_update_customers))
 
     capway_create_contracts =
       get_contracts_to_create(
@@ -78,6 +87,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway: %{
           cancel_contracts: capway_cancel_contracts,
           update_contracts: capway_update_contracts,
+          update_customers: capway_update_customers,
           create_contracts: capway_create_contracts
         }
       }
@@ -190,10 +200,35 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  This function identifies Capway contracts that needs updating.
-  It will focus on checking for all active Capway subscribers
-  and compare it to trinity subscriber data, if the national_id is missing or is
-  different than the one in Trinity, it will be marked for update.
+  Identifies Capway contracts where the national ID differs from Trinity.
+
+  When the national ID on the Capway side does not match the Trinity national ID,
+  the customer record in Capway needs to be updated. These are tagged as
+  `capway_update_customer` action items.
+  """
+  def get_customers_to_update(
+        capway_subscriber_data,
+        trinity_subscriber_data,
+        subscriber_to_subscription_ids \\ %{}
+      ) do
+    for {contract_ref, capway_sub} <- capway_subscriber_data,
+        Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        has_national_id_mismatch?(capway_sub, trinity_sub),
+        (capway_sub.collection || 0) < 2,
+        into: %{} do
+      reason = "National ID mismatch"
+
+      enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
+      {contract_ref, build_action_item(:capway_update_customer, enriched_sub, reason)}
+    end
+  end
+
+  @doc """
+  Identifies Capway contracts where the subscriber ID is missing or mismatched,
+  but the national ID matches.
+
+  These are tagged as `capway_update_contract` action items.
   """
   def get_contracts_to_update(
         capway_subscriber_data,
@@ -203,23 +238,26 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
-        check_for_missing_attrs(capway_sub, trinity_sub),
+        has_subscriber_id_mismatch_only?(capway_sub, trinity_sub),
         (capway_sub.collection || 0) < 2,
         into: %{} do
-      reason = "National ID mismatch"
+      reason = "Subscriber ID mismatch"
 
       enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
       {contract_ref, build_action_item(:capway_update_contract, enriched_sub, reason)}
     end
   end
 
-  defp check_for_missing_attrs(capway_sub, trinity_sub) do
-    has_mismatch =
-      capway_sub.national_id != trinity_sub.national_id or
-        capway_sub.trinity_subscriber_id == nil or
-        capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id
+  defp has_national_id_mismatch?(capway_sub, trinity_sub) do
+    capway_sub.national_id != trinity_sub.national_id and
+      valid_national_id?(trinity_sub.national_id)
+  end
 
-    has_mismatch and valid_national_id?(trinity_sub.national_id)
+  defp has_subscriber_id_mismatch_only?(capway_sub, trinity_sub) do
+    capway_sub.national_id == trinity_sub.national_id and
+      (capway_sub.trinity_subscriber_id == nil or
+         capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id) and
+      valid_national_id?(trinity_sub.national_id)
   end
 
   defp valid_national_id?(nil), do: false

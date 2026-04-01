@@ -156,6 +156,10 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
       )
 
       Logger.info(
+        "Number of Capway Update Customers: #{map_size(args.result.actions.capway.update_customers)}"
+      )
+
+      Logger.info(
         "Number of Trinity Cancel Accounts: #{map_size(args.result.actions.trinity.cancel_accounts)}"
       )
 
@@ -165,7 +169,8 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
 
       store_action_items(args.result.actions.capway.cancel_contracts, "capway cancel")
       store_action_items(args.result.actions.capway.create_contracts, "capway create")
-      store_action_items(args.result.actions.capway.update_contracts, "capway update")
+      store_action_items(args.result.actions.capway.update_contracts, "capway update contract")
+      store_action_items(args.result.actions.capway.update_customers, "capway update customer")
       store_action_items(args.result.actions.trinity.cancel_accounts, "trinity cancel")
       store_action_items(args.result.actions.trinity.suspend_accounts, "trinity suspend")
 
