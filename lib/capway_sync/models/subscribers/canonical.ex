@@ -56,7 +56,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           # Capway metadata stored in Trinity
           trinity_capway_last_updated: String.t() | nil,
           trinity_capway_created_at: String.t() | nil,
-          trinity_capway_cancelled_at: String.t() | nil
+          trinity_capway_cancelled_at: String.t() | nil,
+          # Sync exclusion flag
+          capway_sync_excluded: boolean()
         }
 
   @derive Jason.Encoder
@@ -81,7 +83,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             capway_next_invoice_date: nil,
             trinity_capway_last_updated: nil,
             trinity_capway_created_at: nil,
-            trinity_capway_cancelled_at: nil
+            trinity_capway_cancelled_at: nil,
+            capway_sync_excluded: false
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -120,7 +123,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       collection: nil,
       trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
       trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at"),
-      trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at")
+      trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at"),
+      capway_sync_excluded: find_metadata_value(metadata, "capway_sync_excluded") == "true"
     }
   end
 

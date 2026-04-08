@@ -121,6 +121,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
            trinity_sub when not is_nil(trinity_sub) <-
              Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id)
              |> ensure_map_get(capway_sub.national_id, capway_subscriber_data),
+           false <- trinity_sub.capway_sync_excluded,
            true <- trinity_sub.trinity_status != :suspended,
            true <- trinity_sub.trinity_status != :cancelled do
         suspend_or_cancel_action(contract_ref, capway_sub, trinity_sub, suspend, cancel)
@@ -147,7 +148,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
            capway_sub.last_invoice_status == "Paid" do
         {suspend_acc, cancel_acc}
       else
-        reason = "Should be cancelled in Trinity due to inactive Capway status"
+        reason =
+          "Should be cancelled in Trinity due to too many failed collection attempts in Capway and not being locked in Trinity"
+
         item = build_action_item(:trinity_cancel_subscription, capway_sub, reason)
 
         {suspend_acc, Map.put(cancel_acc, contract_ref, item)}
@@ -182,6 +185,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway_all_subscribers \\ %{}
       ) do
     for {_id, sub} <- trinity_subscriber_data,
+        not sub.capway_sync_excluded,
         sub.payment_method == "capway",
         not MapSet.member?(capway_map_sets.active_trinity_ids, sub.trinity_subscriber_id),
         not MapSet.member?(capway_map_sets.active_national_ids, sub.national_id),
@@ -195,7 +199,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
       enriched_sub = enrich_with_capway_data(sub, capway_all_subscribers)
 
-      {sub.trinity_subscriber_id, build_action_item(:capway_create_contract, enriched_sub, reason)}
+      {sub.trinity_subscriber_id,
+       build_action_item(:capway_create_contract, enriched_sub, reason)}
     end
   end
 
@@ -214,6 +219,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        not trinity_sub.capway_sync_excluded,
         has_national_id_mismatch?(capway_sub, trinity_sub),
         (capway_sub.collection || 0) < 2,
         into: %{} do
@@ -238,6 +244,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     for {contract_ref, capway_sub} <- capway_subscriber_data,
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
+        not trinity_sub.capway_sync_excluded,
         has_subscriber_id_mismatch_only?(capway_sub, trinity_sub),
         (capway_sub.collection || 0) < 2,
         into: %{} do
@@ -300,7 +307,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     end
   end
 
-  defp enrich_with_capway_data(sub, capway_all_subscribers) when map_size(capway_all_subscribers) == 0 do
+  defp enrich_with_capway_data(sub, capway_all_subscribers)
+       when map_size(capway_all_subscribers) == 0 do
     sub
   end
 

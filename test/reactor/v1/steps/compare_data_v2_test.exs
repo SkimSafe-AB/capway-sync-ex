@@ -750,6 +750,190 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "capway_sync_excluded" do
+    test "excluded subscriber does not generate create_contracts action" do
+      excluded_sub =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          trinity_subscription_updated_at: ~N[2025-01-01 00:00:00],
+          capway_sync_excluded: true
+        })
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            associated_subscribers: %{},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => excluded_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      assert map_size(result.actions.capway.create_contracts) == 0
+    end
+
+    test "excluded subscriber does not trigger capway contract cancellation" do
+      # Capway has a contract for subscriber 1, and Trinity has the subscriber but excluded.
+      # The contract should NOT be cancelled because the subscriber is still present in active_subscribers.
+      excluded_sub =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          capway_sync_excluded: true
+        })
+
+      capway_sub =
+        build_capway_sub(%{
+          trinity_subscriber_id: 1,
+          national_id: "196403273813",
+          capway_contract_ref: "C-001"
+        })
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{"C-001" => capway_sub},
+            associated_subscribers: %{"C-001" => capway_sub},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"])
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => excluded_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      # No cancellation — subscriber is still visible in active data
+      assert map_size(result.actions.capway.cancel_contracts) == 0
+      # No updates either — subscriber is excluded from sync
+      assert map_size(result.actions.capway.update_customers) == 0
+      assert map_size(result.actions.capway.update_contracts) == 0
+    end
+
+    test "excluded subscriber does not generate update_customers action on national_id mismatch" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          collection: 0
+        })
+
+      excluded_trinity_sub =
+        build_trinity_sub(%{
+          national_id: "196403273813",
+          capway_sync_excluded: true
+        })
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => excluded_trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "excluded subscriber does not generate update_contracts action on subscriber_id mismatch" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0
+        })
+
+      excluded_trinity_sub =
+        build_trinity_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 2,
+          capway_sync_excluded: true
+        })
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => excluded_trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "excluded subscriber does not generate suspend or cancel action" do
+      capway_sub = build_capway_sub(%{collection: 3, last_invoice_status: "Invoice"})
+
+      excluded_trinity_sub =
+        build_trinity_sub(%{capway_sync_excluded: true})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => excluded_trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(
+          capway_data,
+          trinity_data,
+          trinity_map_set
+        )
+
+      assert map_size(suspend) == 0
+      assert map_size(cancel) == 0
+    end
+
+    test "excluded locked subscriber does not generate suspend action" do
+      capway_sub = build_capway_sub(%{collection: 3})
+
+      excluded_trinity_sub =
+        build_trinity_sub(%{
+          subscription_type: :locked,
+          capway_sync_excluded: true
+        })
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => excluded_trinity_sub}
+      trinity_map_set = %{active_national_ids: MapSet.new(["199001011234"])}
+
+      {suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(
+          capway_data,
+          trinity_data,
+          trinity_map_set
+        )
+
+      assert map_size(suspend) == 0
+      assert map_size(cancel) == 0
+    end
+  end
+
   describe "get_contracts_to_cancel/5" do
     test "cancels contract with no matching trinity_subscriber_id" do
       capway_sub =
