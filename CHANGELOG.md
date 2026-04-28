@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+-   Email-drift detection between Trinity subscribers and Capway customers:
+    -   Trinity is the source of truth (`Trinity.Subscriber.email`, encrypted, surfaced into the local Ecto schema and the `Canonical` model).
+    -   New `CapwaySync.Clients.PaymentProcessor.Client.get_capway_customer_by_id/1` (Req-based) fetches each customer one-by-one from `GET <PAYMENT_PROCESSOR_HOST>v3/capway/customers/by_customer_id/:customer_id` and returns the JSON body.
+    -   New `CapwaySync.Reactor.V1.Steps.FetchCapwayEmails` step (inserted between `:group_subscribers` and `:compare_data`) backfills the Capway-side email on every active matched subscriber, concurrently via `Task.async_stream` (configurable via `CAPWAY_EMAIL_FETCH_CONCURRENCY`, default 10). Errors and `:not_found` are tolerated — the entry stays at `email: nil` and is treated as "unknown".
+    -   `CompareDataV2.get_customers_to_update/3` now triggers `:capway_update_customer` action items on national-id mismatch **or** email mismatch (or both). The `comment` field reflects exactly which fields differ — actual email values are never logged or stored. Email comparison is case-insensitive and trim-insensitive; missing/blank emails on either side are treated as unknown.
+    -   New required env var `PAYMENT_PROCESSOR_HOST` (must end with `/`).
 -   `CapwayContractRepository` — stores every Capway contract as its own DynamoDB item keyed by `contract_ref_no`:
     -   Provides fast contract-level lookups without hitting the slow Capway SOAP API
     -   Query by `contract_ref_no` (primary key), `customer_ref` (GSI), or `id_number` (GSI)

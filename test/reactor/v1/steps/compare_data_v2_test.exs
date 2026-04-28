@@ -404,6 +404,175 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "get_customers_to_update/2 email mismatch" do
+    test "marks customer for update when emails differ" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "old@example.com"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_customer
+      assert action_item.comment == "Email mismatch"
+    end
+
+    test "uses combined reason when both national_id and email differ" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "old@example.com"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_customer
+      assert action_item.comment == "National ID and email mismatch"
+    end
+
+    test "does not include actual emails in reason text (PII)" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "secret-old@example.com"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "secret-new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+      action_item = Map.get(result, "C-001")
+
+      refute String.contains?(action_item.comment, "secret-old@example.com")
+      refute String.contains?(action_item.comment, "secret-new@example.com")
+    end
+
+    test "treats email comparison as case-insensitive and trim-insensitive" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "  Same@Example.COM  "
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", email: "same@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      assert CompareDataV2.get_customers_to_update(capway_data, trinity_data) == %{}
+    end
+
+    test "does not mark when capway email is nil (unknown)" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: nil
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      assert CompareDataV2.get_customers_to_update(capway_data, trinity_data) == %{}
+    end
+
+    test "does not mark when trinity email is nil" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "old@example.com"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813", email: nil})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      assert CompareDataV2.get_customers_to_update(capway_data, trinity_data) == %{}
+    end
+
+    test "does not mark when either email is blank" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: ""
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      assert CompareDataV2.get_customers_to_update(capway_data, trinity_data) == %{}
+    end
+
+    test "respects collection >= 2 cap and capway_sync_excluded for email-only diffs" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 5,
+          email: "old@example.com"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      assert CompareDataV2.get_customers_to_update(capway_data, trinity_data) == %{}
+
+      excluded_trinity =
+        build_trinity_sub(%{
+          national_id: "196403273813",
+          email: "new@example.com",
+          capway_sync_excluded: true
+        })
+
+      assert CompareDataV2.get_customers_to_update(
+               capway_data,
+               %{1 => excluded_trinity}
+             ) == %{}
+    end
+  end
+
   describe "get_contracts_to_update/2" do
     test "marks contract for update when subscriber_id mismatches but national_id matches" do
       # Both have same national_id, but subscriber_id on capway struct differs from trinity struct

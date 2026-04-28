@@ -58,7 +58,12 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           trinity_capway_created_at: String.t() | nil,
           trinity_capway_cancelled_at: String.t() | nil,
           # Sync exclusion flag
-          capway_sync_excluded: boolean()
+          capway_sync_excluded: boolean(),
+          # Email address — populated from Trinity in `from_trinity/1` and from
+          # the payment processor REST API (via the FetchCapwayEmails step) for
+          # Capway-originated entries. `nil` means "not yet known", which the
+          # comparison treats as a no-op.
+          email: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -84,7 +89,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             trinity_capway_last_updated: nil,
             trinity_capway_created_at: nil,
             trinity_capway_cancelled_at: nil,
-            capway_sync_excluded: false
+            capway_sync_excluded: false,
+            email: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.
@@ -124,7 +130,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
       trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at"),
       trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at"),
-      capway_sync_excluded: find_metadata_value(metadata, "capway_sync_excluded") == "true"
+      capway_sync_excluded: find_metadata_value(metadata, "capway_sync_excluded") == "true",
+      email: Map.get(subscriber, :email)
     }
   end
 

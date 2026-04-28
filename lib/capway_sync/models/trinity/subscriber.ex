@@ -12,6 +12,7 @@ defmodule CapwaySync.Models.Trinity.Subscriber do
   schema "subscribers" do
     field(:personal_number_hash, CapwaySync.Vault.Trinity.Hashed.HMAC)
     field(:personal_number, CapwaySync.Vault.Trinity.Encrypted.Binary)
+    field(:email, CapwaySync.Vault.Trinity.Encrypted.Binary)
     field(:activated, :boolean, default: false)
     field(:type, Ecto.Enum, values: @subscriber_types)
     belongs_to(:subscription, CapwaySync.Models.Trinity.Subscription)

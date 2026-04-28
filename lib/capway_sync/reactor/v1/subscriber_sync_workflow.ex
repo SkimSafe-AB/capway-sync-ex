@@ -7,6 +7,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     CancelCapwayContracts,
     CompareDataV2,
     ConvertToCanonicalData,
+    FetchCapwayEmails,
     GroupSubscribers,
     SuspendAccounts,
     TrinitySubscribers,
@@ -130,8 +131,16 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     max_retries(2)
   end
 
-  step(:compare_data, CompareDataV2) do
+  # Backfills the Capway-side email on each active canonical entry by calling
+  # the payment processor REST API. Required by `:compare_data` to detect
+  # email drift and emit `:capway_update_customer` action items.
+  step(:fetch_capway_emails, FetchCapwayEmails) do
     argument(:data, result(:group_subscribers))
+    max_retries(2)
+  end
+
+  step(:compare_data, CompareDataV2) do
+    argument(:data, result(:fetch_capway_emails))
     max_retries(2)
   end
 

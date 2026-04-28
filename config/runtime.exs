@@ -18,6 +18,11 @@ if config_env() != :test do
     base_url: System.get_env("REST_API_BASE_URL") || raise("REST_API_BASE_URL is not set"),
     username: System.get_env("REST_API_USERNAME") || raise("REST_API_USERNAME is not set"),
     password: System.get_env("REST_API_PASSWORD") || raise("REST_API_PASSWORD is not set")
+
+  config :capway_sync, :payment_processor,
+    host:
+      System.get_env("PAYMENT_PROCESSOR_HOST") ||
+        raise("PAYMENT_PROCESSOR_HOST is not set (must end with `/`)")
 end
 
 if config_env() == :prod do

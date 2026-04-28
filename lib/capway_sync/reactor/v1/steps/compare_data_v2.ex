@@ -205,11 +205,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  Identifies Capway contracts where the national ID differs from Trinity.
+  Identifies Capway contracts where customer-level fields (national ID, email)
+  differ from Trinity.
 
-  When the national ID on the Capway side does not match the Trinity national ID,
-  the customer record in Capway needs to be updated. These are tagged as
-  `capway_update_customer` action items.
+  When either the national ID or the contact email on the Capway side does not
+  match Trinity, the customer record in Capway needs to be updated. These are
+  tagged as `capway_update_customer` action items. The reason text reflects
+  exactly which fields differ. Email is compared case-insensitively after
+  trimming, and missing/blank emails on either side are treated as "unknown"
+  and never trigger the action.
   """
   def get_customers_to_update(
         capway_subscriber_data,
@@ -220,14 +224,23 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         not trinity_sub.capway_sync_excluded,
-        has_national_id_mismatch?(capway_sub, trinity_sub),
+        # Tuple match (always truthy) — using two separate `var = ...` clauses
+        # would short-circuit the iteration as soon as one diff was false, since
+        # `for` treats `=` clauses as filter+binding.
+        {nat_diff, email_diff} = customer_field_diffs(capway_sub, trinity_sub),
+        nat_diff or email_diff,
         (capway_sub.collection || 0) < 2,
         into: %{} do
-      reason = "National ID mismatch"
+      reason = customer_update_reason(nat_diff, email_diff)
 
       enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
       {contract_ref, build_action_item(:capway_update_customer, enriched_sub, reason)}
     end
+  end
+
+  defp customer_field_diffs(capway_sub, trinity_sub) do
+    {has_national_id_mismatch?(capway_sub, trinity_sub),
+     has_email_mismatch?(capway_sub, trinity_sub)}
   end
 
   @doc """
@@ -259,6 +272,30 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     capway_sub.national_id != trinity_sub.national_id and
       valid_national_id?(trinity_sub.national_id)
   end
+
+  defp has_email_mismatch?(capway_sub, trinity_sub) do
+    case {normalize_email(capway_sub.email), normalize_email(trinity_sub.email)} do
+      {nil, _} -> false
+      {_, nil} -> false
+      {a, b} -> a != b
+    end
+  end
+
+  defp normalize_email(nil), do: nil
+
+  defp normalize_email(email) when is_binary(email) do
+    case email |> String.trim() |> String.downcase() do
+      "" -> nil
+      s -> s
+    end
+  end
+
+  defp normalize_email(_), do: nil
+
+  defp customer_update_reason(true, true), do: "National ID and email mismatch"
+  defp customer_update_reason(true, false), do: "National ID mismatch"
+  defp customer_update_reason(false, true), do: "Email mismatch"
+  defp customer_update_reason(false, false), do: ""
 
   defp has_subscriber_id_mismatch_only?(capway_sub, trinity_sub) do
     capway_sub.national_id == trinity_sub.national_id and

@@ -100,6 +100,12 @@ export AWS_ACCESS_KEY_ID="your-access-key"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_REGION="us-east-1"
 export SYNC_REPORTS_TABLE="capway-sync-reports-prod"
+# Payment processor REST API (used by FetchCapwayEmails to read contact emails
+# from the Capway customer record).  Must end with `/`.
+export PAYMENT_PROCESSOR_HOST="https://payment-processor.example.com/api/"
+# Optional — bound on the Task.async_stream that fetches customer emails.
+# Defaults to 10 if unset.
+export CAPWAY_EMAIL_FETCH_CONCURRENCY=10
 ```
 
 ## Testing
