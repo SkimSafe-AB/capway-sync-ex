@@ -42,7 +42,9 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
           },
           "update_customers" => %{
             "count" => get_map_length(Map.get(actions.capway, :update_customers, %{})),
-            "ids" => Map.keys(Map.get(actions.capway, :update_customers, %{}))
+            "ids" => Map.keys(Map.get(actions.capway, :update_customers, %{})),
+            "sub_action_breakdown" =>
+              sub_action_breakdown(Map.get(actions.capway, :update_customers, %{}))
           },
           "create_contracts" => %{
             "count" => get_map_length(Map.get(actions.capway, :create_contracts, %{})),
@@ -83,4 +85,20 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
 
   defp get_map_length(map) when is_map(map), do: map_size(map)
   defp get_map_length(_), do: 0
+
+  defp sub_action_breakdown(update_customers) when is_map(update_customers) do
+    base = %{"update_email" => 0, "update_nin" => 0, "update_email_and_nin" => 0}
+
+    Enum.reduce(update_customers, base, fn {_ref, %ActionItem{sub_action: sub_action}}, acc ->
+      case sub_action do
+        :update_email -> Map.update!(acc, "update_email", &(&1 + 1))
+        :update_nin -> Map.update!(acc, "update_nin", &(&1 + 1))
+        :update_email_and_nin -> Map.update!(acc, "update_email_and_nin", &(&1 + 1))
+        _ -> acc
+      end
+    end)
+  end
+
+  defp sub_action_breakdown(_),
+    do: %{"update_email" => 0, "update_nin" => 0, "update_email_and_nin" => 0}
 end

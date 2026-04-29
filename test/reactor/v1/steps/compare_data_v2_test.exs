@@ -295,6 +295,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert Map.has_key?(result, "C-001")
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
+      assert action_item.sub_action == :update_nin
       assert action_item.comment == "National ID mismatch"
     end
 
@@ -425,6 +426,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 1
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
+      assert action_item.sub_action == :update_email
       assert action_item.comment == "Email mismatch"
     end
 
@@ -447,6 +449,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
+      assert action_item.sub_action == :update_email_and_nin
       assert action_item.comment == "National ID and email mismatch"
     end
 
@@ -1346,4 +1349,83 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "sub_action emission" do
+    test "non-update_customer action items have sub_action: nil" do
+      capway_active = build_capway_sub(%{collection: 4, last_invoice_status: "Invoice"})
+      trinity_active = build_trinity_sub(%{})
+
+      {_suspend, cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(
+          %{"C-001" => capway_active},
+          %{1 => trinity_active},
+          %{active_national_ids: MapSet.new()}
+        )
+
+      assert %{sub_action: nil, action: :trinity_cancel_subscription} =
+               Map.get(cancel, "C-001")
+
+      capway_locked = build_capway_sub(%{collection: 4, last_invoice_status: "Invoice"})
+      trinity_locked = build_trinity_sub(%{subscription_type: :locked})
+
+      {suspend, _cancel} =
+        CompareDataV2.get_accounts_to_suspend_or_cancel(
+          %{"C-002" => capway_locked},
+          %{1 => trinity_locked},
+          %{active_national_ids: MapSet.new()}
+        )
+
+      assert %{sub_action: nil, action: :suspend} = Map.get(suspend, "C-002")
+
+      capway_subid_mismatch =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0
+        })
+
+      trinity_subid_mismatch =
+        build_trinity_sub(%{national_id: "196403273813", trinity_subscriber_id: 2})
+
+      update_contract_result =
+        CompareDataV2.get_contracts_to_update(
+          %{"C-003" => capway_subid_mismatch},
+          %{1 => trinity_subid_mismatch}
+        )
+
+      assert %{sub_action: nil, action: :capway_update_contract} =
+               Map.get(update_contract_result, "C-003")
+
+      trinity_to_create =
+        build_trinity_sub(%{
+          trinity_subscriber_id: 99,
+          national_id: "199001011234",
+          payment_method: "capway",
+          trinity_subscription_updated_at: ~U[2020-01-01 00:00:00Z]
+        })
+
+      capway_map_sets = %{
+        active_trinity_ids: MapSet.new(),
+        active_national_ids: MapSet.new()
+      }
+
+      create_result =
+        CompareDataV2.get_contracts_to_create(
+          %{99 => trinity_to_create},
+          capway_map_sets,
+          %{}
+        )
+
+      assert %{sub_action: nil, action: :capway_create_contract} = Map.get(create_result, 99)
+
+      capway_orphan = build_capway_sub(%{trinity_subscriber_id: 999, national_id: "200001011234"})
+
+      cancel_result =
+        CompareDataV2.get_contracts_to_cancel(
+          %{"C-004" => capway_orphan},
+          %{}
+        )
+
+      assert %{sub_action: nil, action: :capway_cancel_contract} = Map.get(cancel_result, "C-004")
+    end
+  end
 end

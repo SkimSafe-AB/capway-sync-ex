@@ -22,6 +22,7 @@ defmodule CapwaySync.Dynamodb.ActionItemRepositoryV2 do
       "created_at" => action_item.created_at,
       "timestamp" => action_item.timestamp,
       "action" => action_item.action,
+      "sub_action" => action_item.sub_action,
       "status" => Atom.to_string(action_item.status),
       "comment" => action_item.comment
     }

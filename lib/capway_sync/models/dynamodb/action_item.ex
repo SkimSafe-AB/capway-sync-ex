@@ -8,6 +8,12 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           | :capway_update_contract
           | :capway_update_customer
 
+  @type sub_action ::
+          :update_email
+          | :update_nin
+          | :update_email_and_nin
+          | nil
+
   @type t :: %__MODULE__{
           id: String.t() | nil,
           trinity_subscriber_id: Integer.t() | nil,
@@ -19,6 +25,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           created_at: String.t(),
           timestamp: non_neg_integer(),
           action: String.t(),
+          sub_action: sub_action(),
           status: :pending | :completed | :failed,
           comment: String.t() | nil
         }
@@ -35,6 +42,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
             created_at: nil,
             timestamp: 0,
             action: nil,
+            sub_action: nil,
             status: :pending,
             comment: nil
 
@@ -51,6 +59,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
       created_at: Date.utc_today() |> Date.to_string(),
       timestamp: DateTime.utc_now() |> DateTime.to_unix(),
       action: action,
+      sub_action: Map.get(data, :sub_action, nil),
       status: :pending,
       comment: Map.get(data, :reason, "")
     }

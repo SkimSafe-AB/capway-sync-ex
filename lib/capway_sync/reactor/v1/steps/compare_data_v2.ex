@@ -232,9 +232,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         (capway_sub.collection || 0) < 2,
         into: %{} do
       reason = customer_update_reason(nat_diff, email_diff)
+      sub_action = customer_update_sub_action(nat_diff, email_diff)
 
       enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
-      {contract_ref, build_action_item(:capway_update_customer, enriched_sub, reason)}
+
+      {contract_ref,
+       build_action_item(:capway_update_customer, enriched_sub, reason, sub_action)}
     end
   end
 
@@ -296,6 +299,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   defp customer_update_reason(true, false), do: "National ID mismatch"
   defp customer_update_reason(false, true), do: "Email mismatch"
   defp customer_update_reason(false, false), do: ""
+
+  defp customer_update_sub_action(true, true), do: :update_email_and_nin
+  defp customer_update_sub_action(true, false), do: :update_nin
+  defp customer_update_sub_action(false, true), do: :update_email
+  defp customer_update_sub_action(false, false), do: nil
 
   defp has_subscriber_id_mismatch_only?(capway_sub, trinity_sub) do
     capway_sub.national_id == trinity_sub.national_id and
@@ -381,7 +389,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     end
   end
 
-  defp build_action_item(action, sub, reason) do
+  defp build_action_item(action, sub, reason, sub_action \\ nil) do
     ActionItem.create_action_item(action, %{
       national_id: sub.national_id,
       trinity_subscriber_id: sub.trinity_subscriber_id,
@@ -389,7 +397,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       capway_customer_id: sub.capway_customer_id,
       capway_contract_guid: sub.capway_contract_guid,
       capway_contract_ref: sub.capway_contract_ref,
-      reason: reason
+      reason: reason,
+      sub_action: sub_action
     })
   end
 
