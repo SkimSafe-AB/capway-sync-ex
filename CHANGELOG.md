@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 -   `sub_action` field on `ActionItem` for downstream branching of `:capway_update_customer`. Values: `:update_email`, `:update_nin`, `:update_email_and_nin`, or `nil` for any other action type. `CompareDataV2.get_customers_to_update/3` derives it from the same `{nat_diff, email_diff}` tuple that drives the comment text. The field is persisted to DynamoDB by `ActionItemRepositoryV2` and surfaced as a `sub_action_breakdown` (counts per sub_action) in the `update_customers` section of the `GeneralSyncReport`.
+-   `FetchCapwayEmails` now also backfills `national_id` from the payment processor REST response (`idNumber`), in addition to `email`. This avoids false `:capway_update_customer` items caused by lag in the Capway SOAP report when a customer's personal number was just edited Trinity-side — the comparison now runs against fresh REST values.
 -   Email-drift detection between Trinity subscribers and Capway customers:
     -   Trinity is the source of truth (`Trinity.Subscriber.email`, encrypted, surfaced into the local Ecto schema and the `Canonical` model).
     -   New `CapwaySync.Clients.PaymentProcessor.Client.get_capway_customer_by_id/1` (Req-based) fetches each customer one-by-one from `GET <PAYMENT_PROCESSOR_HOST>v3/capway/customers/by_customer_id/:customer_id` and returns the JSON body.

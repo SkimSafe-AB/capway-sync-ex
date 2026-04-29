@@ -155,6 +155,55 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmailsTest do
     assert result.capway.active_subscribers["C-001"].email == nil
   end
 
+  test "merges fetched national_id (idNumber) into capway active_subscribers" do
+    set_responses(%{
+      "CID-001" =>
+        {:ok, %{"email" => "found@example.com", "idNumber" => "195108260224"}}
+    })
+
+    # SOAP-side national_id is stale; REST should override it.
+    capway_sub =
+      build_capway(%{capway_customer_id: "CID-001", national_id: "199999999999"})
+
+    trinity_sub = build_trinity(%{national_id: "195108260224"})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].email == "found@example.com"
+    assert result.capway.active_subscribers["C-001"].national_id == "195108260224"
+  end
+
+  test "leaves national_id untouched when REST body omits idNumber" do
+    set_responses(%{"CID-001" => {:ok, %{"email" => "found@example.com"}}})
+
+    capway_sub =
+      build_capway(%{capway_customer_id: "CID-001", national_id: "199999999999"})
+
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].national_id == "199999999999"
+  end
+
+  test "treats blank idNumber strings as missing" do
+    set_responses(%{
+      "CID-001" => {:ok, %{"email" => "found@example.com", "idNumber" => ""}}
+    })
+
+    capway_sub =
+      build_capway(%{capway_customer_id: "CID-001", national_id: "199999999999"})
+
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].national_id == "199999999999"
+  end
+
   test "fetches emails for many entries concurrently and merges all" do
     responses =
       for i <- 1..5, into: %{} do

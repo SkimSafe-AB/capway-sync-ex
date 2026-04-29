@@ -1,25 +1,29 @@
 defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   @moduledoc """
-  Reactor step that backfills the Capway-side email on each active Capway
-  canonical entry by calling the payment processor REST API one-by-one.
+  Reactor step that backfills Capway-side customer fields (`email` and
+  `national_id`) on each active Capway canonical entry by calling the payment
+  processor REST API one-by-one.
 
-  Why this exists: the Capway SOAP response intentionally drops the email
-  column, so the canonical Capway entries arrive at this step with `email: nil`.
-  The downstream `CompareDataV2` step needs both Trinity-side and Capway-side
-  emails to detect drift and emit `:capway_update_customer` action items.
+  Why this exists: the Capway SOAP report drops the email column entirely and
+  lags behind real-time edits to the customer record. Pulling the customer
+  payload from the payment processor REST API gives us the current values for
+  both `email` and `national_id` (`idNumber`), so the downstream `CompareDataV2`
+  step compares Trinity against fresh Capway data — no false `:capway_update_customer`
+  items caused by stale SOAP data after a Trinity-side update has already been
+  pushed.
 
   The step:
     * walks `data.capway.active_subscribers` (a map keyed by contract_ref)
     * skips entries with no `capway_customer_id`
     * skips entries whose Trinity counterpart has `capway_sync_excluded: true`
       (looked up by `national_id` against `data.trinity.active_subscribers`)
-    * fetches each email concurrently via `Task.async_stream/3`
-    * tolerates `:not_found` and any other client error by leaving `email: nil`
-      (the comparison step treats nil as "unknown" → no action)
+    * fetches each customer concurrently via `Task.async_stream/3`
+    * tolerates `:not_found` and any other client error by leaving the entry
+      untouched (the comparison step treats nil as "unknown" → no action)
 
   Returns the input data shape unchanged except that
-  `data.capway.active_subscribers` has emails populated where they were fetched
-  successfully.
+  `data.capway.active_subscribers` has `email` and `national_id` populated where
+  they were fetched successfully.
   """
 
   use Reactor.Step
@@ -37,7 +41,7 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
     excluded_national_ids = collect_excluded_national_ids(trinity)
 
     Logger.info(
-      "Fetching Capway emails for #{map_size(active_capway)} active capway subscribers " <>
+      "Fetching Capway customer data for #{map_size(active_capway)} active capway subscribers " <>
         "(excluded: #{MapSet.size(excluded_national_ids)})"
     )
 
@@ -45,21 +49,21 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
       active_capway
       |> Enum.filter(fn {_ref, sub} -> fetchable?(sub, excluded_national_ids) end)
       |> Task.async_stream(
-        fn {ref, sub} -> {ref, fetch_email(sub)} end,
+        fn {ref, sub} -> {ref, fetch_customer_fields(sub)} end,
         max_concurrency: max_concurrency(),
         timeout: @default_timeout,
         on_timeout: :kill_task,
         ordered: false
       )
       |> Enum.reduce(active_capway, fn
-        {:ok, {_ref, nil}}, acc ->
+        {:ok, {_ref, %{email: nil, national_id: nil}}}, acc ->
           acc
 
-        {:ok, {ref, email}}, acc ->
-          Map.update!(acc, ref, fn sub -> %{sub | email: email} end)
+        {:ok, {ref, fields}}, acc ->
+          Map.update!(acc, ref, &merge_fields(&1, fields))
 
         {:exit, reason}, acc ->
-          Logger.error("Capway email fetch task exited: #{inspect(reason)}")
+          Logger.error("Capway customer fetch task exited: #{inspect(reason)}")
           acc
       end)
 
@@ -83,14 +87,14 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
 
   defp fetchable?(_sub, _excluded), do: false
 
-  defp fetch_email(%{capway_customer_id: customer_id} = sub) do
+  defp fetch_customer_fields(%{capway_customer_id: customer_id} = sub) do
     case client().get_capway_customer_by_id(customer_id) do
       {:ok, body} ->
-        extract_email(body)
+        %{email: extract_email(body), national_id: extract_national_id(body)}
 
       {:error, :not_found} ->
         Logger.debug("Capway customer #{customer_id} not found in payment processor")
-        nil
+        %{email: nil, national_id: nil}
 
       {:error, reason} ->
         Logger.warning(
@@ -98,13 +102,27 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
             inspect(reason)
         )
 
-        nil
+        %{email: nil, national_id: nil}
     end
   end
 
   defp extract_email(%{"email" => email}) when is_binary(email) and email != "", do: email
   defp extract_email(%{"Email" => email}) when is_binary(email) and email != "", do: email
   defp extract_email(_), do: nil
+
+  defp extract_national_id(%{"idNumber" => id}) when is_binary(id) and id != "", do: id
+  defp extract_national_id(%{"id_number" => id}) when is_binary(id) and id != "", do: id
+  defp extract_national_id(%{"IdNumber" => id}) when is_binary(id) and id != "", do: id
+  defp extract_national_id(_), do: nil
+
+  defp merge_fields(sub, %{email: email, national_id: national_id}) do
+    sub
+    |> maybe_put(:email, email)
+    |> maybe_put(:national_id, national_id)
+  end
+
+  defp maybe_put(sub, _key, nil), do: sub
+  defp maybe_put(sub, key, value), do: Map.put(sub, key, value)
 
   defp collect_excluded_national_ids(trinity) do
     trinity
