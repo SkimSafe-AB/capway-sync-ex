@@ -145,10 +145,12 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   - `%Subscribers.Canonical{}` struct
   """
   def from_capway(%CapwaySync.Models.CapwaySubscriber{} = capway_subscriber) do
+    {wps_id, subscriber_id} = parse_customer_ref(capway_subscriber.customer_ref)
+
     %__MODULE__{
       national_id: capway_subscriber.id_number,
-      trinity_subscriber_id: capway_subscriber.customer_ref |> format_string_to_integer(),
-      trinity_subscription_id: nil,
+      trinity_subscriber_id: subscriber_id,
+      trinity_subscription_id: wps_id,
       trinity_subscription_updated_at: nil,
       capway_contract_ref: capway_subscriber.contract_ref_no,
       capway_contract_guid: capway_subscriber.customer_guid,
@@ -207,6 +209,43 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   end
 
   defp format_string_to_integer(val), do: val
+
+  @doc """
+  Parses a Capway `customer_ref` into `{wps_id, trinity_subscriber_id}`.
+
+  Recognised shapes (see `TrinityWeb.Admin.CapwayController.build_customer_reference/1`):
+
+    * `"v{N}-<wps>-<sub>-<nanoid>"`            → `{wps_int, sub_int}`
+    * `"v{N}-<wps>-NO_TRIN_SUB-<nanoid>"`      → `{wps_int, nil}`
+    * `"v{N}-NO_WPS_ID-<sub>-<nanoid>"`        → `{nil, sub_int}`
+    * Plain integer string (legacy)            → `{nil, sub_int}`
+    * `nil` / unparseable                       → `{nil, nil}`
+
+  Sentinel segments (`NO_WPS_ID`, `NO_TRIN_SUB`) and any segment that doesn't
+  parse cleanly as an integer come back as `nil` for that slot.
+  """
+  @spec parse_customer_ref(String.t() | nil) :: {integer() | nil, integer() | nil}
+  def parse_customer_ref(nil), do: {nil, nil}
+
+  def parse_customer_ref(ref) when is_binary(ref) do
+    with [version, wps, sub, _nanoid] <- String.split(ref, "-", parts: 4),
+         true <- versioned?(version) do
+      {segment_to_integer(wps), segment_to_integer(sub)}
+    else
+      _ -> {nil, format_string_to_integer(ref)}
+    end
+  end
+
+  def parse_customer_ref(_), do: {nil, nil}
+
+  defp versioned?(<<v, rest::binary>>) when v in [?v, ?V] and byte_size(rest) > 0,
+    do: rest =~ ~r/^\d+$/
+
+  defp versioned?(_), do: false
+
+  defp segment_to_integer("NO_WPS_ID"), do: nil
+  defp segment_to_integer("NO_TRIN_SUB"), do: nil
+  defp segment_to_integer(segment), do: format_string_to_integer(segment)
 
   defp find_metadata_value(metadata, key) when is_list(metadata) do
     case Enum.find(metadata, fn m -> m.key == key end) do
