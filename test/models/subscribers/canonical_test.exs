@@ -62,6 +62,57 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
 
       assert canonical.capway_sync_excluded == false
     end
+
+    test "sets capway_sync_excluded to true for sinfrid subscription_type (atom)" do
+      subscriber =
+        build_trinity_subscriber([], %{
+          subscription: %{
+            id: 100,
+            updated_at: ~N[2025-01-01 00:00:00],
+            payment_method: "capway",
+            end_date: nil,
+            status: :active,
+            subscription_type: :sinfrid
+          }
+        })
+
+      canonical = Canonical.from_trinity(subscriber)
+
+      assert canonical.subscription_type == :sinfrid
+      assert canonical.capway_sync_excluded == true
+    end
+
+    test "sets capway_sync_excluded to true for sinfrid subscription_type (string)" do
+      subscriber =
+        build_trinity_subscriber([], %{
+          subscription: %{
+            id: 100,
+            updated_at: ~N[2025-01-01 00:00:00],
+            payment_method: "capway",
+            end_date: nil,
+            status: :active,
+            subscription_type: "sinfrid"
+          }
+        })
+
+      assert Canonical.from_trinity(subscriber).capway_sync_excluded == true
+    end
+
+    test "keeps capway_sync_excluded false for non-sinfrid subscription types" do
+      subscriber =
+        build_trinity_subscriber([], %{
+          subscription: %{
+            id: 100,
+            updated_at: ~N[2025-01-01 00:00:00],
+            payment_method: "capway",
+            end_date: nil,
+            status: :active,
+            subscription_type: :locked
+          }
+        })
+
+      assert Canonical.from_trinity(subscriber).capway_sync_excluded == false
+    end
   end
 
   describe "from_trinity/1 email" do

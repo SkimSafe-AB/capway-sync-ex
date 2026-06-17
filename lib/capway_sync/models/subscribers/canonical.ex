@@ -17,7 +17,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
   - `end_date`: Subscription/contract end date
   - `origin`: Source system (:trinity or :capway)
   - `status`: Original subscription status from Trinity (nil for Capway data)
-  - `subscription_type`: Subscription type from Trinity (e.g., "locked", nil for Capway data)
+  - `subscription_type`: Subscription type from Trinity (e.g., "locked", nil for Capway data).
+    A `:sinfrid` type causes `capway_sync_excluded` to be set to `true`.
   - `capway_active_status`: Capway active status (enriched during comparison, nil if not enriched)
 
   ## Usage
@@ -109,6 +110,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
         } = subscriber
       ) do
     metadata = Map.get(subscriber, :metadata, [])
+    subscription_type = Map.get(subscription, :subscription_type)
 
     %__MODULE__{
       national_id: personal_number,
@@ -121,7 +123,7 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       end_date: format_datetime(subscription.end_date),
       origin: :trinity,
       trinity_status: subscription.status,
-      subscription_type: Map.get(subscription, :subscription_type),
+      subscription_type: subscription_type,
       capway_active_status: nil,
       last_invoice_status: nil,
       paid_invoices: nil,
@@ -130,10 +132,25 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
       trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at"),
       trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at"),
-      capway_sync_excluded: find_metadata_value(metadata, "capway_sync_excluded") == "true",
+      # Sinfrid subscriptions are excluded from the Capway sync entirely. We map
+      # them onto the existing `capway_sync_excluded` flag (rather than dropping
+      # them from the Trinity list) so they remain present in the national_id /
+      # subscriber_id map sets — that keeps `get_contracts_to_cancel/7` from
+      # wrongly treating an existing sinfrid Capway contract as orphaned and
+      # cancelling it, while still suppressing all create/update/suspend actions.
+      capway_sync_excluded:
+        find_metadata_value(metadata, "capway_sync_excluded") == "true" or
+          sinfrid?(subscription_type),
       email: Map.get(subscriber, :email)
     }
   end
+
+  # Treat sinfrid subscriptions as excluded from the Capway sync. Accepts both
+  # the Ecto.Enum atom (`:sinfrid`) and its string form for robustness against
+  # raw/mock data sources.
+  defp sinfrid?(:sinfrid), do: true
+  defp sinfrid?("sinfrid"), do: true
+  defp sinfrid?(_), do: false
 
   @doc """
   Converts a Capway subscriber to canonical format.

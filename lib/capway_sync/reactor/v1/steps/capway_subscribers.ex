@@ -248,8 +248,20 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
     end
   end
 
-  # Merge results from all workers, handling both successes and failures.
-  defp merge_worker_results(task_results) do
+  @doc """
+  Merges per-worker results into a single subscriber list.
+
+  Returns `{:ok, subscribers}` ONLY when every worker succeeded. If any worker
+  errored or was killed by `Task.async_stream`'s timeout, returns
+  `{:error, {:partial_fetch, failures}}` so the reactor retries the step
+  instead of silently propagating an incomplete Capway snapshot. Returning
+  partial data would poison the daily cache and cause false
+  `:capway_create_contract` action items for every Trinity subscriber whose
+  contract fell in the missing worker's offset range.
+
+  Made public for direct unit testing of the fail-fast contract.
+  """
+  def merge_worker_results(task_results) do
     {successes, failures} =
       Enum.reduce(task_results, {[], []}, fn
         {:ok, {:ok, {worker_id, subscribers}}}, {success_acc, failure_acc} ->
@@ -271,7 +283,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
     case failures do
       [] ->
-        # All workers succeeded, merge the data
         all_subscribers =
           successes
           |> Enum.sort_by(fn {worker_id, _} -> worker_id end)
@@ -288,30 +299,16 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         {:ok, all_subscribers}
 
       failures ->
-        # Some workers failed
         success_count = length(successes)
         failure_count = length(failures)
 
         Logger.error(
-          "#{failure_count} workers failed, #{success_count} succeeded. Failures: #{inspect(failures)}"
+          "❌ Capway fetch failed: #{failure_count} worker(s) failed, " <>
+            "#{success_count} succeeded. Refusing to return partial data to avoid " <>
+            "false :capway_create_contract action items. Failures: #{inspect(failures)}"
         )
 
-        if success_count > 0 do
-          # Partial success - return what we have but log warnings
-          all_subscribers =
-            successes
-            |> Enum.sort_by(fn {worker_id, _} -> worker_id end)
-            |> Enum.flat_map(fn {_worker_id, subscribers} -> subscribers end)
-
-          Logger.warning(
-            "Returning partial data: #{length(all_subscribers)} subscribers from #{success_count} successful workers"
-          )
-
-          {:ok, all_subscribers}
-        else
-          # Complete failure
-          {:error, {:all_workers_failed, failures}}
-        end
+        {:error, {:partial_fetch, failures}}
     end
   end
 
