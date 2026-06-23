@@ -160,7 +160,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
            "CAP_q_contracts_skimsafe",
            "Data",
            [
-             %{name: "creditor", value: "202623"}
+             %{name: "creditor", value: creditor()}
            ],
            offset: current_offset,
            maxrows: chunk_size
@@ -276,9 +276,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
     # Log per-worker breakdown
     Enum.each(successes, fn {worker_id, subscribers} ->
-      Logger.info(
-        "📊 Worker #{worker_id} result: #{length(subscribers)} subscribers fetched"
-      )
+      Logger.info("📊 Worker #{worker_id} result: #{length(subscribers)} subscribers fetched")
     end)
 
     case failures do
@@ -309,6 +307,23 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         )
 
         {:error, {:partial_fetch, failures}}
+    end
+  end
+
+  @doc """
+  Creditor id for the Capway report query, sourced from config
+  (`CAPWAY_CREDITOR` env var). Raises if unset so a misconfigured deploy fails
+  loudly instead of querying Capway with a nil/blank creditor.
+
+  Made public for testing purposes.
+  """
+  def creditor do
+    case Application.get_env(:capway_sync, :capway_creditor) do
+      value when is_binary(value) and value != "" ->
+        value
+
+      _ ->
+        raise "CAPWAY_CREDITOR is not configured. Set the CAPWAY_CREDITOR env var to the Capway creditor id."
     end
   end
 

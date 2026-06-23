@@ -135,4 +135,37 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribersTest do
                [{0, 1}, {1, 1}]
     end
   end
+
+  describe "creditor/0" do
+    setup do
+      original = Application.get_env(:capway_sync, :capway_creditor)
+
+      on_exit(fn ->
+        Application.put_env(:capway_sync, :capway_creditor, original)
+      end)
+
+      :ok
+    end
+
+    test "returns the configured creditor id" do
+      Application.put_env(:capway_sync, :capway_creditor, "999111")
+      assert CapwaySubscribers.creditor() == "999111"
+    end
+
+    test "raises when the creditor is not configured" do
+      Application.put_env(:capway_sync, :capway_creditor, nil)
+
+      assert_raise RuntimeError, ~r/CAPWAY_CREDITOR is not configured/, fn ->
+        CapwaySubscribers.creditor()
+      end
+    end
+
+    test "raises when the creditor is blank" do
+      Application.put_env(:capway_sync, :capway_creditor, "")
+
+      assert_raise RuntimeError, ~r/CAPWAY_CREDITOR is not configured/, fn ->
+        CapwaySubscribers.creditor()
+      end
+    end
+  end
 end

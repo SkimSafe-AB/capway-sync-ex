@@ -100,6 +100,9 @@ export AWS_ACCESS_KEY_ID="your-access-key"
 export AWS_SECRET_ACCESS_KEY="your-secret-key"
 export AWS_REGION="us-east-1"
 export SYNC_REPORTS_TABLE="capway-sync-reports-prod"
+# Creditor id passed to the Capway report query. Required — the Capway
+# subscriber fetch raises at runtime if this is unset/blank (no fallback).
+export CAPWAY_CREDITOR="202623"
 # Payment processor REST API (used by FetchCapwayEmails to read contact emails
 # from the Capway customer record).  Must end with `/`.
 export PAYMENT_PROCESSOR_HOST="https://payment-processor.example.com/api/"
