@@ -58,4 +58,22 @@ if config_env() == :prod do
 
   config :logger, :default_handler,
     formatter: LoggerJSON.Formatters.Basic.new(metadata: [:request_id])
+
+  config :capway_sync,
+    report_wsdl: System.get_env("SOAP_REPORT_WSDL"),
+    sync_reports_table: System.get_env("SYNC_REPORTS_TABLE"),
+    action_items_table: System.get_env("ACTION_ITEMS_TABLE"),
+    capway_cache_table: System.get_env("CAPWAY_CACHE_TABLE"),
+    # Creditor id passed to the Capway report query. Set per-client via the
+    # CAPWAY_CREDITOR env var.
+    capway_creditor: System.get_env("CAPWAY_CREDITOR"),
+    # Max pages to fetch from Capway (each page is 100 records)
+    # Set to nil or 0 for unlimited, or a positive integer for limit
+    capway_max_pages:
+      System.get_env("CAPWAY_MAX_PAGES")
+      |> then(fn
+        nil -> nil
+        "" -> nil
+        val -> String.to_integer(val)
+      end)
 end
