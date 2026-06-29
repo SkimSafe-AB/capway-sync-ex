@@ -7,7 +7,10 @@ if is_nil(market_env) and config_env() != :test do
   raise "MARKET environment variable is not set (e.g. \"se\")"
 end
 
-config :capway_sync, :market, String.to_atom(market_env || "se")
+# Normalise the casing so deploy manifests can use either "SE"/"NO" or
+# "se"/"no" — the market is keyed on lowercase atoms (`:se`, `:no`) everywhere
+# (CapwaySync.Market settings, the personnummer validity gate, etc.).
+config :capway_sync, :market, market_env |> Kernel.||("se") |> String.downcase() |> String.to_atom()
 
 config :capway_sync, Trinity.Db.Hashed.HMAC,
   algorithm: :sha512,
