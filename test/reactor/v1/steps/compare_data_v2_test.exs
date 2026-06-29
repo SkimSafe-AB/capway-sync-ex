@@ -4,10 +4,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
   alias CapwaySync.Reactor.V1.Steps.CompareDataV2
   alias CapwaySync.Models.Subscribers.Canonical
 
-  # Default market in the test env is :se, whose expected language is "sv".
-  # Seed the Capway side with the correct language so tests that aren't about
-  # language don't incidentally flag a language mismatch (a blank/wrong
-  # language counts as an update). Language-specific tests override this.
+  # Default market in the test env is :se, whose expected language/currency are
+  # "sv"/"SEK". Seed the Capway side with the correct values so tests that aren't
+  # about language/currency don't incidentally flag a mismatch (a blank/wrong
+  # value counts as an update). Field-specific tests override these.
   defp build_capway_sub(attrs) do
     Map.merge(
       %Canonical{
@@ -23,7 +23,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         payment_method: nil,
         trinity_status: nil,
         subscription_type: nil,
-        language_code: "sv"
+        language_code: "sv",
+        currency_code: "SEK"
       },
       attrs
     )
@@ -746,6 +747,105 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
                %{"C-001" => capway_sub},
                %{1 => trinity_sub}
              ) == %{}
+    end
+  end
+
+  describe "get_customers_to_update/2 currency mismatch (:se market → \"SEK\")" do
+    test "flags a wrong currency code on its own" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          currency_code: "NOK"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.sub_action == [:update_currency]
+      assert action_item.comment == "Currency code mismatch"
+    end
+
+    test "flags a fetched-but-blank currency as wrong" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          currency_code: ""
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert Map.get(result, "C-001").sub_action == [:update_currency]
+    end
+
+    test "does not flag a never-fetched currency (nil is unknown)" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          currency_code: nil
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
+             ) == %{}
+    end
+
+    test "treats currency comparison as case- and trim-insensitive" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          currency_code: "  sek  "
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
+             ) == %{}
+    end
+
+    test "combines all four fields in canonical order" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "old@example.com",
+          language_code: "en",
+          currency_code: "NOK"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      action_item = Map.get(result, "C-001")
+
+      assert action_item.sub_action ==
+               [:update_nin, :update_email, :update_language, :update_currency]
+
+      assert action_item.comment ==
+               "National ID, email, language code and currency code mismatch"
     end
   end
 

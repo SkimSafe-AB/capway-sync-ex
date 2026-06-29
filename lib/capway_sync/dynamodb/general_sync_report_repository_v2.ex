@@ -90,7 +90,12 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
   # per-field tally: an item that updates both email and language counts once
   # toward each. `List.wrap/1` also tolerates a legacy single-atom value.
   defp sub_action_breakdown(update_customers) when is_map(update_customers) do
-    base = %{"update_email" => 0, "update_nin" => 0, "update_language" => 0}
+    base = %{
+      "update_email" => 0,
+      "update_nin" => 0,
+      "update_language" => 0,
+      "update_currency" => 0
+    }
 
     Enum.reduce(update_customers, base, fn {_ref, %ActionItem{sub_action: sub_action}}, acc ->
       sub_action
@@ -99,11 +104,17 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
         :update_email, a -> Map.update!(a, "update_email", &(&1 + 1))
         :update_nin, a -> Map.update!(a, "update_nin", &(&1 + 1))
         :update_language, a -> Map.update!(a, "update_language", &(&1 + 1))
+        :update_currency, a -> Map.update!(a, "update_currency", &(&1 + 1))
         _, a -> a
       end)
     end)
   end
 
   defp sub_action_breakdown(_),
-    do: %{"update_email" => 0, "update_nin" => 0, "update_language" => 0}
+    do: %{
+      "update_email" => 0,
+      "update_nin" => 0,
+      "update_language" => 0,
+      "update_currency" => 0
+    }
 end

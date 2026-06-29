@@ -73,7 +73,12 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           #   * `""`   — fetched but the record had no/blank language; counts as
           #              wrong and triggers an update to the market default.
           #   * value  — the fetched code, compared against the market default.
-          language_code: String.t() | nil
+          language_code: String.t() | nil,
+          # Capway customer `currencyCode` (ISO 4217), backfilled by the
+          # FetchCapwayEmails step. Same tri-state semantics as `language_code`
+          # (`nil` = not fetched/unknown, `""` = fetched-but-blank/wrong, value
+          # = the fetched code), compared against the market default currency.
+          currency_code: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -101,7 +106,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             trinity_capway_cancelled_at: nil,
             capway_sync_excluded: false,
             email: nil,
-            language_code: nil
+            language_code: nil,
+            currency_code: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.

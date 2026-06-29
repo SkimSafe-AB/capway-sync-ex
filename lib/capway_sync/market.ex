@@ -21,6 +21,9 @@ defmodule CapwaySync.Market do
       iex> CapwaySync.Market.language_code(:no)
       "nb"
 
+      iex> CapwaySync.Market.currency_code(:se)
+      "SEK"
+
       # Unknown market → nil; callers treat this as "cannot determine".
       iex> CapwaySync.Market.language_code(:dk)
       nil
@@ -28,11 +31,12 @@ defmodule CapwaySync.Market do
 
   @type t :: atom()
 
-  # Per-market settings. Keep language codes lowercase — comparisons normalise
-  # the incoming value to lowercase before matching.
+  # Per-market settings. Language codes are lowercase and currency codes are
+  # uppercase ISO 4217 — comparisons normalise the incoming value to the same
+  # case before matching.
   @settings %{
-    se: %{language_code: "sv"},
-    no: %{language_code: "nb"}
+    se: %{language_code: "sv", currency_code: "SEK"},
+    no: %{language_code: "nb", currency_code: "NOK"}
   }
 
   @default_market :se
@@ -65,4 +69,17 @@ defmodule CapwaySync.Market do
   @doc "Expected Capway `languageCode` for the given market (`nil` if undefined)."
   @spec language_code(t()) :: String.t() | nil
   def language_code(market), do: settings(market)[:language_code]
+
+  @doc """
+  Expected Capway `currencyCode` (ISO 4217) for the active market.
+
+  Returns `nil` when the market has no defined currency — callers should treat
+  `nil` as "cannot determine" and skip currency-based actions.
+  """
+  @spec currency_code() :: String.t() | nil
+  def currency_code, do: currency_code(current())
+
+  @doc "Expected Capway `currencyCode` for the given market (`nil` if undefined)."
+  @spec currency_code(t()) :: String.t() | nil
+  def currency_code(market), do: settings(market)[:currency_code]
 end

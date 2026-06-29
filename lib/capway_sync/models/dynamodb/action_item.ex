@@ -12,6 +12,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           :update_email
           | :update_nin
           | :update_language
+          | :update_currency
 
   # For `:capway_update_customer` this is the list of fields that drifted
   # (e.g. `[:update_email, :update_language]`); `nil` for every other action.

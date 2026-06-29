@@ -123,19 +123,21 @@ export CAPWAY_EMAIL_FETCH_CONCURRENCY=10
 Business logic that varies by market lives in `lib/capway_sync/market.ex`, not in
 scattered env vars. The active market is selected by the `MARKET` env var
 (surfaced as `:capway_sync, :market`, defaulting to `:se`). `Market.language_code/0`
-returns the expected Capway customer `languageCode` per market (`:se → "sv"`,
-`:no → "nb"`; unknown markets return `nil` and are never flagged). Add a market or
-a new per-market setting by editing the module's `@settings` map. Deployment-level
-config (credentials, hosts, DynamoDB table names) stays in env vars.
+and `Market.currency_code/0` return the expected Capway customer `languageCode` /
+`currencyCode` per market (`:se → "sv"`/`"SEK"`, `:no → "nb"`/`"NOK"`; unknown
+markets return `nil` and are never flagged). Add a market or a new per-market
+setting by editing the module's `@settings` map. Deployment-level config
+(credentials, hosts, DynamoDB table names) stays in env vars.
 
 ### Customer-update `sub_action`
 `:capway_update_customer` action items carry `sub_action` as a **list** of the
-fields that drifted — any of `:update_nin`, `:update_email`, `:update_language`
-(`nil` for all other action types). `CompareDataV2` derives both the list and the
-`comment` from one ordered field list (`@customer_update_fields`). The Trinity-side
-worker that executes these items must read `sub_action` as a list and PATCH the
-corresponding fields (including `languageCode`); this app only decides that an
-update is needed — it does not perform the REST write.
+fields that drifted — any of `:update_nin`, `:update_email`, `:update_language`,
+`:update_currency` (`nil` for all other action types). `CompareDataV2` derives both
+the list and the `comment` from one ordered field list (`@customer_update_fields`).
+The Trinity-side worker that executes these items must read `sub_action` as a list
+and PATCH the corresponding fields (including `languageCode`/`currencyCode`); this
+app only decides that an update is needed — it does not perform the REST write.
+Note `:update_currency` is billing-sensitive and should be handled with care.
 
 ## Database
 The database is external and this application should not hold any migrations or such.

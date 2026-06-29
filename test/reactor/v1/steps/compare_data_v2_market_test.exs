@@ -6,9 +6,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
   alias CapwaySync.Reactor.V1.Steps.CompareDataV2
   alias CapwaySync.Models.Subscribers.Canonical
 
-  # Most tests here run under the :no market (expected language "nb"); seed the
-  # Capway side with "nb" so non-language tests don't incidentally flag a
-  # language mismatch. The :se contrast test overrides this to "sv".
+  # Most tests here run under the :no market (expected language/currency
+  # "nb"/"NOK"); seed the Capway side with those so non-language/currency tests
+  # don't incidentally flag a mismatch. The :se contrast test overrides them.
   defp build_capway_sub(attrs) do
     Map.merge(
       %Canonical{
@@ -24,7 +24,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
         payment_method: nil,
         trinity_status: nil,
         subscription_type: nil,
-        language_code: "nb"
+        language_code: "nb",
+        currency_code: "NOK"
       },
       attrs
     )
@@ -113,7 +114,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
         build_capway_sub(%{
           national_id: "24105144829",
           trinity_subscriber_id: 1,
-          language_code: "sv"
+          language_code: "sv",
+          currency_code: "SEK"
         })
 
       trinity_sub = build_trinity_sub(%{national_id: "31125099912"})
@@ -167,14 +169,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
              ) == %{}
     end
 
-    test "a market with no defined language never flags a language mismatch" do
+    test "a market with no defined language/currency never flags those mismatches" do
       put_market(:dk)
 
       capway_sub =
         build_capway_sub(%{
           national_id: "24105144829",
           trinity_subscriber_id: 1,
-          language_code: "anything"
+          language_code: "anything",
+          currency_code: "XYZ"
         })
 
       trinity_sub = build_trinity_sub(%{national_id: "24105144829"})
@@ -183,6 +186,27 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
                %{"C-001" => capway_sub},
                %{1 => trinity_sub}
              ) == %{}
+    end
+
+    test ":no market flags \"SEK\" currency as wrong (expects \"NOK\")" do
+      put_market(:no)
+
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "24105144829",
+          trinity_subscriber_id: 1,
+          currency_code: "SEK"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "24105144829"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.sub_action == [:update_currency]
+      assert action_item.comment == "Currency code mismatch"
     end
   end
 end

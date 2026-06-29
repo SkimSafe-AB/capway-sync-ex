@@ -13,7 +13,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   @customer_update_fields [
     {:update_nin, "National ID"},
     {:update_email, "email"},
-    {:update_language, "language code"}
+    {:update_language, "language code"},
+    {:update_currency, "currency code"}
   ]
 
   @doc """
@@ -236,6 +237,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
       fetched-but-blank language counts as wrong; a never-fetched language
       (`nil`) is "unknown" and never triggers the action. Skipped entirely when
       the market has no defined language.
+    * Currency — compared against `CapwaySync.Market.currency_code/0`, with the
+      same fetched-but-blank / never-fetched / no-market-default rules as language.
   """
   def get_customers_to_update(
         capway_subscriber_data,
@@ -267,7 +270,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
     %{
       update_nin: has_national_id_mismatch?(capway_sub, trinity_sub),
       update_email: has_email_mismatch?(capway_sub, trinity_sub),
-      update_language: has_language_mismatch?(capway_sub)
+      update_language: has_language_mismatch?(capway_sub),
+      update_currency: has_currency_mismatch?(capway_sub)
     }
   end
 
@@ -337,6 +341,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
   defp normalize_language(code) when is_binary(code), do: code |> String.trim() |> String.downcase()
   defp normalize_language(_), do: ""
+
+  # Currency mirrors language, but currency codes are upper-case ISO 4217.
+  defp has_currency_mismatch?(%{currency_code: nil}), do: false
+
+  defp has_currency_mismatch?(%{currency_code: code}) do
+    case Market.currency_code() do
+      nil -> false
+      expected -> normalize_currency(code) != expected
+    end
+  end
+
+  defp normalize_currency(code) when is_binary(code), do: code |> String.trim() |> String.upcase()
+  defp normalize_currency(_), do: ""
 
   # Both the reason text and the sub_action list are derived from the same
   # ordered field list (`@customer_update_fields`) so they can never diverge.

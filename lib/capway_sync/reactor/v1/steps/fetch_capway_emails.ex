@@ -1,30 +1,31 @@
 defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   @moduledoc """
   Reactor step that backfills Capway-side customer fields (`email`,
-  `national_id` and `language_code`) on each active Capway canonical entry by
-  calling the payment processor REST API one-by-one.
+  `national_id`, `language_code` and `currency_code`) on each active Capway
+  canonical entry by calling the payment processor REST API one-by-one.
 
-  Why this exists: the Capway SOAP report drops the email/language columns
-  entirely and lags behind real-time edits to the customer record. Pulling the
-  customer payload from the payment processor REST API gives us the current
-  values for `email`, `national_id` (`idNumber`) and `language_code`
-  (`languageCode`), so the downstream `CompareDataV2` step compares against
-  fresh Capway data — no false `:capway_update_customer` items caused by stale
-  SOAP data after a Trinity-side update has already been pushed.
+  Why this exists: the Capway SOAP report drops the email/language/currency
+  columns entirely and lags behind real-time edits to the customer record.
+  Pulling the customer payload from the payment processor REST API gives us the
+  current values for `email`, `national_id` (`idNumber`), `language_code`
+  (`languageCode`) and `currency_code` (`currencyCode`), so the downstream
+  `CompareDataV2` step compares against fresh Capway data — no false
+  `:capway_update_customer` items caused by stale SOAP data after a Trinity-side
+  update has already been pushed.
 
-  ## `language_code` tri-state
+  ## `language_code` / `currency_code` tri-state
 
   Unlike email/national_id (where `nil` always means "unknown → no action"),
-  the comparison treats a *fetched-but-blank* language as wrong. To keep those
-  two cases distinct we record:
+  the comparison treats a *fetched-but-blank* language/currency as wrong. To
+  keep those two cases distinct we record:
 
     * `nil`  — never fetched (the entry was skipped, or the REST call failed);
                left untouched so a transient failure can't trigger a false update.
-    * `""`   — fetched, but the record carried no/blank `languageCode`.
+    * `""`   — fetched, but the record carried no/blank value.
     * value  — the fetched code.
 
   Because a successful fetch always yields at least `""`, `merge_fields/2`'s
-  `nil`-skipping `maybe_put` only ever leaves `language_code` as `nil` on the
+  `nil`-skipping `maybe_put` only ever leaves these fields as `nil` on the
   failure path.
 
   The step:
@@ -71,7 +72,8 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
         ordered: false
       )
       |> Enum.reduce(active_capway, fn
-        {:ok, {_ref, %{email: nil, national_id: nil, language_code: nil}}}, acc ->
+        {:ok, {_ref, %{email: nil, national_id: nil, language_code: nil, currency_code: nil}}},
+        acc ->
           acc
 
         {:ok, {ref, fields}}, acc ->
@@ -108,12 +110,13 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
         %{
           email: extract_email(body),
           national_id: extract_national_id(body),
-          language_code: extract_language_code(body)
+          language_code: extract_language_code(body),
+          currency_code: extract_currency_code(body)
         }
 
       {:error, :not_found} ->
         Logger.debug("Capway customer #{customer_id} not found in payment processor")
-        %{email: nil, national_id: nil, language_code: nil}
+        %{email: nil, national_id: nil, language_code: nil, currency_code: nil}
 
       {:error, reason} ->
         Logger.warning(
@@ -121,7 +124,7 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
             inspect(reason)
         )
 
-        %{email: nil, national_id: nil, language_code: nil}
+        %{email: nil, national_id: nil, language_code: nil, currency_code: nil}
     end
   end
 
@@ -142,11 +145,23 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   defp extract_language_code(%{"LanguageCode" => code}) when is_binary(code), do: code
   defp extract_language_code(_), do: ""
 
-  defp merge_fields(sub, %{email: email, national_id: national_id, language_code: language_code}) do
+  # Same "" sentinel semantics as extract_language_code/1.
+  defp extract_currency_code(%{"currencyCode" => code}) when is_binary(code), do: code
+  defp extract_currency_code(%{"currency_code" => code}) when is_binary(code), do: code
+  defp extract_currency_code(%{"CurrencyCode" => code}) when is_binary(code), do: code
+  defp extract_currency_code(_), do: ""
+
+  defp merge_fields(sub, %{
+         email: email,
+         national_id: national_id,
+         language_code: language_code,
+         currency_code: currency_code
+       }) do
     sub
     |> maybe_put(:email, email)
     |> maybe_put(:national_id, national_id)
     |> maybe_put(:language_code, language_code)
+    |> maybe_put(:currency_code, currency_code)
   end
 
   defp maybe_put(sub, _key, nil), do: sub
