@@ -403,6 +403,42 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       # No match because Map.has_key?(trinity_data, nil) is false
       assert map_size(result) == 0
     end
+
+    test "does not flag mismatch when national_ids differ only by trailing whitespace" do
+      capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813 "})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not flag mismatch when national_ids differ only by an internal space" do
+      capway_sub = build_capway_sub(%{national_id: "196403273813", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403 273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
+
+    test "does not flag mismatch when capway side carries leading/trailing whitespace" do
+      capway_sub = build_capway_sub(%{national_id: "\t196403273813\n", trinity_subscriber_id: 1})
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 0
+    end
   end
 
   describe "get_customers_to_update/2 email mismatch" do
@@ -623,6 +659,28 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
+    end
+
+    test "treats national_ids that differ only by whitespace as matching for subscriber_id mismatch" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403 273813 ", trinity_subscriber_id: 2})
+
+      capway_data = %{"C-001" => capway_sub}
+      trinity_data = %{1 => trinity_sub}
+
+      result = CompareDataV2.get_contracts_to_update(capway_data, trinity_data)
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_contract
+      assert action_item.comment == "Subscriber ID mismatch"
     end
   end
 

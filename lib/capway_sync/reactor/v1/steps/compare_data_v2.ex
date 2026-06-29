@@ -272,8 +272,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   defp has_national_id_mismatch?(capway_sub, trinity_sub) do
-    capway_sub.national_id != trinity_sub.national_id and
-      valid_national_id?(trinity_sub.national_id)
+    capway_nid = normalize_national_id(capway_sub.national_id)
+    trinity_nid = normalize_national_id(trinity_sub.national_id)
+
+    capway_nid != trinity_nid and valid_national_id?(trinity_nid)
   end
 
   defp has_email_mismatch?(capway_sub, trinity_sub) do
@@ -306,12 +308,34 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   defp customer_update_sub_action(false, false), do: nil
 
   defp has_subscriber_id_mismatch_only?(capway_sub, trinity_sub) do
-    capway_sub.national_id == trinity_sub.national_id and
+    capway_nid = normalize_national_id(capway_sub.national_id)
+    trinity_nid = normalize_national_id(trinity_sub.national_id)
+
+    capway_nid == trinity_nid and
       (capway_sub.trinity_subscriber_id == nil or
          capway_sub.trinity_subscriber_id != trinity_sub.trinity_subscriber_id) and
-      valid_national_id?(trinity_sub.national_id)
+      valid_national_id?(trinity_nid)
   end
 
+  # National IDs are compared as raw strings, but the two sides reach us with
+  # inconsistent whitespace: the Capway side is trimmed at the SOAP boundary
+  # while the Trinity value is stored verbatim, and Norwegian numbers are often
+  # written with an internal space ("241051 44829"). Strip *all* whitespace so
+  # values that represent the same number compare equal regardless of market.
+  defp normalize_national_id(nil), do: nil
+
+  defp normalize_national_id(national_id) when is_binary(national_id) do
+    case String.replace(national_id, ~r/\s/u, "") do
+      "" -> nil
+      s -> s
+    end
+  end
+
+  defp normalize_national_id(_), do: nil
+
+  # Validity gating only applies to the Swedish market, where a malformed
+  # personnummer must not trigger a sync action. Other markets (e.g. Norway)
+  # are not validated here, so any genuine difference is actionable.
   defp valid_national_id?(nil), do: false
 
   defp valid_national_id?(national_id) do
