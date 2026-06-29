@@ -4,6 +4,10 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
   alias CapwaySync.Reactor.V1.Steps.CompareDataV2
   alias CapwaySync.Models.Subscribers.Canonical
 
+  # Default market in the test env is :se, whose expected language is "sv".
+  # Seed the Capway side with the correct language so tests that aren't about
+  # language don't incidentally flag a language mismatch (a blank/wrong
+  # language counts as an update). Language-specific tests override this.
   defp build_capway_sub(attrs) do
     Map.merge(
       %Canonical{
@@ -18,7 +22,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
         last_invoice_status: "Invoice",
         payment_method: nil,
         trinity_status: nil,
-        subscription_type: nil
+        subscription_type: nil,
+        language_code: "sv"
       },
       attrs
     )
@@ -295,7 +300,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert Map.has_key?(result, "C-001")
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
-      assert action_item.sub_action == :update_nin
+      assert action_item.sub_action == [:update_nin]
       assert action_item.comment == "National ID mismatch"
     end
 
@@ -462,7 +467,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert map_size(result) == 1
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
-      assert action_item.sub_action == :update_email
+      assert action_item.sub_action == [:update_email]
       assert action_item.comment == "Email mismatch"
     end
 
@@ -485,7 +490,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
 
       action_item = Map.get(result, "C-001")
       assert action_item.action == :capway_update_customer
-      assert action_item.sub_action == :update_email_and_nin
+      assert action_item.sub_action == [:update_nin, :update_email]
       assert action_item.comment == "National ID and email mismatch"
     end
 
@@ -608,6 +613,138 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
       assert CompareDataV2.get_customers_to_update(
                capway_data,
                %{1 => excluded_trinity}
+             ) == %{}
+    end
+  end
+
+  describe "get_customers_to_update/2 language mismatch (:se market → \"sv\")" do
+    test "flags a wrong language code on its own" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          language_code: "en"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.action == :capway_update_customer
+      assert action_item.sub_action == [:update_language]
+      assert action_item.comment == "Language code mismatch"
+    end
+
+    test "flags a fetched-but-blank language as wrong" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          language_code: ""
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 1
+      assert Map.get(result, "C-001").sub_action == [:update_language]
+    end
+
+    test "does not flag a never-fetched language (nil is unknown)" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          language_code: nil
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 0
+    end
+
+    test "treats language comparison as case- and trim-insensitive" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          language_code: "  SV  "
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
+             ) == %{}
+    end
+
+    test "combines language with national_id in sub_action and reason" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          language_code: "en"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      action_item = Map.get(result, "C-001")
+      assert action_item.sub_action == [:update_nin, :update_language]
+      assert action_item.comment == "National ID and language code mismatch"
+    end
+
+    test "combines all three fields in canonical order" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "198507099805",
+          trinity_subscriber_id: 1,
+          collection: 0,
+          email: "old@example.com",
+          language_code: "en"
+        })
+
+      trinity_sub =
+        build_trinity_sub(%{national_id: "196403273813", email: "new@example.com"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      action_item = Map.get(result, "C-001")
+      assert action_item.sub_action == [:update_nin, :update_email, :update_language]
+      assert action_item.comment == "National ID, email and language code mismatch"
+    end
+
+    test "respects the collection >= 2 cap for language-only diffs" do
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          collection: 2,
+          language_code: "en"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "196403273813"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
              ) == %{}
     end
   end

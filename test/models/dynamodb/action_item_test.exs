@@ -17,31 +17,33 @@ defmodule CapwaySync.Models.Dynamodb.ActionItemTest do
       assert item.comment == "Missing in Capway"
     end
 
-    test "stores sub_action atom when supplied" do
+    test "stores the sub_action list when supplied" do
       item =
         ActionItem.create_action_item(:capway_update_customer, %{
           national_id: "196403273813",
           trinity_subscriber_id: 1,
           reason: "Email mismatch",
-          sub_action: :update_email
+          sub_action: [:update_email]
         })
 
       assert item.action == :capway_update_customer
-      assert item.sub_action == :update_email
+      assert item.sub_action == [:update_email]
     end
 
-    test "supports the :update_nin and :update_email_and_nin sub_actions" do
-      nin_item =
-        ActionItem.create_action_item(:capway_update_customer, %{sub_action: :update_nin})
-
-      assert nin_item.sub_action == :update_nin
-
+    test "supports multi-field sub_action lists" do
       both_item =
         ActionItem.create_action_item(:capway_update_customer, %{
-          sub_action: :update_email_and_nin
+          sub_action: [:update_nin, :update_email]
         })
 
-      assert both_item.sub_action == :update_email_and_nin
+      assert both_item.sub_action == [:update_nin, :update_email]
+
+      all_item =
+        ActionItem.create_action_item(:capway_update_customer, %{
+          sub_action: [:update_nin, :update_email, :update_language]
+        })
+
+      assert all_item.sub_action == [:update_nin, :update_email, :update_language]
     end
 
     test "always populates id, created_at, timestamp, and pending status" do

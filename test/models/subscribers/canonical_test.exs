@@ -141,6 +141,20 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
     end
   end
 
+  describe "from_capway/1 language_code" do
+    test "always starts with language_code nil — populated later by FetchCapwayEmails" do
+      capway_subscriber = %CapwaySync.Models.CapwaySubscriber{
+        id_number: "199001011234",
+        customer_ref: "1",
+        contract_ref_no: "C-001",
+        customer_id: "CID-001",
+        active: "true"
+      }
+
+      assert Canonical.from_capway(capway_subscriber).language_code == nil
+    end
+  end
+
   describe "parse_customer_ref/1" do
     test "parses the v2 four-segment format into {wps_id, subscriber_id}" do
       assert Canonical.parse_customer_ref("v2-845714-61432-JSLGL") == {845_714, 61_432}

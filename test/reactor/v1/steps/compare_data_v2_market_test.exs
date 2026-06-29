@@ -6,6 +6,9 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
   alias CapwaySync.Reactor.V1.Steps.CompareDataV2
   alias CapwaySync.Models.Subscribers.Canonical
 
+  # Most tests here run under the :no market (expected language "nb"); seed the
+  # Capway side with "nb" so non-language tests don't incidentally flag a
+  # language mismatch. The :se contrast test overrides this to "sv".
   defp build_capway_sub(attrs) do
     Map.merge(
       %Canonical{
@@ -20,7 +23,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
         last_invoice_status: "Invoice",
         payment_method: nil,
         trinity_status: nil,
-        subscription_type: nil
+        subscription_type: nil,
+        language_code: "nb"
       },
       attrs
     )
@@ -105,7 +109,13 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
     test ":se market suppresses the mismatch (Norwegian number fails Personnummer.valid?)" do
       put_market(:se)
 
-      capway_sub = build_capway_sub(%{national_id: "24105144829", trinity_subscriber_id: 1})
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "24105144829",
+          trinity_subscriber_id: 1,
+          language_code: "sv"
+        })
+
       trinity_sub = build_trinity_sub(%{national_id: "31125099912"})
 
       capway_data = %{"C-001" => capway_sub}
@@ -114,6 +124,65 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2MarketTest do
       result = CompareDataV2.get_customers_to_update(capway_data, trinity_data)
 
       assert map_size(result) == 0
+    end
+  end
+
+  describe "language code gating per market" do
+    test ":no market flags \"sv\" (Swedish) language as wrong" do
+      put_market(:no)
+
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "24105144829",
+          trinity_subscriber_id: 1,
+          language_code: "sv"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "24105144829"})
+
+      result =
+        CompareDataV2.get_customers_to_update(%{"C-001" => capway_sub}, %{1 => trinity_sub})
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, "C-001")
+      assert action_item.sub_action == [:update_language]
+      assert action_item.comment == "Language code mismatch"
+    end
+
+    test ":no market accepts \"nb\" (Norwegian) language" do
+      put_market(:no)
+
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "24105144829",
+          trinity_subscriber_id: 1,
+          language_code: "nb"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "24105144829"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
+             ) == %{}
+    end
+
+    test "a market with no defined language never flags a language mismatch" do
+      put_market(:dk)
+
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "24105144829",
+          trinity_subscriber_id: 1,
+          language_code: "anything"
+        })
+
+      trinity_sub = build_trinity_sub(%{national_id: "24105144829"})
+
+      assert CompareDataV2.get_customers_to_update(
+               %{"C-001" => capway_sub},
+               %{1 => trinity_sub}
+             ) == %{}
     end
   end
 end

@@ -64,7 +64,16 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           # the payment processor REST API (via the FetchCapwayEmails step) for
           # Capway-originated entries. `nil` means "not yet known", which the
           # comparison treats as a no-op.
-          email: String.t() | nil
+          email: String.t() | nil,
+          # Capway customer `languageCode`, backfilled by the FetchCapwayEmails
+          # step from the payment processor REST API (Capway-originated entries
+          # only — there is no Trinity equivalent). Tri-state:
+          #   * `nil`  — never fetched ("unknown"); the comparison ignores it,
+          #              so a failed/absent REST fetch can't trigger a false update.
+          #   * `""`   — fetched but the record had no/blank language; counts as
+          #              wrong and triggers an update to the market default.
+          #   * value  — the fetched code, compared against the market default.
+          language_code: String.t() | nil
         }
 
   @derive Jason.Encoder
@@ -91,7 +100,8 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             trinity_capway_created_at: nil,
             trinity_capway_cancelled_at: nil,
             capway_sync_excluded: false,
-            email: nil
+            email: nil,
+            language_code: nil
 
   @doc """
   Converts a Trinity subscriber to canonical format.

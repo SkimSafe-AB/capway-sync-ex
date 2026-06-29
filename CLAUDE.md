@@ -119,5 +119,23 @@ export CAPWAY_EMAIL_FETCH_CONCURRENCY=10
 - its essential that the test are covering 100% of the functionality in this app, as its cruxial there are no errors when we run it.
 - Always ensure tests are valid and passed
 
+## Per-market settings (`CapwaySync.Market`)
+Business logic that varies by market lives in `lib/capway_sync/market.ex`, not in
+scattered env vars. The active market is selected by the `MARKET` env var
+(surfaced as `:capway_sync, :market`, defaulting to `:se`). `Market.language_code/0`
+returns the expected Capway customer `languageCode` per market (`:se → "sv"`,
+`:no → "nb"`; unknown markets return `nil` and are never flagged). Add a market or
+a new per-market setting by editing the module's `@settings` map. Deployment-level
+config (credentials, hosts, DynamoDB table names) stays in env vars.
+
+### Customer-update `sub_action`
+`:capway_update_customer` action items carry `sub_action` as a **list** of the
+fields that drifted — any of `:update_nin`, `:update_email`, `:update_language`
+(`nil` for all other action types). `CompareDataV2` derives both the list and the
+`comment` from one ordered field list (`@customer_update_fields`). The Trinity-side
+worker that executes these items must read `sub_action` as a list and PATCH the
+corresponding fields (including `languageCode`); this app only decides that an
+update is needed — it does not perform the REST write.
+
 ## Database
 The database is external and this application should not hold any migrations or such.

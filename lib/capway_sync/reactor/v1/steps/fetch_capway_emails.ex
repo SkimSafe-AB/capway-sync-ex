@@ -1,16 +1,31 @@
 defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   @moduledoc """
-  Reactor step that backfills Capway-side customer fields (`email` and
-  `national_id`) on each active Capway canonical entry by calling the payment
-  processor REST API one-by-one.
+  Reactor step that backfills Capway-side customer fields (`email`,
+  `national_id` and `language_code`) on each active Capway canonical entry by
+  calling the payment processor REST API one-by-one.
 
-  Why this exists: the Capway SOAP report drops the email column entirely and
-  lags behind real-time edits to the customer record. Pulling the customer
-  payload from the payment processor REST API gives us the current values for
-  both `email` and `national_id` (`idNumber`), so the downstream `CompareDataV2`
-  step compares Trinity against fresh Capway data — no false `:capway_update_customer`
-  items caused by stale SOAP data after a Trinity-side update has already been
-  pushed.
+  Why this exists: the Capway SOAP report drops the email/language columns
+  entirely and lags behind real-time edits to the customer record. Pulling the
+  customer payload from the payment processor REST API gives us the current
+  values for `email`, `national_id` (`idNumber`) and `language_code`
+  (`languageCode`), so the downstream `CompareDataV2` step compares against
+  fresh Capway data — no false `:capway_update_customer` items caused by stale
+  SOAP data after a Trinity-side update has already been pushed.
+
+  ## `language_code` tri-state
+
+  Unlike email/national_id (where `nil` always means "unknown → no action"),
+  the comparison treats a *fetched-but-blank* language as wrong. To keep those
+  two cases distinct we record:
+
+    * `nil`  — never fetched (the entry was skipped, or the REST call failed);
+               left untouched so a transient failure can't trigger a false update.
+    * `""`   — fetched, but the record carried no/blank `languageCode`.
+    * value  — the fetched code.
+
+  Because a successful fetch always yields at least `""`, `merge_fields/2`'s
+  `nil`-skipping `maybe_put` only ever leaves `language_code` as `nil` on the
+  failure path.
 
   The step:
     * walks `data.capway.active_subscribers` (a map keyed by contract_ref)
@@ -56,7 +71,7 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
         ordered: false
       )
       |> Enum.reduce(active_capway, fn
-        {:ok, {_ref, %{email: nil, national_id: nil}}}, acc ->
+        {:ok, {_ref, %{email: nil, national_id: nil, language_code: nil}}}, acc ->
           acc
 
         {:ok, {ref, fields}}, acc ->
@@ -90,11 +105,15 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   defp fetch_customer_fields(%{capway_customer_id: customer_id} = sub) do
     case client().get_capway_customer_by_id(customer_id) do
       {:ok, body} ->
-        %{email: extract_email(body), national_id: extract_national_id(body)}
+        %{
+          email: extract_email(body),
+          national_id: extract_national_id(body),
+          language_code: extract_language_code(body)
+        }
 
       {:error, :not_found} ->
         Logger.debug("Capway customer #{customer_id} not found in payment processor")
-        %{email: nil, national_id: nil}
+        %{email: nil, national_id: nil, language_code: nil}
 
       {:error, reason} ->
         Logger.warning(
@@ -102,7 +121,7 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
             inspect(reason)
         )
 
-        %{email: nil, national_id: nil}
+        %{email: nil, national_id: nil, language_code: nil}
     end
   end
 
@@ -115,10 +134,19 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmails do
   defp extract_national_id(%{"IdNumber" => id}) when is_binary(id) and id != "", do: id
   defp extract_national_id(_), do: nil
 
-  defp merge_fields(sub, %{email: email, national_id: national_id}) do
+  # Returns the fetched code, or "" when the (successfully fetched) record had no
+  # `languageCode`. Never returns nil — nil is reserved for the failure path so
+  # the comparison can tell "fetched but blank" (wrong) from "not fetched" (unknown).
+  defp extract_language_code(%{"languageCode" => code}) when is_binary(code), do: code
+  defp extract_language_code(%{"language_code" => code}) when is_binary(code), do: code
+  defp extract_language_code(%{"LanguageCode" => code}) when is_binary(code), do: code
+  defp extract_language_code(_), do: ""
+
+  defp merge_fields(sub, %{email: email, national_id: national_id, language_code: language_code}) do
     sub
     |> maybe_put(:email, email)
     |> maybe_put(:national_id, national_id)
+    |> maybe_put(:language_code, language_code)
   end
 
   defp maybe_put(sub, _key, nil), do: sub

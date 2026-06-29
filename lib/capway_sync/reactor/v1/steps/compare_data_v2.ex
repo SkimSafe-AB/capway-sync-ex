@@ -1,8 +1,20 @@
 defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   alias ElixirSense.Log
   alias CapwaySync.Models.Dynamodb.ActionItem
+  alias CapwaySync.Market
   use Reactor.Step
   require Logger
+
+  # Canonical ordering of the customer-level fields the update action covers.
+  # Both the `sub_action` list and the human-readable reason are derived from
+  # this single list so the two can never drift, and adding a field is a
+  # one-line change here. Order is chosen to reproduce the historical reason
+  # wording ("National ID and email mismatch").
+  @customer_update_fields [
+    {:update_nin, "National ID"},
+    {:update_email, "email"},
+    {:update_language, "language code"}
+  ]
 
   @doc """
   The args map is expected to have the following structure
@@ -205,15 +217,25 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   @doc """
-  Identifies Capway contracts where customer-level fields (national ID, email)
-  differ from Trinity.
+  Identifies Capway contracts where customer-level fields (national ID, email,
+  language code) differ from the expected value.
 
-  When either the national ID or the contact email on the Capway side does not
-  match Trinity, the customer record in Capway needs to be updated. These are
-  tagged as `capway_update_customer` action items. The reason text reflects
-  exactly which fields differ. Email is compared case-insensitively after
-  trimming, and missing/blank emails on either side are treated as "unknown"
-  and never trigger the action.
+  When the national ID or contact email on the Capway side does not match
+  Trinity, or the Capway `languageCode` does not match the active market's
+  expected language, the customer record in Capway needs to be updated. These
+  are tagged as `capway_update_customer` action items whose `sub_action` is the
+  **list** of fields that drifted (e.g. `[:update_email, :update_language]`).
+  The reason text reflects exactly which fields differ.
+
+  Field rules:
+    * National ID — compared as whitespace-normalised strings; gated by market
+      validity (see `valid_national_id?/1`).
+    * Email — compared case-insensitively after trimming; missing/blank on
+      either side is "unknown" and never triggers the action.
+    * Language — compared against `CapwaySync.Market.language_code/0`. A
+      fetched-but-blank language counts as wrong; a never-fetched language
+      (`nil`) is "unknown" and never triggers the action. Skipped entirely when
+      the market has no defined language.
   """
   def get_customers_to_update(
         capway_subscriber_data,
@@ -224,15 +246,15 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         Map.has_key?(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         trinity_sub = Map.get(trinity_subscriber_data, capway_sub.trinity_subscriber_id),
         not trinity_sub.capway_sync_excluded,
-        # Tuple match (always truthy) — using two separate `var = ...` clauses
-        # would short-circuit the iteration as soon as one diff was false, since
-        # `for` treats `=` clauses as filter+binding.
-        {nat_diff, email_diff} = customer_field_diffs(capway_sub, trinity_sub),
-        nat_diff or email_diff,
+        # Map match (always truthy) — using separate `var = ...` clauses would
+        # short-circuit the iteration as soon as one diff was false, since `for`
+        # treats `=` clauses as filter+binding.
+        diffs = customer_field_diffs(capway_sub, trinity_sub),
+        Enum.any?(Map.values(diffs)),
         (capway_sub.collection || 0) < 2,
         into: %{} do
-      reason = customer_update_reason(nat_diff, email_diff)
-      sub_action = customer_update_sub_action(nat_diff, email_diff)
+      reason = customer_update_reason(diffs)
+      sub_action = customer_update_sub_actions(diffs)
 
       enriched_sub = enrich_subscription_id(capway_sub, subscriber_to_subscription_ids)
 
@@ -242,8 +264,11 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   end
 
   defp customer_field_diffs(capway_sub, trinity_sub) do
-    {has_national_id_mismatch?(capway_sub, trinity_sub),
-     has_email_mismatch?(capway_sub, trinity_sub)}
+    %{
+      update_nin: has_national_id_mismatch?(capway_sub, trinity_sub),
+      update_email: has_email_mismatch?(capway_sub, trinity_sub),
+      update_language: has_language_mismatch?(capway_sub)
+    }
   end
 
   @doc """
@@ -297,15 +322,46 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
 
   defp normalize_email(_), do: nil
 
-  defp customer_update_reason(true, true), do: "National ID and email mismatch"
-  defp customer_update_reason(true, false), do: "National ID mismatch"
-  defp customer_update_reason(false, true), do: "Email mismatch"
-  defp customer_update_reason(false, false), do: ""
+  # The Capway language is wrong when it does not match the market default. A
+  # fetched-but-blank language ("") counts as wrong; a never-fetched language
+  # (nil) is "unknown" and ignored. When the market has no defined language we
+  # can't act, so nothing is flagged.
+  defp has_language_mismatch?(%{language_code: nil}), do: false
 
-  defp customer_update_sub_action(true, true), do: :update_email_and_nin
-  defp customer_update_sub_action(true, false), do: :update_nin
-  defp customer_update_sub_action(false, true), do: :update_email
-  defp customer_update_sub_action(false, false), do: nil
+  defp has_language_mismatch?(%{language_code: code}) do
+    case Market.language_code() do
+      nil -> false
+      expected -> normalize_language(code) != expected
+    end
+  end
+
+  defp normalize_language(code) when is_binary(code), do: code |> String.trim() |> String.downcase()
+  defp normalize_language(_), do: ""
+
+  # Both the reason text and the sub_action list are derived from the same
+  # ordered field list (`@customer_update_fields`) so they can never diverge.
+  defp customer_update_sub_actions(diffs) do
+    for {field, _label} <- @customer_update_fields, Map.get(diffs, field), do: field
+  end
+
+  defp customer_update_reason(diffs) do
+    labels = for {field, label} <- @customer_update_fields, Map.get(diffs, field), do: label
+
+    case labels do
+      [] -> ""
+      _ -> capitalize_first(join_and(labels)) <> " mismatch"
+    end
+  end
+
+  defp join_and([single]), do: single
+
+  defp join_and(labels) do
+    {init, [last]} = Enum.split(labels, -1)
+    Enum.join(init, ", ") <> " and " <> last
+  end
+
+  defp capitalize_first(<<first::utf8, rest::binary>>), do: String.upcase(<<first::utf8>>) <> rest
+  defp capitalize_first(str), do: str
 
   defp has_subscriber_id_mismatch_only?(capway_sub, trinity_sub) do
     capway_nid = normalize_national_id(capway_sub.national_id)
@@ -339,7 +395,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
   defp valid_national_id?(nil), do: false
 
   defp valid_national_id?(national_id) do
-    case Application.get_env(:capway_sync, :market) do
+    case Market.current() do
       :se -> Personnummer.valid?(national_id)
       _ -> true
     end

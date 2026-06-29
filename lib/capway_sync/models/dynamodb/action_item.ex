@@ -8,11 +8,14 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           | :capway_update_contract
           | :capway_update_customer
 
-  @type sub_action ::
+  @type sub_action_item ::
           :update_email
           | :update_nin
-          | :update_email_and_nin
-          | nil
+          | :update_language
+
+  # For `:capway_update_customer` this is the list of fields that drifted
+  # (e.g. `[:update_email, :update_language]`); `nil` for every other action.
+  @type sub_action :: [sub_action_item()] | nil
 
   @type t :: %__MODULE__{
           id: String.t() | nil,

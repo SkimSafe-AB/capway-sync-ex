@@ -204,6 +204,62 @@ defmodule CapwaySync.Reactor.V1.Steps.FetchCapwayEmailsTest do
     assert result.capway.active_subscribers["C-001"].national_id == "199999999999"
   end
 
+  test "merges fetched languageCode into capway active_subscribers" do
+    set_responses(%{
+      "CID-001" => {:ok, %{"email" => "found@example.com", "languageCode" => "sv"}}
+    })
+
+    capway_sub = build_capway(%{capway_customer_id: "CID-001"})
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].language_code == "sv"
+  end
+
+  test "records language_code as \"\" (fetched-but-blank) when body omits languageCode" do
+    # The customer was fetched successfully but carried no language. We record
+    # "" rather than nil so the comparison can treat it as wrong, distinct from
+    # a never-fetched entry.
+    set_responses(%{"CID-001" => {:ok, %{"email" => "found@example.com"}}})
+
+    capway_sub = build_capway(%{capway_customer_id: "CID-001"})
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].language_code == ""
+  end
+
+  test "leaves language_code nil when the fetch fails (not_found)" do
+    set_responses(%{"CID-001" => {:error, :not_found}})
+
+    capway_sub = build_capway(%{capway_customer_id: "CID-001"})
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].language_code == nil
+  end
+
+  test "merges language even when email and national_id are both absent" do
+    # Guards the early-skip clause: a successful fetch that only yields a
+    # language must not be dropped as if nothing was fetched.
+    set_responses(%{"CID-001" => {:ok, %{"languageCode" => "sv"}}})
+
+    capway_sub = build_capway(%{capway_customer_id: "CID-001"})
+    trinity_sub = build_trinity(%{})
+
+    {:ok, result} =
+      FetchCapwayEmails.run(args(%{"C-001" => capway_sub}, %{1 => trinity_sub}), %{}, [])
+
+    assert result.capway.active_subscribers["C-001"].language_code == "sv"
+    assert result.capway.active_subscribers["C-001"].email == nil
+  end
+
   test "fetches emails for many entries concurrently and merges all" do
     responses =
       for i <- 1..5, into: %{} do
