@@ -115,6 +115,38 @@ defmodule CapwaySync.Models.Subscribers.CanonicalTest do
     end
   end
 
+  describe "from_trinity/1 trinity_capway_mandate_guid" do
+    test "reads the mandate guid from metadata" do
+      subscriber =
+        build_trinity_subscriber([
+          %{key: "capway_mandate_guid", value: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"}
+        ])
+
+      canonical = Canonical.from_trinity(subscriber)
+
+      assert canonical.trinity_capway_mandate_guid == "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+    end
+
+    test "is nil when the metadata key is absent" do
+      canonical = Canonical.from_trinity(build_trinity_subscriber([]))
+
+      assert canonical.trinity_capway_mandate_guid == nil
+    end
+
+    test "reads the recorded mandate failure from metadata" do
+      subscriber =
+        build_trinity_subscriber([
+          %{key: "capway_mandate_error", value: "Personen saknar giltigt personnummer"},
+          %{key: "capway_mandate_error_at", value: "2026-07-20T22:15:00Z"}
+        ])
+
+      canonical = Canonical.from_trinity(subscriber)
+
+      assert canonical.trinity_capway_mandate_error == "Personen saknar giltigt personnummer"
+      assert canonical.trinity_capway_mandate_error_at == "2026-07-20T22:15:00Z"
+    end
+  end
+
   describe "from_trinity/1 email" do
     test "carries email through to canonical" do
       subscriber = build_trinity_subscriber([], %{email: "alice@example.com"})

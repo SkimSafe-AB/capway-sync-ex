@@ -1217,6 +1217,182 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2Test do
     end
   end
 
+  describe "get_mandates_to_create/2" do
+    defp build_autogiro_sub(attrs) do
+      build_trinity_sub(
+        Map.merge(
+          %{
+            payment_method: "capway_autogiro",
+            trinity_subscription_updated_at: ~N[2025-01-01 00:00:00]
+          },
+          attrs
+        )
+      )
+    end
+
+    test "emits capway_create_mandate for active autogiro subscriber without mandate metadata" do
+      sub = build_autogiro_sub(%{trinity_subscriber_id: 1, national_id: "196403273813"})
+
+      result = CompareDataV2.get_mandates_to_create(%{1 => sub})
+
+      assert map_size(result) == 1
+      action_item = Map.get(result, 1)
+      assert action_item.action == :capway_create_mandate
+      assert action_item.comment == "Capway autogiro mandate missing"
+      assert action_item.trinity_subscriber_id == 1
+      assert action_item.national_id == "196403273813"
+      assert action_item.status == :pending
+      assert action_item.sub_action == nil
+    end
+
+    test "matches the space variant of the payment method" do
+      sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 2,
+          payment_method: "capway autogiro"
+        })
+
+      result = CompareDataV2.get_mandates_to_create(%{2 => sub})
+
+      assert map_size(result) == 1
+      assert Map.get(result, 2).action == :capway_create_mandate
+    end
+
+    test "skips subscriber with a stored mandate guid" do
+      sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 1,
+          trinity_capway_mandate_guid: "6f9619ff-8b86-d011-b42d-00cf4fc964ff"
+        })
+
+      assert CompareDataV2.get_mandates_to_create(%{1 => sub}) == %{}
+    end
+
+    test "treats a blank mandate guid as missing" do
+      sub = build_autogiro_sub(%{trinity_subscriber_id: 1, trinity_capway_mandate_guid: "   "})
+
+      result = CompareDataV2.get_mandates_to_create(%{1 => sub})
+
+      assert map_size(result) == 1
+    end
+
+    test "ignores non-autogiro payment methods" do
+      capway_sub = build_autogiro_sub(%{trinity_subscriber_id: 1, payment_method: "capway"})
+      card_sub = build_autogiro_sub(%{trinity_subscriber_id: 2, payment_method: "card"})
+
+      assert CompareDataV2.get_mandates_to_create(%{1 => capway_sub, 2 => card_sub}) == %{}
+    end
+
+    test "skips sync-excluded subscribers" do
+      sub = build_autogiro_sub(%{trinity_subscriber_id: 1, capway_sync_excluded: true})
+
+      assert CompareDataV2.get_mandates_to_create(%{1 => sub}) == %{}
+    end
+
+    test "skips subscriptions updated within the last day" do
+      recent_sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 1,
+          trinity_subscription_updated_at: NaiveDateTime.utc_now()
+        })
+
+      never_updated_sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 2,
+          trinity_subscription_updated_at: nil
+        })
+
+      assert CompareDataV2.get_mandates_to_create(%{1 => recent_sub, 2 => never_updated_sub}) ==
+               %{}
+    end
+
+    test "includes the recorded failure reason and timestamp in the comment" do
+      sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 1,
+          trinity_capway_mandate_error: "Personen saknar giltigt personnummer",
+          trinity_capway_mandate_error_at: "2026-07-20T22:15:00Z"
+        })
+
+      result = CompareDataV2.get_mandates_to_create(%{1 => sub})
+
+      assert Map.get(result, 1).comment ==
+               "Capway autogiro mandate missing — last attempt failed: " <>
+                 "Personen saknar giltigt personnummer (2026-07-20T22:15:00Z)"
+    end
+
+    test "includes the failure reason without a timestamp when none was recorded" do
+      sub =
+        build_autogiro_sub(%{
+          trinity_subscriber_id: 1,
+          trinity_capway_mandate_error: "missing_personal_number"
+        })
+
+      result = CompareDataV2.get_mandates_to_create(%{1 => sub})
+
+      assert Map.get(result, 1).comment ==
+               "Capway autogiro mandate missing — last attempt failed: missing_personal_number"
+    end
+
+    test "enriches action item with capway references from a matching contract" do
+      sub = build_autogiro_sub(%{trinity_subscriber_id: 1, national_id: "196403273813"})
+
+      capway_sub =
+        build_capway_sub(%{
+          national_id: "196403273813",
+          trinity_subscriber_id: 1,
+          capway_contract_ref: "C-001",
+          capway_contract_guid: "GUID-123",
+          capway_customer_id: "CID-456"
+        })
+
+      result = CompareDataV2.get_mandates_to_create(%{1 => sub}, %{"C-001" => capway_sub})
+
+      action_item = Map.get(result, 1)
+      assert action_item.capway_customer_id == "CID-456"
+      assert action_item.capway_contract_guid == "GUID-123"
+      assert action_item.capway_contract_ref == "C-001"
+    end
+
+    test "run/3 includes the create_mandates bucket" do
+      autogiro_sub =
+        build_autogiro_sub(%{trinity_subscriber_id: 1, national_id: "196403273813"})
+
+      args = %{
+        data: %{
+          capway: %{
+            active_subscribers: %{},
+            associated_subscribers: %{},
+            above_collector_threshold: %{},
+            map_sets: %{
+              active_trinity_ids: MapSet.new(),
+              active_national_ids: MapSet.new()
+            }
+          },
+          trinity: %{
+            active_subscribers: %{1 => autogiro_sub},
+            locked_subscribers: %{},
+            map_sets: %{
+              subscriber_to_subscription_ids: %{},
+              all_national_ids: MapSet.new(["196403273813"]),
+              all_subscriber_ids: MapSet.new([1]),
+              active_national_ids: MapSet.new(["196403273813"]),
+              recently_cancelled_subscriber_ids: MapSet.new(),
+              recently_cancelled_national_ids: MapSet.new()
+            }
+          }
+        }
+      }
+
+      {:ok, result} = CompareDataV2.run(args, %{}, [])
+
+      assert map_size(result.actions.capway.create_mandates) == 1
+      assert Map.get(result.actions.capway.create_mandates, 1).action == :capway_create_mandate
+      # autogiro subscriptions are not eligible for contract creation items
+      assert map_size(result.actions.capway.create_contracts) == 0
+    end
+  end
+
   describe "capway_sync_excluded" do
     test "excluded subscriber does not generate create_contracts action" do
       excluded_sub =

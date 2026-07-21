@@ -49,6 +49,10 @@ defmodule CapwaySync.Dynamodb.GeneralSyncReportRepositoryV2 do
           "create_contracts" => %{
             "count" => get_map_length(Map.get(actions.capway, :create_contracts, %{})),
             "ids" => Map.keys(Map.get(actions.capway, :create_contracts, %{}))
+          },
+          "create_mandates" => %{
+            "count" => get_map_length(Map.get(actions.capway, :create_mandates, %{})),
+            "ids" => Map.keys(Map.get(actions.capway, :create_mandates, %{}))
           }
         }
       },

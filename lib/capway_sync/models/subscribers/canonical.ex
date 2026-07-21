@@ -58,6 +58,15 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
           trinity_capway_last_updated: String.t() | nil,
           trinity_capway_created_at: String.t() | nil,
           trinity_capway_cancelled_at: String.t() | nil,
+          # Capway direct debit mandate GUID stored in Trinity subscriber
+          # metadata (`capway_mandate_guid`, written by Trinity when the
+          # autogiro mandate is created). `nil`/blank means no mandate exists.
+          trinity_capway_mandate_guid: String.t() | nil,
+          # Last mandate-creation failure recorded by Trinity's PaymentService
+          # (`capway_mandate_error` / `capway_mandate_error_at` metadata).
+          # Used to enrich the `capway_create_mandate` action-item comment.
+          trinity_capway_mandate_error: String.t() | nil,
+          trinity_capway_mandate_error_at: String.t() | nil,
           # Sync exclusion flag
           capway_sync_excluded: boolean(),
           # Email address — populated from Trinity in `from_trinity/1` and from
@@ -104,6 +113,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
             trinity_capway_last_updated: nil,
             trinity_capway_created_at: nil,
             trinity_capway_cancelled_at: nil,
+            trinity_capway_mandate_guid: nil,
+            trinity_capway_mandate_error: nil,
+            trinity_capway_mandate_error_at: nil,
             capway_sync_excluded: false,
             email: nil,
             language_code: nil,
@@ -148,6 +160,9 @@ defmodule CapwaySync.Models.Subscribers.Canonical do
       trinity_capway_last_updated: find_metadata_value(metadata, "capway_last_updated"),
       trinity_capway_created_at: find_metadata_value(metadata, "capway_created_at"),
       trinity_capway_cancelled_at: find_metadata_value(metadata, "capway_cancelled_at"),
+      trinity_capway_mandate_guid: find_metadata_value(metadata, "capway_mandate_guid"),
+      trinity_capway_mandate_error: find_metadata_value(metadata, "capway_mandate_error"),
+      trinity_capway_mandate_error_at: find_metadata_value(metadata, "capway_mandate_error_at"),
       # Sinfrid subscriptions are excluded from the Capway sync entirely. We map
       # them onto the existing `capway_sync_excluded` flag (rather than dropping
       # them from the Trinity list) so they remain present in the national_id /

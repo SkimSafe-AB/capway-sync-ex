@@ -7,6 +7,7 @@ defmodule CapwaySync.Models.Dynamodb.ActionItem do
           | :capway_cancel_contract
           | :capway_update_contract
           | :capway_update_customer
+          | :capway_create_mandate
 
   @type sub_action_item ::
           :update_email

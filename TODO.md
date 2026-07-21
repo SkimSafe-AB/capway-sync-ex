@@ -45,3 +45,57 @@ correct value for the active market and emit an update when it drifts.
 The Trinity-side worker that *executes* `:capway_update_customer` action items must learn to
 PATCH the customer `languageCode` and to read `sub_action` as a **list**. This repo only
 decides that an update is needed; it does not perform the REST write.
+
+---
+
+# TODO: Detect missing autogiro debit mandates → `:capway_create_mandate` (2026-07-21, DONE)
+
+## Goal
+For every subscription whose `payment_method` is `"capway_autogiro"` OR `"capway autogiro"`
+(both variants exist in data), check subscriber metadata for the debit mandate
+(`capway_mandate_guid` key, written by Trinity's `PaymentService.store_mandate_guid/2`).
+If missing/blank → emit a new action item `:capway_create_mandate`, comment
+"Capway autogiro mandate missing". Trinity then executes it from /admin/capway (see
+apps/trinity/TODO.md for the executor half).
+
+## Decisions (confirmed with user 2026-07-21)
+- Action type name: `:capway_create_mandate` (imperative, matches convention).
+- Scope: ACTIVE subscriptions only, following `get_contracts_to_create` pattern
+  (not `capway_sync_excluded`, `older_than_yesterday?`).
+- Detection = metadata presence only (no REST validation of the mandate at Capway).
+- Trinity execute flow: hybrid form — prefill clearing/account from WC meta
+  (`_clearing_number`/`_account_number`), operator can edit/fill, POST creates mandate.
+
+## Key facts (from exploration)
+- NO autogiro/mandate concept exists in this app today — `"capway_autogiro"` appears nowhere.
+- Pattern to copy: `get_contracts_to_create/3` at `lib/capway_sync/reactor/v1/steps/compare_data_v2.ex:195-218`
+  (comprehension over trinity grouped data, emits `build_action_item(:capway_create_contract, sub, reason)`; builder at :489).
+- Canonical struct (`lib/capway_sync/models/subscribers/canonical.ex`, `from_trinity/1` at :121)
+  already reads metadata keys (:148-159: capway_last_updated, capway_created_at,
+  capway_cancelled_at, capway_sync_excluded) and carries `payment_method` — must ADD
+  `capway_mandate_guid` field populated from metadata.
+- ActionItem model: `lib/capway_sync/models/dynamodb/action_item.ex` — add `:capway_create_mandate`
+  to `@type action_type` (lines 2-9). `create_action_item/2` at :53.
+- Workflow: `lib/capway_sync/reactor/v1/subscriber_sync_workflow.ex` — new bucket must be
+  persisted in `:dynamodb_store_action_items` step (:147-188) and counted in
+  `:dynamodb_store_report` (GeneralSyncReportRepositoryV2 builds counts+ids per bucket).
+- VERIFY: whether grouping (`lib/capway_sync/models/subscribers/cannonical/helper.ex` `group/2`,
+  note payment_method=="capway" check at helper.ex:53) lets capway_autogiro subs reach
+  CompareDataV2's trinity map at all — the detector input may need widening.
+
+## Tasks
+- [x] 1. Verify data flow for capway_autogiro subs — confirmed: `list_subscribers(true)` fetches ALL
+        payment methods and `Helper.group(:trinity)` does not filter by payment_method, so autogiro
+        subs reach `CompareDataV2.active_subscribers` (only the `locked_subscribers` bucket is
+        capway-only).
+- [x] 2. `ActionItem` — added `:capway_create_mandate` to action_type union
+- [x] 3. `Canonical` — added `trinity_capway_mandate_guid` (from `capway_mandate_guid` metadata)
+- [x] 4. `CompareDataV2` — `get_mandates_to_create/2` + `create_mandates` bucket in `run/3`
+- [x] 5. `SubscriberSyncWorkflow` — stores bucket; `GeneralSyncReportRepositoryV2` reports counts/ids
+- [x] 6. Tests: 9 new compare_data_v2 cases + 2 canonical cases
+- [x] 7. `mix test` full suite — 298 tests + 1 doctest, 0 failures (env vars from docker-compose-test.yml)
+- [x] 8. CHANGELOG + CLAUDE.md updated
+- [x] 9. Follow-up (2026-07-21): item comment now includes Trinity's recorded mandate
+        failure — `Canonical` reads `capway_mandate_error`/`capway_mandate_error_at`
+        metadata; comment becomes "… — last attempt failed: <reason> (<at>)".
+        (301 tests, 0 failures.)

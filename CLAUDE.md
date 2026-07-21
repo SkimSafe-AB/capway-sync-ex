@@ -139,5 +139,19 @@ and PATCH the corresponding fields (including `languageCode`/`currencyCode`); th
 app only decides that an update is needed — it does not perform the REST write.
 Note `:update_currency` is billing-sensitive and should be handled with care.
 
+### Autogiro debit-mandate detection (`:capway_create_mandate`)
+Subscriptions paying via Capway autogiro carry `payment_method` `"capway_autogiro"`
+**or** the legacy space variant `"capway autogiro"` (both are matched — see
+`@autogiro_payment_methods` in `CompareDataV2`). The mandate itself lives on the
+Trinity side as subscriber metadata `capway_mandate_guid` (surfaced on `Canonical`
+as `trinity_capway_mandate_guid`). `CompareDataV2.get_mandates_to_create/2` emits a
+`:capway_create_mandate` action item (comment `"Capway autogiro mandate missing"`)
+for every active, non-excluded autogiro subscription without a non-blank mandate
+guid; the report gains a `capway.actions.create_mandates` bucket. When Trinity
+recorded a failed mandate attempt (`capway_mandate_error`/`capway_mandate_error_at`
+metadata), the reason and timestamp are appended to the item comment. As with all
+action items, this app only detects — Trinity's `/admin/capway` UI executes the
+mandate creation via the payment processor.
+
 ## Database
 The database is external and this application should not hold any migrations or such.

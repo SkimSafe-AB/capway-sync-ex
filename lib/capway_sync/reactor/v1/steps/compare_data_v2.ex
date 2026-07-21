@@ -80,6 +80,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
         capway_subscriber_data.associated_subscribers
       )
 
+    capway_create_mandates =
+      get_mandates_to_create(
+        trinity_subscriber_data.active_subscribers,
+        capway_subscriber_data.associated_subscribers
+      )
+
     {trinity_suspend_accounts, trinity_cancel_accounts} =
       get_accounts_to_suspend_or_cancel(
         capway_subscriber_data.above_collector_threshold,
@@ -101,7 +107,8 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
           cancel_contracts: capway_cancel_contracts,
           update_contracts: capway_update_contracts,
           update_customers: capway_update_customers,
-          create_contracts: capway_create_contracts
+          create_contracts: capway_create_contracts,
+          create_mandates: capway_create_mandates
         }
       }
     }
@@ -216,6 +223,70 @@ defmodule CapwaySync.Reactor.V1.Steps.CompareDataV2 do
        build_action_item(:capway_create_contract, enriched_sub, reason)}
     end
   end
+
+  # Payment-method values that mean "Capway autogiro" — both the underscore
+  # and space variants occur in Trinity data.
+  @autogiro_payment_methods ["capway_autogiro", "capway autogiro"]
+
+  @doc """
+  Identifies active autogiro subscriptions that are missing their Capway
+  direct debit mandate.
+
+  A subscription pays via autogiro when its `payment_method` is
+  `"capway_autogiro"` or `"capway autogiro"`. The mandate exists when Trinity
+  subscriber metadata carries a non-blank `capway_mandate_guid` (surfaced on
+  the canonical struct as `trinity_capway_mandate_guid`). Subscriptions
+  without one are tagged as `capway_create_mandate` action items so the
+  mandate can be created from the Trinity admin UI.
+
+  Follows the same gating as `get_contracts_to_create/3`: sync-excluded
+  subscribers and subscriptions updated within the last day are skipped.
+  Action items are enriched with existing Capway references (customer_id,
+  contract_guid, contract_ref) when a matching Capway record exists.
+
+  When Trinity recorded a mandate-creation failure for the subscriber
+  (`capway_mandate_error` metadata, written by `PaymentService` when e.g. the
+  signup-time attempt failed), the failure reason and timestamp are appended
+  to the action-item comment so the operator sees the cause directly.
+  """
+  def get_mandates_to_create(trinity_subscriber_data, capway_all_subscribers \\ %{}) do
+    for {_id, sub} <- trinity_subscriber_data,
+        not sub.capway_sync_excluded,
+        sub.payment_method in @autogiro_payment_methods,
+        missing_mandate?(sub),
+        older_than_yesterday?(sub),
+        into: %{} do
+      reason = mandate_missing_reason(sub)
+
+      Logger.info(
+        "Subscriber #{sub.trinity_subscriber_id} pays via Capway autogiro but has no debit mandate, marking for mandate creation"
+      )
+
+      enriched_sub = enrich_with_capway_data(sub, capway_all_subscribers)
+
+      {sub.trinity_subscriber_id, build_action_item(:capway_create_mandate, enriched_sub, reason)}
+    end
+  end
+
+  defp missing_mandate?(%{trinity_capway_mandate_guid: guid}) when is_binary(guid),
+    do: String.trim(guid) == ""
+
+  defp missing_mandate?(_), do: true
+
+  @mandate_missing_reason "Capway autogiro mandate missing"
+
+  defp mandate_missing_reason(%{trinity_capway_mandate_error: error} = sub)
+       when is_binary(error) and error != "" do
+    case sub.trinity_capway_mandate_error_at do
+      at when is_binary(at) and at != "" ->
+        "#{@mandate_missing_reason} — last attempt failed: #{error} (#{at})"
+
+      _ ->
+        "#{@mandate_missing_reason} — last attempt failed: #{error}"
+    end
+  end
+
+  defp mandate_missing_reason(_sub), do: @mandate_missing_reason
 
   @doc """
   Identifies Capway contracts where customer-level fields (national ID, email,
