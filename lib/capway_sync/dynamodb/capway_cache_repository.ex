@@ -33,12 +33,28 @@ defmodule CapwaySync.Dynamodb.CapwayCacheRepository do
   """
   @spec read_cache(String.t()) :: {:ok, [%CapwaySubscriber{}]} | {:miss} | {:error, term()}
   def read_cache(date_string) do
-    table_name = table_name()
+    case read_manifest(date_string) do
+      {:ok, %{chunk_count: chunk_count}} ->
+        fetch_all_chunks(table_name(), date_string, chunk_count)
 
-    case Client.get_item(table_name, %{"cache_date" => date_string, "chunk_id" => "manifest"}) do
+      other ->
+        other
+    end
+  end
+
+  @doc """
+  Reads only the cache manifest for the given date string.
+
+  Returns `{:ok, %{total_subscribers: n, chunk_count: n, created_at: iso8601}}`,
+  `{:miss}` when no cache exists for that date, or `{:error, reason}`.
+  Used by the snapshot-shrink guard to compare today's fetch against the
+  previous day's cached size without loading every chunk.
+  """
+  @spec read_manifest(String.t()) :: {:ok, map()} | {:miss} | {:error, term()}
+  def read_manifest(date_string) do
+    case Client.get_item(table_name(), %{"cache_date" => date_string, "chunk_id" => "manifest"}) do
       {:ok, %{"Item" => manifest}} ->
-        chunk_count = manifest["chunk_count"]["N"] |> String.to_integer()
-        fetch_all_chunks(table_name, date_string, chunk_count)
+        {:ok, parse_manifest(manifest)}
 
       {:ok, %{}} ->
         {:miss}
@@ -46,6 +62,40 @@ defmodule CapwaySync.Dynamodb.CapwayCacheRepository do
       {:error, reason} ->
         Logger.error("Failed to read cache manifest: #{inspect(reason)}")
         {:error, reason}
+    end
+  end
+
+  @doc """
+  Converts a raw DynamoDB manifest item (typed attribute values such as
+  `%{"N" => "550"}`, or already-decoded plain values) into an atom-keyed map.
+  """
+  @spec parse_manifest(map()) :: %{
+          total_subscribers: non_neg_integer() | nil,
+          chunk_count: non_neg_integer() | nil,
+          created_at: String.t() | nil
+        }
+  def parse_manifest(manifest) when is_map(manifest) do
+    %{
+      total_subscribers: integer_attribute(manifest, "total_subscribers"),
+      chunk_count: integer_attribute(manifest, "chunk_count"),
+      created_at: string_attribute(manifest, "created_at")
+    }
+  end
+
+  defp integer_attribute(item, key) do
+    case Map.get(item, key) do
+      %{"N" => value} when is_binary(value) -> String.to_integer(value)
+      value when is_integer(value) -> value
+      value when is_binary(value) -> String.to_integer(value)
+      _ -> nil
+    end
+  end
+
+  defp string_attribute(item, key) do
+    case Map.get(item, key) do
+      %{"S" => value} -> value
+      value when is_binary(value) -> value
+      _ -> nil
     end
   end
 

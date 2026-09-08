@@ -282,4 +282,39 @@ defmodule CapwaySync.Dynamodb.CapwayCacheRepositoryTest do
       }
     end)
   end
+
+  describe "parse_manifest/1" do
+    test "decodes DynamoDB typed attribute values" do
+      manifest = %{
+        "cache_date" => %{"S" => "2026-09-01"},
+        "chunk_id" => %{"S" => "manifest"},
+        "total_subscribers" => %{"N" => "2350"},
+        "chunk_count" => %{"N" => "12"},
+        "created_at" => %{"S" => "2026-09-01T22:04:51Z"}
+      }
+
+      assert CapwayCacheRepository.parse_manifest(manifest) == %{
+               total_subscribers: 2350,
+               chunk_count: 12,
+               created_at: "2026-09-01T22:04:51Z"
+             }
+    end
+
+    test "accepts already-decoded plain values (e.g. from build_manifest/2)" do
+      manifest = CapwayCacheRepository.build_manifest("2026-09-01", build_subscribers(550))
+      parsed = CapwayCacheRepository.parse_manifest(manifest)
+
+      assert parsed.total_subscribers == 550
+      assert parsed.chunk_count == 3
+      assert parsed.created_at == manifest["created_at"]
+    end
+
+    test "missing attributes become nil" do
+      assert CapwayCacheRepository.parse_manifest(%{}) == %{
+               total_subscribers: nil,
+               chunk_count: nil,
+               created_at: nil
+             }
+    end
+  end
 end

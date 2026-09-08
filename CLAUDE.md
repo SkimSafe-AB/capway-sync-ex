@@ -109,6 +109,10 @@ export PAYMENT_PROCESSOR_HOST="https://payment-processor.example.com/api/"
 # Optional — bound on the Task.async_stream that fetches customer emails.
 # Defaults to 10 if unset.
 export CAPWAY_EMAIL_FETCH_CONCURRENCY=10
+# Optional — max tolerated fractional drop of today's Capway snapshot vs the
+# previous day's cached one before the fetch is rejected (default 0.05 = 5%).
+# 1.0 disables the guard.
+export CAPWAY_SNAPSHOT_DROP_TOLERANCE=0.05
 ```
 
 ## Testing
@@ -152,6 +156,21 @@ recorded a failed mandate attempt (`capway_mandate_error`/`capway_mandate_error_
 metadata), the reason and timestamp are appended to the item comment. As with all
 action items, this app only detects — Trinity's `/admin/capway` UI executes the
 mandate creation via the payment processor.
+
+### Capway fetch integrity (`CapwaySubscribers` / `CachedCapwaySubscribers`)
+The SOAP report returns one row per **contract**, while the REST customer count
+counts **customers** — so the count is only a parallelisation hint. After the 3
+workers finish, `CapwaySubscribers.fetch_tail/3` sweeps past the count until a
+short page (an empty page is confirmed with one probe), and
+`validate_page_sequence/1` rejects the snapshot if any short/empty page is
+followed by an offset that still has rows. `CachedCapwaySubscribers` then refuses
+(and does not cache) a snapshot that shrank more than
+`CAPWAY_SNAPSHOT_DROP_TOLERANCE` versus the previous day's cache manifest. Finally
+the `SuppressKnownContracts` step drops a `:capway_create_contract` item when the
+`capway-contracts` table still holds a recently written active contract for that
+national id. All of this exists because a missing row in the fetch shows up as a
+false "Missing in Capway system" action item — when touching the fetch, keep the
+page loops injectable (`fetch_page_fun`) so they stay unit-testable.
 
 ## Database
 The database is external and this application should not hold any migrations or such.

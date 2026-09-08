@@ -9,7 +9,8 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
 
   - Partition key: `contract_ref_no` (String)
   - All Capway subscriber fields stored as top-level attributes
-  - `updated_at` timestamp for staleness tracking
+  - `updated_at` timestamp for staleness tracking (surfaced on the
+    deserialized struct as `CapwaySubscriber.updated_at`)
 
   ## Configuration
 
@@ -188,6 +189,7 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepository do
       customer_guid: get_value(item, "customer_guid"),
       contract_price: get_value(item, "contract_price"),
       next_invoice_date: get_value(item, "next_invoice_date"),
+      updated_at: get_value(item, "updated_at"),
       origin: :capway,
       capway_id: get_value(item, "customer_id"),
       trinity_id: nil,

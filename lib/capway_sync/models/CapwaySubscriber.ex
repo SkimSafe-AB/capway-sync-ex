@@ -116,6 +116,10 @@ defmodule CapwaySync.Models.CapwaySubscriber do
             customer_id: nil,
             customer_guid: nil,
             next_invoice_date: nil,
+            # When the row was last written to the `capway-contracts` table
+            # (ISO 8601). Only populated by `CapwayContractRepository.deserialize/1`;
+            # nil for rows coming straight from the SOAP report or the daily cache.
+            updated_at: nil,
             # external data and debug
             origin: nil,
             trinity_id: nil,

@@ -99,3 +99,32 @@ apps/trinity/TODO.md for the executor half).
         failure — `Canonical` reads `capway_mandate_error`/`capway_mandate_error_at`
         metadata; comment becomes "… — last attempt failed: <reason> (<at>)".
         (301 tests, 0 failures.)
+
+---
+
+# TODO: Harden the Capway SOAP fetch against silent row loss (2026-09-02)
+
+## Problem
+Action item `2026-09-02:capway_create_contract:tsuid:65200` was emitted for a subscriber whose
+contract (`v2:1780472140:875617`) was active in the 2026-09-01 snapshot. The 2026-09-02 fetch did
+not contain the row at all (all Capway fields on the item were `nil`, and the `capway-contracts`
+row was not rewritten by that run). Root causes in `CapwaySubscribers`:
+1. Worker ranges are sized from the REST *customer* count, but the report returns one row per
+   *contract* — rows past the customer count are never requested.
+2. A page that parses to zero rows is only logged, never treated as a failure.
+3. Nothing compares today's fetched count with yesterday's cached count.
+4. Nothing cross-checks a create item against the `capway-contracts` table.
+
+## Tasks
+- [x] 1. `CapwaySubscribers`: track pages (offset/requested/fetched), sweep the tail past the REST
+      count until a short page, validate the page sequence (no data after a short/empty page)
+- [x] 2. `CachedCapwaySubscribers`: abort (no cache write) when today's count drops below the
+      previous day's manifest count by more than `CAPWAY_SNAPSHOT_DROP_TOLERANCE` (default 5%)
+- [x] 3. `CapwayCacheRepository.read_manifest/1` + `CapwaySubscriber.updated_at` +
+      `CapwayContractRepository.deserialize/1` populates it
+- [x] 4. New step `SuppressKnownContracts` between `compare_data` and the store steps: drop a
+      `:capway_create_contract` item when `capway-contracts` holds a recently-updated active
+      contract for the same national id
+- [x] 5. Tests for all of the above
+- [x] 6. Docs: CHANGELOG, CLAUDE.md, README env vars
+- [x] 7. `mix compile` warning scan (no warnings for new symbols) + `mix test` (352 tests, 0 failures)

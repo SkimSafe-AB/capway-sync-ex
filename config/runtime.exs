@@ -70,6 +70,15 @@ if config_env() == :prod do
     # Creditor id passed to the Capway report query. Set per-client via the
     # CAPWAY_CREDITOR env var.
     capway_creditor: System.get_env("CAPWAY_CREDITOR"),
+    # Max tolerated fractional drop of today's Capway snapshot vs the previous
+    # day's cached one before the fetch is rejected (0.05 = 5%). 1.0 disables.
+    capway_snapshot_drop_tolerance:
+      System.get_env("CAPWAY_SNAPSHOT_DROP_TOLERANCE")
+      |> then(fn
+        nil -> 0.05
+        "" -> 0.05
+        val -> String.to_float(val)
+      end),
     # Max pages to fetch from Capway (each page is 100 records)
     # Set to nil or 0 for unlimited, or a positive integer for limit
     capway_max_pages:

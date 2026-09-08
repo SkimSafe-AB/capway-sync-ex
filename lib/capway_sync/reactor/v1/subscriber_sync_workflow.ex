@@ -9,6 +9,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     ConvertToCanonicalData,
     FetchCapwayEmails,
     GroupSubscribers,
+    SuppressKnownContracts,
     SuspendAccounts,
     TrinitySubscribers,
     UnsuspendAccounts
@@ -144,8 +145,19 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
     max_retries(2)
   end
 
-  step(:dynamodb_store_action_items) do
+  # Backstop against an incomplete Capway snapshot: a `:capway_create_contract`
+  # item is dropped when the `capway-contracts` table still holds a recently
+  # written *active* contract for the same national id. Depends on
+  # `store_capway_contracts` purely for ordering, so the table reflects today's
+  # snapshot before it is consulted.
+  step(:suppress_known_contracts, SuppressKnownContracts) do
     argument(:result, result(:compare_data))
+    argument(:contracts_stored, result(:store_capway_contracts))
+    max_retries(2)
+  end
+
+  step(:dynamodb_store_action_items) do
+    argument(:result, result(:suppress_known_contracts))
 
     run(fn args, _context ->
       Logger.info(
@@ -193,7 +205,7 @@ defmodule CapwaySync.Reactor.V1.SubscriberSyncWorkflow do
   end
 
   step(:dynamodb_store_report) do
-    argument(:result, result(:compare_data))
+    argument(:result, result(:suppress_known_contracts))
     # argument(:data, result(:group_subscribers))
 
     run(fn args, _context ->

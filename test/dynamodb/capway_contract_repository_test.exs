@@ -106,6 +106,18 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert result.contract_price == "199.00"
       assert result.next_invoice_date == "2026-04-01"
       assert result.raw_data == nil
+      assert result.updated_at == nil
+    end
+
+    test "surfaces the stored updated_at timestamp" do
+      item = %{
+        "contract_ref_no" => %{"S" => "contract_789"},
+        "active" => %{"S" => "true"},
+        "updated_at" => %{"S" => "2026-09-01T22:04:51.448559Z"}
+      }
+
+      assert CapwayContractRepository.deserialize(item).updated_at ==
+               "2026-09-01T22:04:51.448559Z"
     end
 
     test "handles DynamoDB typed values" do
@@ -148,6 +160,9 @@ defmodule CapwaySync.Dynamodb.CapwayContractRepositoryTest do
       assert deserialized.contract_price == subscriber.contract_price
       assert deserialized.next_invoice_date == subscriber.next_invoice_date
       assert deserialized.origin == :capway
+      # serialize/1 stamps the write time; it must survive the roundtrip
+      assert deserialized.updated_at == serialized["updated_at"]
+      assert {:ok, _, _} = DateTime.from_iso8601(deserialized.updated_at)
     end
   end
 end
