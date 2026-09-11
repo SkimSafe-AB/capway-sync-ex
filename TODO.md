@@ -127,4 +127,43 @@ row was not rewritten by that run). Root causes in `CapwaySubscribers`:
       contract for the same national id
 - [x] 5. Tests for all of the above
 - [x] 6. Docs: CHANGELOG, CLAUDE.md, README env vars
+- [x] 8. Workers stop at report end (short page / two empty pages); skip tail sweep when the end
+      was already seen; cache manifest written after chunks (2026-09-08 log review)
 - [x] 7. `mix compile` warning scan (no warnings for new symbols) + `mix test` (352 tests, 0 failures)
+
+---
+
+# TODO: Size the Capway fetch from the report's own `counter` column (2026-09-11)
+
+## Problem
+`CapwaySubscribers` sized the fetch from the REST *customer* count (`Rest.CustomerCount`), but the
+`CAP_q_contracts_skimsafe` report returns one row per *contract*, so the two never agreed. The
+tail sweep, short-page heuristics and "count is only a hint" logic all existed to paper over that.
+Every row of the report carries a `counter` column (last value of the row) that is the total row
+count of the whole report — identical on every row of every page (6137 in all saved responses).
+The handler ignored it (`counter(20) - ignored`).
+
+## Decisions
+- The report total is read from the **last** value of each row (robust to the 20→21 column shift
+  the report already went through; headers do not align with data columns, so no header lookup).
+- All rows on a page must agree on the counter, otherwise the page is rejected
+  (`{:invalid_report_total, {:inconsistent_counter, values}}`).
+- The REST customer count is no longer used by the fetch. `Rest.CustomerCount` is deleted;
+  `Rest.AccessToken` / `Rest.Client` and the `REST_API_*` env vars are kept (unchanged).
+- The tail sweep (`fetch_tail/3`, `report_end_found?/1`) is removed: with an exact total the
+  fetch knows when it is complete. Replaced by `validate_row_count/2` (fetched == counter) and a
+  single probe at offset `counter` (`confirm_report_end/3`) that must return no rows.
+- An empty first page means an empty report (total 0); the shrink guard in
+  `CachedCapwaySubscribers` still rejects it against yesterday's manifest.
+
+## Tasks
+- [x] 1. `ResponseHandler.report_total/1` — parse the `counter` column, require consistency
+- [x] 2. `CapwaySubscribers.run/3`: first page → total → `apply_page_limit` → workers over
+      `[page_size, total)` → `validate_page_sequence` → `validate_row_count` → end probe
+- [x] 3. `calculate_worker_ranges/3` takes a start offset; remove tail sweep, REST count
+- [x] 4. Delete `lib/capway_sync/rest/customer_count.ex`
+- [x] 5. Mock generator + `priv/mock_responses/*.xml`: counter = total rows, same on every row
+- [x] 6. Tests: handler `report_total/1`, step `fetch_first_page/1`, `validate_row_count/2`,
+      `confirm_report_end/3`, `calculate_worker_ranges/3`, `fetch_pages/2` orchestration
+- [x] 7. Docs: CHANGELOG, CLAUDE.md fetch-integrity section, moduledoc
+- [x] 8. `mix compile` warning scan for new symbols (none) + `mix test` (378 tests + 1 doctest, 0 failures)

@@ -5,39 +5,39 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   ## Why the fetch is shaped the way it is
 
   The report (`CAP_q_contracts_skimsafe`) is paginated with `offset`/`maxrows`
-  and returns **one row per contract**. The only cheap "how many rows are
-  there" signal we have is the REST customer count, which counts *customers*,
-  not contracts — a customer with several contracts produces more rows than
-  the count suggests. The count is therefore treated as a **parallelisation
-  hint**, never as the upper bound of the fetch:
+  and returns **one row per contract**. Every row carries a `counter` column
+  holding the row count of the *whole* report (see
+  `ResponseHandler.report_total/1`), so the fetch knows its exact size up
+  front and never has to guess where the report ends:
 
-    1. `@worker_count` workers fetch `[0, customer_count)` in parallel, page by
-       page (`@page_size` rows each).
-    2. A sequential **tail sweep** then continues from `customer_count` until
-       the report returns a short page (fewer rows than requested). An empty
-       page is confirmed with one extra probe so a single glitchy empty
-       response cannot end the sweep early.
+    1. The first page (`[0, @page_size)`) is fetched alone and the report
+       total is read from it. An empty first page is an empty report.
+    2. `@worker_count` workers fetch the remaining `[@page_size, total)` rows
+       in parallel, page by page. A worker still stops early after a short
+       non-empty page or two consecutive empty pages, so a report that turns
+       out shorter than its counter does not cost a sweep of empty pages.
     3. Every page is recorded as a `Page` (offset, requested, rows) and the
-       whole sequence is validated: once a short or empty page has been seen,
-       no later offset may return rows. A page that silently came back empty
-       in the middle of the report therefore fails the step instead of
-       quietly dropping up to `@page_size` contracts.
+       whole set is validated: once a short or empty page has been seen no
+       later offset may return rows (`validate_page_sequence/1`), and the
+       fetched rows must add up to the counter (`validate_row_count/2`).
+    4. One probe at offset `total` must return no rows
+       (`confirm_report_end/3`) — a counter that undercounts would otherwise
+       silently truncate the snapshot.
 
   Any failure — a worker error, a worker killed by the task timeout, an
-  inconsistent page sequence, a tail-sweep error — makes the step return
-  `{:error, _}` so the reactor retries (`compensate/4` → `:retry`) rather than
-  handing a partial snapshot to `CompareDataV2`, where every Trinity
-  subscriber whose contract fell in the missing range would become a false
-  `:capway_create_contract` action item.
+  inconsistent page sequence, a row-count mismatch, rows past the counter —
+  makes the step return `{:error, _}` so the reactor retries (`compensate/4`
+  → `:retry`) rather than handing a partial snapshot to `CompareDataV2`, where
+  every Trinity subscriber whose contract fell in the missing range would
+  become a false `:capway_create_contract` action item.
 
   When `CAPWAY_MAX_PAGES` is set the fetch is intentionally truncated for
-  development, and the tail sweep is skipped.
+  development: the total is capped and the end-of-report probe is skipped.
   """
 
   use Reactor.Step
   alias CapwaySync.Soap.GenerateReport
   alias CapwaySync.Soap.ResponseHandler
-  alias CapwaySync.Rest.{AccessToken, CustomerCount}
   alias CapwaySync.Models.CapwaySubscriber
   require Logger
 
@@ -73,10 +73,18 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
   @typedoc """
   Fetches one report page. Injected into the page loops so they can be unit
-  tested without SOAP; production uses `fetch_page_with_retry/3`.
+  tested without SOAP.
   """
   @type fetch_page_fun ::
           (non_neg_integer(), pos_integer() -> {:ok, [CapwaySubscriber.t()]} | {:error, term()})
+
+  @typedoc """
+  Same as `fetch_page_fun`, plus a label for log lines and the debug dump.
+  Production uses `fetch_page_with_retry/3`.
+  """
+  @type labelled_fetch_fun ::
+          (non_neg_integer(), pos_integer(), String.t() ->
+             {:ok, [CapwaySubscriber.t()]} | {:error, term()})
 
   @doc "Rows requested per SOAP page (Capway caps a page at 100)."
   @spec page_size() :: pos_integer()
@@ -84,33 +92,92 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
   @impl true
   def run(_map, _context, _options) do
-    # Clear previous debug file
-    file_dir = System.get_env("CAPWAY_DEBUG_FILE_DIR") || "priv"
-    file_path = Path.join(file_dir, "soap_response.xml")
-    File.write(file_path, "")
-
-    Logger.info("Starting parallel Capway subscriber fetch with #{@worker_count} workers")
-
+    reset_debug_file()
     max_pages = Application.get_env(:capway_sync, :capway_max_pages)
+    Logger.info("Starting Capway subscriber fetch (#{@worker_count} workers after the first page)")
 
-    with {:ok, access_token} <- AccessToken.run(),
-         {:ok, customer_count} <- CustomerCount.run(access_token),
-         limited_count = apply_page_limit(customer_count, max_pages),
-         {:ok, worker_pages} <- fetch_with_parallel_workers(limited_count),
-         {:ok, tail_pages} <- maybe_fetch_tail(limited_count, max_pages),
-         pages = worker_pages ++ tail_pages,
-         :ok <- validate_page_sequence(pages) do
-      subscribers = subscribers_from_pages(pages)
-      log_fetch_summary(subscribers, customer_count, tail_pages)
-      {:ok, subscribers}
-    else
+    case fetch_pages(max_pages, &fetch_page_with_retry/3) do
+      {:ok, pages, total} ->
+        subscribers = subscribers_from_pages(pages)
+        log_fetch_summary(subscribers, total)
+        {:ok, subscribers}
+
       {:error, reason} ->
         Logger.error("Failed to fetch Capway subscribers: #{inspect(reason)}")
         {:error, "Failed to fetch capway subscribers: #{inspect(reason)}"}
     end
   end
 
-  # Apply page limit to total count if configured
+  @doc """
+  Runs the whole paged fetch with an injectable page fetcher.
+
+  Returns `{:ok, pages, total}` — every fetched `Page` plus the report total
+  read from the counter column — or `{:error, reason}`. `max_pages` is the
+  `CAPWAY_MAX_PAGES` cap (`nil`/`0` = unlimited).
+
+  Made public so the orchestration (first page → total → workers →
+  validation → end probe) can be tested without SOAP; `run/3` is a thin
+  wrapper around it.
+  """
+  @spec fetch_pages(non_neg_integer() | nil, labelled_fetch_fun()) ::
+          {:ok, [Page.t()], non_neg_integer()} | {:error, term()}
+  def fetch_pages(max_pages, fetch_fun) do
+    with {:ok, first_page, total} <- fetch_first_page(&fetch_fun.(&1, &2, "first")),
+         limited_total = apply_page_limit(total, max_pages),
+         {:ok, worker_pages} <-
+           fetch_with_parallel_workers(
+             first_page.requested,
+             limited_total - first_page.requested,
+             fetch_fun
+           ),
+         pages = [first_page | worker_pages],
+         :ok <- validate_page_sequence(pages),
+         :ok <- validate_row_count(pages, limited_total),
+         :ok <- maybe_confirm_report_end(total, limited_total, &fetch_fun.(&1, &2, "probe")) do
+      {:ok, pages, total}
+    end
+  end
+
+  @doc """
+  Fetches the first report page and reads the report total from its
+  `counter` column.
+
+  Returns `{:ok, page, total}`. An empty first page is an empty report
+  (`total` 0). A non-empty page whose rows carry no usable counter returns
+  `{:error, {:invalid_report_total, reason}}` (see
+  `ResponseHandler.report_total/1`); a fetch failure returns
+  `{:error, {:first_page_error, reason}}`.
+  """
+  @spec fetch_first_page(fetch_page_fun()) ::
+          {:ok, Page.t(), non_neg_integer()} | {:error, term()}
+  def fetch_first_page(fetch_fun) do
+    case fetch_fun.(0, @page_size) do
+      {:ok, []} ->
+        Logger.warning("⚠️ First page: the Capway report returned no rows at all")
+        {:ok, %Page{offset: 0, requested: @page_size, subscribers: []}, 0}
+
+      {:ok, subscribers} ->
+        page = %Page{offset: 0, requested: @page_size, subscribers: subscribers}
+        log_page("First page", page)
+
+        case ResponseHandler.report_total(subscribers) do
+          {:ok, total} ->
+            Logger.info("Capway report counter: #{total} rows in total")
+            {:ok, page, total}
+
+          {:error, reason} ->
+            Logger.error(
+              "❌ Cannot read the report total from the counter column: #{inspect(reason)}"
+            )
+
+            {:error, {:invalid_report_total, reason}}
+        end
+
+      {:error, reason} ->
+        {:error, {:first_page_error, reason}}
+    end
+  end
+
   defp apply_page_limit(total_count, nil), do: total_count
   defp apply_page_limit(total_count, 0), do: total_count
 
@@ -129,24 +196,19 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
 
   defp apply_page_limit(total_count, _), do: total_count
 
-  # The tail sweep exists to pick up rows beyond the REST customer count. When
-  # a page limit is configured the truncation is intentional, so skip it.
-  defp maybe_fetch_tail(_limited_count, max_pages) when is_integer(max_pages) and max_pages > 0 do
-    Logger.info("CAPWAY_MAX_PAGES is set (#{max_pages}) — skipping tail sweep")
+  # Fetches `row_count` rows from `start_offset` with parallel workers. The
+  # first page has already been fetched, so a report that fits in one page
+  # needs no workers at all.
+  defp fetch_with_parallel_workers(_start_offset, row_count, _fetch_fun) when row_count <= 0 do
+    Logger.info("The first page covers the whole report — no parallel workers needed")
     {:ok, []}
   end
 
-  defp maybe_fetch_tail(start_offset, _max_pages) do
-    Logger.info("Starting tail sweep from offset #{start_offset} (past the REST customer count)")
-    fetch_tail(start_offset, @page_size, &fetch_page_with_retry(&1, &2, "tail"))
-  end
-
-  # Fetch pages using parallel workers that divide the customer count.
-  defp fetch_with_parallel_workers(total_count) do
-    ranges = calculate_worker_ranges(total_count, @worker_count)
+  defp fetch_with_parallel_workers(start_offset, row_count, fetch_fun) do
+    ranges = calculate_worker_ranges(start_offset, row_count, @worker_count)
     Logger.info("Worker ranges: #{inspect(ranges)}")
-    timeout = max(15 * total_count * 100, @min_worker_timeout_ms)
-    Logger.info("Setting timeout to #{timeout}ms for fetching #{total_count} records")
+    timeout = max(15 * row_count * 100, @min_worker_timeout_ms)
+    Logger.info("Setting timeout to #{timeout}ms for fetching #{row_count} records")
 
     tasks =
       ranges
@@ -157,7 +219,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
             worker_id,
             offset,
             count,
-            &fetch_page_with_retry(&1, &2, "worker-#{worker_id}")
+            &fetch_fun.(&1, &2, "worker-#{worker_id}")
           )
         end,
         max_concurrency: @worker_count,
@@ -170,12 +232,17 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   end
 
   @doc """
-  Calculate offset and maxrows for each worker to divide the work evenly.
+  Splits `row_count` rows starting at `start_offset` into `worker_count`
+  `{offset, count}` ranges of (near) equal size; the first workers absorb the
+  remainder and empty ranges are dropped.
+
   Made public for testing purposes.
   """
-  def calculate_worker_ranges(total_count, worker_count) do
-    base_size = div(total_count, worker_count)
-    remainder = rem(total_count, worker_count)
+  @spec calculate_worker_ranges(non_neg_integer(), non_neg_integer(), pos_integer()) ::
+          [{non_neg_integer(), pos_integer()}]
+  def calculate_worker_ranges(start_offset, row_count, worker_count) do
+    base_size = div(row_count, worker_count)
+    remainder = rem(row_count, worker_count)
 
     Enum.reduce(0..(worker_count - 1), [], fn worker_index, acc ->
       # First workers get an extra record if there's a remainder
@@ -183,7 +250,7 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       worker_size = base_size + extra
 
       # Calculate offset based on previous workers
-      offset = worker_index * base_size + min(worker_index, remainder)
+      offset = start_offset + worker_index * base_size + min(worker_index, remainder)
 
       [{offset, worker_size} | acc]
     end)
@@ -194,11 +261,20 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
   @doc """
   Fetches `count` rows starting at `offset` for one worker, one page at a time.
 
-  Returns `{:ok, {worker_id, [Page.t()]}}` when every page was fetched, or
-  `{:error, {worker_id, reason}}` on the first page that fails after retries.
-  A page that comes back empty is recorded (and logged) but not treated as an
-  error here — `validate_page_sequence/1` decides afterwards whether it was a
-  legitimate end of data or a silently failed page.
+  Returns `{:ok, {worker_id, [Page.t()]}}` or `{:error, {worker_id, reason}}`
+  on the first page that fails after retries.
+
+  The ranges are sized from the report's own counter, which should be exact.
+  Should the report nevertheless turn out *shorter* than the counter, a
+  worker stops early — without fetching the rest of its range — as soon as
+  it has seen the end of the report:
+
+    * a **short, non-empty** page (fewer rows than requested), or
+    * **two consecutive empty** pages.
+
+  A single empty page is recorded (and logged) and the worker continues, so
+  `validate_page_sequence/1` can tell a silently failed page (data follows)
+  from the genuine end of the report (only empty pages follow).
 
   Made public so the page loop can be tested with an injected `fetch_fun`.
   """
@@ -227,16 +303,36 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
     case fetch_fun.(offset, chunk_size) do
       {:ok, subscribers} ->
         page = %Page{offset: offset, requested: chunk_size, subscribers: subscribers}
-        log_page(worker_id, page)
+        log_page("Worker #{worker_id}", page)
+        pages = [page | acc]
 
-        do_fetch_worker_pages(worker_id, offset + chunk_size, remaining - chunk_size, fetch_fun, [
-          page | acc
-        ])
+        if end_of_report?(pages) do
+          Logger.info(
+            "Worker #{worker_id}: End of report reached at offset #{offset} — " <>
+              "skipping the remaining #{remaining - chunk_size} records of the range"
+          )
+
+          do_fetch_worker_pages(worker_id, offset, 0, fetch_fun, pages)
+        else
+          do_fetch_worker_pages(
+            worker_id,
+            offset + chunk_size,
+            remaining - chunk_size,
+            fetch_fun,
+            pages
+          )
+        end
 
       {:error, reason} ->
         {:error, {worker_id, reason}}
     end
   end
+
+  # `pages` is newest-first. The end of the report is certain after a short
+  # non-empty page, or after two consecutive empty pages.
+  defp end_of_report?([%Page{subscribers: [_ | _]} = latest | _]), do: Page.short?(latest)
+  defp end_of_report?([%Page{subscribers: []}, %Page{subscribers: []} | _]), do: true
+  defp end_of_report?(_pages), do: false
 
   defp log_page(label, %Page{} = page) do
     fetched = Page.fetched(page)
@@ -250,73 +346,6 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       Logger.info(
         "#{label}: Fetched #{fetched}/#{page.requested} subscribers at offset=#{page.offset}"
       )
-    end
-  end
-
-  @doc """
-  Sequentially fetches pages from `start_offset` until the report signals the
-  end of data.
-
-    * A **short, non-empty** page ends the sweep.
-    * An **empty** page is confirmed with one probe at the next offset. If the
-      probe is also empty the sweep ends; if the probe returns rows the empty
-      page was a silently failed request and the sweep returns
-      `{:error, {:inconsistent_pages, details}}`.
-
-  Returns `{:ok, [Page.t()]}` (possibly `[]` if nothing lies past
-  `start_offset`... the terminating empty/short page is included) or
-  `{:error, reason}`.
-
-  Made public so it can be tested with an injected `fetch_fun`.
-  """
-  @spec fetch_tail(non_neg_integer(), pos_integer(), fetch_page_fun()) ::
-          {:ok, [Page.t()]} | {:error, term()}
-  def fetch_tail(start_offset, page_size \\ @page_size, fetch_fun) do
-    do_fetch_tail(start_offset, page_size, fetch_fun, [])
-  end
-
-  defp do_fetch_tail(offset, page_size, fetch_fun, acc) do
-    case fetch_fun.(offset, page_size) do
-      {:ok, subscribers} ->
-        page = %Page{offset: offset, requested: page_size, subscribers: subscribers}
-        log_page("tail", page)
-
-        cond do
-          subscribers == [] ->
-            confirm_end_of_report(page, page_size, fetch_fun, acc)
-
-          Page.short?(page) ->
-            {:ok, Enum.reverse([page | acc])}
-
-          true ->
-            do_fetch_tail(offset + page_size, page_size, fetch_fun, [page | acc])
-        end
-
-      {:error, reason} ->
-        {:error, {:tail_fetch_error, offset, reason}}
-    end
-  end
-
-  defp confirm_end_of_report(%Page{} = empty_page, page_size, fetch_fun, acc) do
-    probe_offset = empty_page.offset + page_size
-
-    case fetch_fun.(probe_offset, page_size) do
-      {:ok, []} ->
-        {:ok, Enum.reverse([empty_page | acc])}
-
-      {:ok, subscribers} ->
-        {:error,
-         {:inconsistent_pages,
-          %{
-            short_offset: empty_page.offset,
-            short_requested: empty_page.requested,
-            short_fetched: 0,
-            data_offset: probe_offset,
-            data_fetched: length(subscribers)
-          }}}
-
-      {:error, reason} ->
-        {:error, {:tail_fetch_error, probe_offset, reason}}
     end
   end
 
@@ -362,6 +391,85 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
         end
     end
   end
+
+  @doc """
+  Checks that the rows fetched across all pages add up to `expected` — the
+  report counter, capped by `CAPWAY_MAX_PAGES`.
+
+  Fewer rows means a page silently lost rows or the counter overstates the
+  report; more rows means the counter understates it. Either way the snapshot
+  is refused with `{:error, {:row_count_mismatch, details}}`.
+  """
+  @spec validate_row_count([Page.t()], non_neg_integer()) ::
+          :ok | {:error, {:row_count_mismatch, map()}}
+  def validate_row_count(pages, expected) when is_list(pages) do
+    fetched = row_count(pages)
+
+    if fetched == expected do
+      :ok
+    else
+      Logger.error(
+        "❌ Capway row count mismatch: the report counter says #{expected} rows but " <>
+          "#{fetched} were fetched. Refusing the snapshot to avoid false " <>
+          ":capway_create_contract action items."
+      )
+
+      {:error, {:row_count_mismatch, %{expected: expected, fetched: fetched}}}
+    end
+  end
+
+  @doc """
+  Probes offset `total` once; the report must have no rows there.
+
+  Rows past the counter would mean the counter undercounts the report and the
+  fetch stopped too early. Returns `:ok`,
+  `{:error, {:rows_past_counter, details}}` or
+  `{:error, {:probe_error, offset, reason}}`.
+
+  Made public so it can be tested with an injected `fetch_fun`.
+  """
+  @spec confirm_report_end(non_neg_integer(), pos_integer(), fetch_page_fun()) ::
+          :ok | {:error, term()}
+  def confirm_report_end(total, page_size \\ @page_size, fetch_fun) do
+    case fetch_fun.(total, page_size) do
+      {:ok, []} ->
+        Logger.info("End-of-report probe at offset #{total} returned no rows — counter confirmed")
+        :ok
+
+      {:ok, subscribers} ->
+        details = %{counter: total, probe_offset: total, probe_fetched: length(subscribers)}
+
+        Logger.error(
+          "❌ Capway report has rows past its counter: offset #{total} still returned " <>
+            "#{length(subscribers)} rows. Refusing the snapshot to avoid false " <>
+            ":capway_create_contract action items."
+        )
+
+        {:error, {:rows_past_counter, details}}
+
+      {:error, reason} ->
+        {:error, {:probe_error, total, reason}}
+    end
+  end
+
+  defp maybe_confirm_report_end(0, _limited_total, _fetch_fun) do
+    Logger.info("Empty report — skipping the end-of-report probe")
+    :ok
+  end
+
+  defp maybe_confirm_report_end(total, limited_total, _fetch_fun) when limited_total < total do
+    Logger.info(
+      "CAPWAY_MAX_PAGES truncated the fetch to #{limited_total}/#{total} rows — " <>
+        "skipping the end-of-report probe"
+    )
+
+    :ok
+  end
+
+  defp maybe_confirm_report_end(total, _limited_total, fetch_fun),
+    do: confirm_report_end(total, @page_size, fetch_fun)
+
+  defp row_count(pages), do: pages |> Enum.map(&Page.fetched/1) |> Enum.sum()
 
   @doc """
   Flattens pages (sorted by offset) into the subscriber list.
@@ -425,15 +533,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
     end
   end
 
-  defp log_fetch_summary(subscribers, customer_count, tail_pages) do
-    total = length(subscribers)
+  defp log_fetch_summary(subscribers, total) do
     nil_contract_count = Enum.count(subscribers, &is_nil(&1.contract_ref_no))
-    tail_rows = tail_pages |> Enum.map(&Page.fetched/1) |> Enum.sum()
 
     Logger.info(
-      "Successfully fetched #{total} total subscribers " <>
-        "(REST customer count: #{customer_count}, rows found past the count: #{tail_rows}, " <>
-        "#{nil_contract_count} with nil contract_ref_no)"
+      "Successfully fetched #{length(subscribers)} total subscribers " <>
+        "(report counter: #{total}, #{nil_contract_count} with nil contract_ref_no)"
     )
   end
 
@@ -516,6 +621,12 @@ defmodule CapwaySync.Reactor.V1.Steps.CapwaySubscribers do
       _ ->
         raise "CAPWAY_CREDITOR is not configured. Set the CAPWAY_CREDITOR env var to the Capway creditor id."
     end
+  end
+
+  # Clear the previous run's debug dump.
+  defp reset_debug_file do
+    file_dir = System.get_env("CAPWAY_DEBUG_FILE_DIR") || "priv"
+    File.write(Path.join(file_dir, "soap_response.xml"), "")
   end
 
   # Append raw XML response to a per-label debug file.

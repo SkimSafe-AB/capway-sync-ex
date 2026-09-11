@@ -170,7 +170,8 @@ defmodule CapwaySync.Soap.MockDataGenerator do
   end
 
   defp build_soap_envelope(subscribers) do
-    data_rows = Enum.map(subscribers, &build_report_result/1) |> Enum.join("\n          ")
+    total = length(subscribers)
+    data_rows = Enum.map(subscribers, &build_report_result(&1, total)) |> Enum.join("\n          ")
 
     """
     <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
@@ -187,7 +188,8 @@ defmodule CapwaySync.Soap.MockDataGenerator do
     """
   end
 
-  defp build_report_result(subscriber) do
+  # `total` is the report-wide row count carried by every row's `counter` column.
+  defp build_report_result(subscriber, total) do
     fields = [
       # rownum - always 0
       "0",
@@ -213,8 +215,8 @@ defmodule CapwaySync.Soap.MockDataGenerator do
       # email
       nil,
       subscriber.next_invoice_date,
-      # counter
-      "0"
+      # counter — total rows in the whole report, identical on every row
+      Integer.to_string(total)
     ]
 
     rows = Enum.map(fields, &build_value_element/1) |> Enum.join("\n              ")

@@ -102,7 +102,11 @@ defmodule CapwaySync.Dynamodb.CapwayCacheRepository do
   @doc """
   Writes subscriber data to cache for the given date string.
 
-  Chunks the subscriber list and writes a manifest plus chunk items.
+  Chunks the subscriber list and writes the chunk items **first**, then the
+  manifest. The manifest is what `read_cache/1` keys on, so writing it last
+  means a run that dies or errors halfway through the chunk writes leaves no
+  manifest behind and the next read is a clean `{:miss}` instead of a
+  `{:error, {:missing_chunk, _}}`.
   """
   @spec write_cache(String.t(), [%CapwaySubscriber{}]) :: :ok | {:error, term()}
   def write_cache(date_string, subscribers) do
@@ -120,11 +124,12 @@ defmodule CapwaySync.Dynamodb.CapwayCacheRepository do
       "ttl" => ttl
     }
 
-    with {:ok, _} <- Client.put_item(table_name, manifest) do
-      write_chunks(table_name, date_string, chunks, ttl)
+    with :ok <- write_chunks(table_name, date_string, chunks, ttl),
+         {:ok, _} <- Client.put_item(table_name, manifest) do
+      :ok
     else
       {:error, reason} ->
-        Logger.error("Failed to write cache manifest: #{inspect(reason)}")
+        Logger.error("Failed to write cache for #{date_string}: #{inspect(reason)}")
         {:error, reason}
     end
   end

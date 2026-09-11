@@ -71,7 +71,8 @@ Available mock files in `priv/mock_responses/`:
 
 ### SOAP Integration
 The application connects to a SOAP service for reporting:
-- WSDL URL configured via `SOAP_REPORT_WSDL` environment variable
+- The SOAP endpoint is currently hardcoded in `generate_report.ex` (`call_soap_operation/3`);
+  `SOAP_REPORT_WSDL` is read into config (`:report_wsdl`) but not used by the client
 - Authentication via `SOAP_USERNAME` and `SOAP_PASSWORD` environment variables
 - Uses HTTPoison with insecure SSL options for development
 - SOAP operations available through `CapwaySync.Soap.GenerateReport.operations/0`
@@ -158,19 +159,28 @@ action items, this app only detects — Trinity's `/admin/capway` UI executes th
 mandate creation via the payment processor.
 
 ### Capway fetch integrity (`CapwaySubscribers` / `CachedCapwaySubscribers`)
-The SOAP report returns one row per **contract**, while the REST customer count
-counts **customers** — so the count is only a parallelisation hint. After the 3
-workers finish, `CapwaySubscribers.fetch_tail/3` sweeps past the count until a
-short page (an empty page is confirmed with one probe), and
-`validate_page_sequence/1` rejects the snapshot if any short/empty page is
-followed by an offset that still has rows. `CachedCapwaySubscribers` then refuses
+The SOAP report returns one row per **contract**, and every row carries a `counter`
+column holding the row count of the *whole* report — identical on every row of every
+page, and always the **last** value of the row (`ResponseHandler.report_total/1`; the
+`Headers` block does not line up with the data columns, so it is located by position,
+not by title). The fetch is sized from that counter, never from the REST customer
+count (which counts *customers*; `Rest.CustomerCount` was removed): the first page is
+fetched alone, the total is read from it, the workers fetch the remaining
+`[100, total)` rows in parallel, and three checks must pass before the snapshot is
+accepted — `validate_page_sequence/1` (no rows after a short/empty page),
+`validate_row_count/2` (fetched rows == counter, capped by `CAPWAY_MAX_PAGES`) and
+`confirm_report_end/3` (one probe at offset `total` must return no rows; skipped when
+`CAPWAY_MAX_PAGES` truncated the fetch). `CachedCapwaySubscribers` then refuses
 (and does not cache) a snapshot that shrank more than
 `CAPWAY_SNAPSHOT_DROP_TOLERANCE` versus the previous day's cache manifest. Finally
 the `SuppressKnownContracts` step drops a `:capway_create_contract` item when the
 `capway-contracts` table still holds a recently written active contract for that
 national id. All of this exists because a missing row in the fetch shows up as a
 false "Missing in Capway system" action item — when touching the fetch, keep the
-page loops injectable (`fetch_page_fun`) so they stay unit-testable.
+page loops injectable (`fetch_page_fun`, `fetch_pages/2`) so they stay unit-testable.
+Mock mode (`USE_MOCK_CAPWAY`) only mocks single `generate_report/4` calls; the mock
+files are not a coherent paginated report, so `CapwaySubscribers.run/3` does not
+work end-to-end against them.
 
 ## Database
 The database is external and this application should not hold any migrations or such.

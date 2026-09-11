@@ -583,4 +583,68 @@ defmodule CapwaySync.Soap.ResponseHandlerTest do
       assert length(subscriber.raw_data) == 21
     end
   end
+
+  describe "report_total/1" do
+    defp row(counter), do: %CapwaySubscriber{raw_data: ["0", nil, "CID-1", counter]}
+
+    test "reads the report-wide row total from the last column of the rows" do
+      assert ResponseHandler.report_total([row("6137"), row("6137"), row("6137")]) == {:ok, 6137}
+    end
+
+    test "accepts a zero counter" do
+      assert ResponseHandler.report_total([row("0")]) == {:ok, 0}
+    end
+
+    test "an empty page has no counter" do
+      assert ResponseHandler.report_total([]) == {:error, :no_rows}
+    end
+
+    test "rejects a counter that is not a non-negative integer" do
+      assert ResponseHandler.report_total([row("NaN")]) == {:error, {:invalid_counter, "NaN"}}
+      assert ResponseHandler.report_total([row("12abc")]) == {:error, {:invalid_counter, "12abc"}}
+      assert ResponseHandler.report_total([row("-1")]) == {:error, {:invalid_counter, "-1"}}
+      assert ResponseHandler.report_total([row(nil)]) == {:error, {:invalid_counter, nil}}
+
+      assert ResponseHandler.report_total([%CapwaySubscriber{raw_data: nil}]) ==
+               {:error, {:invalid_counter, nil}}
+    end
+
+    test "rejects rows that disagree on the counter" do
+      assert ResponseHandler.report_total([row("10"), row("11"), row("10")]) ==
+               {:error, {:inconsistent_counter, ["10", "11"]}}
+    end
+
+    test "reads the counter from a parsed production-shaped page" do
+      xml = """
+      <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+        <s:Body>
+          <GenerateReportResponse xmlns="urn:uuid:e657a351-ae8c-42c5-b083-ebe5dcda5c0b">
+            <GenerateReportResult xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+              <DataRows>
+                <ReportResults><Rows>
+                  <ReportResultData><Value>0</Value></ReportResultData>
+                  <ReportResultData><Value i:nil="true"/></ReportResultData>
+                  <ReportResultData><Value>CID-1</Value></ReportResultData>
+                  <ReportResultData><Value>6137</Value></ReportResultData>
+                </Rows></ReportResults>
+              </DataRows>
+              <FooterRows>
+                <ReportResults><Rows>
+                  <ReportResultData><Value>0</Value></ReportResultData>
+                  <ReportResultData><Value i:nil="true"/></ReportResultData>
+                  <ReportResultData><Value>CID-2</Value></ReportResultData>
+                  <ReportResultData><Value>6137</Value></ReportResultData>
+                </Rows></ReportResults>
+              </FooterRows>
+            </GenerateReportResult>
+          </GenerateReportResponse>
+        </s:Body>
+      </s:Envelope>
+      """
+
+      {:ok, subscribers} = Saxy.parse_string(xml, ResponseHandler, %{})
+      assert length(subscribers) == 2
+      assert ResponseHandler.report_total(subscribers) == {:ok, 6137}
+    end
+  end
 end

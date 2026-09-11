@@ -171,6 +171,51 @@ defmodule CapwaySync.Soap.ResponseHandler do
     {:ok, state}
   end
 
+  @doc """
+  Total number of rows in the whole report, read from the `counter` column.
+
+  Every row of the `CAP_q_contracts_skimsafe` report carries a `counter`
+  value that is the row count of the *entire* report (not of the page), and it
+  is identical on every row of every page. It is the last value of each row —
+  read by position from the end so it survives the leading-column additions
+  the report has already gone through (20 → 21 columns); the `Headers` block
+  does not line up with the data columns, so it cannot be used to locate it.
+
+  Returns `{:ok, total}` when every subscriber on the page agrees on a
+  non-negative integer counter. An empty page carries no counter and yields
+  `{:error, :no_rows}`; a non-integer counter yields
+  `{:error, {:invalid_counter, value}}`; rows that disagree yield
+  `{:error, {:inconsistent_counter, values}}`, so a report whose last column
+  is *not* a total is refused instead of silently mis-sizing the fetch.
+  """
+  @spec report_total([CapwaySubscriber.t()]) ::
+          {:ok, non_neg_integer()}
+          | {:error, :no_rows | {:invalid_counter, term()} | {:inconsistent_counter, [term()]}}
+  def report_total([]), do: {:error, :no_rows}
+
+  def report_total(subscribers) when is_list(subscribers) do
+    case subscribers |> Enum.map(&row_counter/1) |> Enum.uniq() do
+      [counter] -> parse_counter(counter)
+      counters -> {:error, {:inconsistent_counter, counters}}
+    end
+  end
+
+  # The counter is the last raw value of the row; a subscriber without raw
+  # data (e.g. built by hand) has none.
+  defp row_counter(%CapwaySubscriber{raw_data: raw_data}) when is_list(raw_data),
+    do: List.last(raw_data)
+
+  defp row_counter(_subscriber), do: nil
+
+  defp parse_counter(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {total, ""} when total >= 0 -> {:ok, total}
+      _ -> {:error, {:invalid_counter, value}}
+    end
+  end
+
+  defp parse_counter(value), do: {:error, {:invalid_counter, value}}
+
   # Map field index to CapwaySubscriber field
   # Header structure: rownum(0), datasetid(1), customerid(2), customerguid(3),
   # customerref(4), idnumber(5), name(6), contractrefno(7), regdate(8), startdate(9),
@@ -201,7 +246,7 @@ defmodule CapwaySync.Soap.ResponseHandler do
       17 -> %{subscriber | contract_price: value}
       # email(18) - ignored
       19 -> %{subscriber | next_invoice_date: value}
-      # counter(20) - ignored
+      # counter(20) - report row total, read via report_total/1 (not a subscriber field)
       _ -> subscriber
     end
   end
